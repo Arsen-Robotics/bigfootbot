@@ -1,0 +1,61 @@
+# Base image (note: ros:foxy = ros:foxy-base)
+FROM ros:foxy
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive
+
+# ROS custom workspace directory
+ARG ROS_CUSTOM_WS=/ros
+
+# Create ROS workspace directory and src directory inside it for storing source code of custom packages
+#RUN mkdir -p ~/dev_ws/src 
+RUN mkdir -p ${ROS_CUSTOM_WS}/src 
+
+#RUN "/opt/ros/foxy/setup.bash"
+
+#RUN printenv
+
+# Clone sources of ROS tutorials packages into ROS workspace directory
+#RUN cd ${ROS_CUSTOM_WS}/src && \
+    #git clone https://github.com/ros/ros_tutorials.git -b foxy-devel
+    #git clone https://github.com/wimblerobotics/ros2_roboclaw_driver.git
+ #   ros2 pkg create --build-type ament_python --node-name my_node my_package
+
+# Install ROS dependencies (ROS packages that packages located in the src directory depend on)
+# - y Tell the package manager to default to y or fail when installing
+# - r Continue installing despite errors
+#RUN cd ${ROS_CUSTOM_WS} && \
+ #   rosdep install --from-path src --ignore-src -y -r
+
+# Colcon build arguments:
+# -- symlink-install if you change code in your source code, it will take effect, 
+# you don't have to compile it again (ony with python, not c++)
+# --packages-up-to builds the package you want, plus all its dependencies, but not the whole workspace (saves time)
+# --event-handlers console_direct+ shows console output while building (can otherwise be found in the log directory)
+#RUN cd ${ROS_CUSTOM_WS} && \
+#    . /opt/ros/foxy/setup.sh $$ \
+#    colcon build --symlink-install
+
+# Change workdir
+WORKDIR ${ROS_CUSTOM_WS}
+
+# --- Setup entrypoint
+#COPY ./ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+#ENTRYPOINT ["/ros_entrypoint.sh"]
+#CMD ["bash"]
+# ---
+
+# install ros package
+#RUN apt-get update && apt-get install -y \
+ #     ros-${ROS_DISTRO}-demo-nodes-cpp \
+  #    ros-${ROS_DISTRO}-demo-nodes-py && \
+   # rm -rf /var/lib/apt/lists/*
+
+# launch ros package
+#CMD ["ros2", "launch", "demo_nodes_cpp", "talker_listener.launch.py"]

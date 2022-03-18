@@ -1,0 +1,7 @@
+version: '3.5'
+
+services:
+  bigfoot_host:
+    build: 
+      context: ./
+      dockerfile: Dockerfile

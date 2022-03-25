@@ -1,13 +1,13 @@
 version: '3.5'
 
 services:
-  bigfoot_host:
+  basic_mobile_robot:
     build: 
       context: ./
-      dockerfile: Dockerfile
+      dockerfile: BasicMobileRobot.Dockerfile
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ../:/bigfoot
+      #- ../:/bigfoot
     environment:
       - DISPLAY
       - QT_X11_NO_MITSHM=1

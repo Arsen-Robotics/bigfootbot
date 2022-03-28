@@ -1,15 +1,15 @@
 <?xml version="1.0" ?>
-<robot name="basic_mobile_bot" xmlns:xacro="http://ros.org/wiki/xacro">
+<robot name="bigfootbot" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <!-- ****************** ROBOT CONSTANTS *******************************  -->
   <!-- Define the size of the robot's main chassis in meters -->
-  <xacro:property name="base_width" value="0.39"/>
-  <xacro:property name="base_length" value="0.70"/>
+  <xacro:property name="base_width" value="0.45"/>
+  <xacro:property name="base_length" value="0.75"/>
   <xacro:property name="base_height" value="0.20"/>
 	
-  <!-- Define the shape of the robot's two back wheels in meters -->
-  <xacro:property name="wheel_radius" value="0.14"/>
-  <xacro:property name="wheel_width" value="0.06"/>
+  <!-- Define the shape of the robot's wheels in meters -->
+  <xacro:property name="wheel_radius" value="0.165"/>
+  <xacro:property name="wheel_width" value="0.1"/>
 
   <!-- x-axis points forward, y-axis points to left, z-axis points upwards -->
   <!-- Define the gap between the wheel and chassis along y-axis in meters -->
@@ -62,9 +62,9 @@
   <!-- ********************** ROBOT BASE *********************************  -->
   <link name="base_link">
     <visual>
-      <origin xyz="0 0 -0.05" rpy="1.5707963267949 0 3.141592654"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://basic_mobile_robot/meshes/robot_base.stl" />
+        <mesh filename="package://bigfootbot_description/meshes/frame.stl" />
       </geometry>
       <material name="Red">
         <color rgba="${255/255} ${0/255} ${0/255} 1.0"/>

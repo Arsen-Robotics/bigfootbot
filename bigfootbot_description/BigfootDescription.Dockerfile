@@ -24,7 +24,7 @@ RUN mkdir -p ${ROS_CUSTOM_WS}/src
 
 # Copy contents (source) of the package basic_mobile_robot into container's 
 # ROS working directory
-COPY . ${ROS_CUSTOM_WS}/src/bigfoot_description
+COPY . ${ROS_CUSTOM_WS}/src/bigfootbot_description
 
 # We need to update APT database for the next step - rosdep install
 # So rosdep install can find and install all needed packages

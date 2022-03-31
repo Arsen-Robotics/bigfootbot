@@ -13,16 +13,13 @@
 
   <!-- x-axis points forward, y-axis points to left, z-axis points upwards -->
   <!-- Define the gap between the wheel and chassis along y-axis in meters -->
-  <xacro:property name="wheel_ygap" value="0.035"/>
+  <xacro:property name="wheel_ygap" value="0.07"/>
 
   <!-- Position the wheels along the z-axis -->
-  <xacro:property name="wheel_zoff" value="0.05"/>
+  <xacro:property name="wheel_zoff" value="0.1"/>
 
   <!-- Position the wheels along the x-axis -->
-  <xacro:property name="wheel_xoff" value="0.221"/>
-
-  <!-- Position the caster wheel along the x-axis -->
-  <xacro:property name="caster_xoff" value="0.217"/>
+  <xacro:property name="wheel_xoff" value="0.275"/>
 
   <!-- Define intertial property macros  -->
   <xacro:macro name="box_inertia" params="m w h d">
@@ -41,12 +38,12 @@
     </inertial>
   </xacro:macro>
 
-  <xacro:macro name="sphere_inertia" params="m r">
+  <!--xacro:macro name="sphere_inertia" params="m r">
     <inertial>
       <mass value="${m}"/>
       <inertia ixx="${(2/5) * m * (r*r)}" ixy="0.0" ixz="0.0" iyy="${(2/5) * m * (r*r)}" iyz="0.0" izz="${(2/5) * m * (r*r)}"/>
     </inertial>
-  </xacro:macro>
+  </xacro:macro-->
 
   <!-- ****************** ROBOT BASE FOOTPRINT ***************************  -->
   <!-- Define the center of the main robot chassis projected on the ground -->	
@@ -64,7 +61,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://bigfootbot_description/meshes/frame.stl" />
+        <mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="Red">
         <color rgba="${255/255} ${0/255} ${0/255} 1.0"/>
@@ -77,7 +74,7 @@
       </geometry>
     </collision>
 
-    <xacro:box_inertia m="40.0" w="${base_width}" d="${base_length}" h="${base_height}"/>
+    <xacro:box_inertia m="20.0" w="${base_width}" d="${base_length}" h="${base_height}"/>
     
   </link>
 
@@ -90,9 +87,10 @@
   <xacro:macro name="wheel" params="prefix x_reflect y_reflect">
     <link name="${prefix}_link">
       <visual>
-        <origin xyz="0 0 0" rpy="1.5707963267949 0 0"/>
+        <origin xyz="0 0 0" rpy="0 0 1.5707963267949"/>
         <geometry>
-            <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+            <!--cylinder radius="${wheel_radius}" length="${wheel_width}"/-->
+            <mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="White">
           <color rgba="${255/255} ${255/255} ${255/255} 1.0"/>
@@ -106,7 +104,7 @@
         </geometry>
       </collision>
       
-      <xacro:cylinder_inertia m="110.5" r="${wheel_radius}" h="${wheel_width}"/>
+      <xacro:cylinder_inertia m="4" r="${wheel_radius}" h="${wheel_width}"/>
       
     </link>
 
@@ -122,17 +120,19 @@
     </joint>
   </xacro:macro>
 
-  <!-- Instantiate two wheels using the macro we just made through the 
+  <!-- Instantiate four wheels using the macro we just made through the 
        xacro:wheel tags. We also define the parameters to have one wheel
-       on both sides at the back of our robot (i.e. x_reflect=-1). -->
-  <xacro:wheel prefix="drivewhl_l" x_reflect="-1" y_reflect="1" />
-  <xacro:wheel prefix="drivewhl_r" x_reflect="-1" y_reflect="-1" />
+       on both sides at the back and at the front of our robot (i.e. back: x_reflect=-1, front: x_reflect=1). -->
+  <xacro:wheel prefix="drivewhl_bl" x_reflect="-1" y_reflect="1" />
+  <xacro:wheel prefix="drivewhl_br" x_reflect="-1" y_reflect="-1" />
+  <xacro:wheel prefix="drivewhl_fl" x_reflect="1" y_reflect="1" />
+  <xacro:wheel prefix="drivewhl_fr" x_reflect="1" y_reflect="-1" />
 
   <!-- *********************** CASTER WHEEL ******************************  -->
   <!-- We add a caster wheel. It will be modeled as sphere.
        We define the wheel’s geometry, material and the joint to connect it to 
        base_link at the appropriate location. -->
-  <link name="front_caster">
+  <!--link name="front_caster">
     <visual>
       <geometry>
         <sphere radius="${(wheel_radius+wheel_zoff-(base_height/2))}"/>
@@ -148,38 +148,38 @@
       </geometry>
     </collision>
     <xacro:sphere_inertia m="10.05" r="${(wheel_radius+wheel_zoff-(base_height/2))}"/>
-  </link>
+  </link-->
 
-  <gazebo reference="front_caster">
+  <!--gazebo reference="front_caster">
     <mu1>0.01</mu1>
     <mu2>0.01</mu2>
     <material>Gazebo/White</material>
-  </gazebo>
+  </gazebo-->
 
-  <joint name="caster_joint" type="fixed">
+  <!--joint name="caster_joint" type="fixed">
     <parent link="base_link"/>
     <child link="front_caster"/>
     <origin xyz="${caster_xoff} 0.0 ${-(base_height/2)}" rpy="0 0 0"/>
-  </joint>
+  </joint-->
   
   <!-- *********************** IMU SETUP *********************************  -->
   <!-- Each sensor must be attached to a link.                              --> 
   
-  <joint name="imu_joint" type="fixed">
+  <!--joint name="imu_joint" type="fixed">
     <parent link="base_link"/>
     <child link="imu_link"/>
     <origin xyz="-0.10 0 0.05" rpy="0 0 0"/>
   </joint>
 
-  <link name="imu_link"/>
+  <link name="imu_link"/-->
 
   <!-- *********************** GPS SETUP **********************************  -->
-  <joint name="gps_joint" type="fixed">
+  <!--joint name="gps_joint" type="fixed">
     <parent link="base_link"/>
     <child link="gps_link"/>
     <origin xyz="0.10 0 0.05" rpy="0 0 0"/>
   </joint>
 
-  <link name="gps_link"/>
+  <link name="gps_link"/-->
 
 </robot>

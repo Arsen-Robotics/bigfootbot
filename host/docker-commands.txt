@@ -11,3 +11,6 @@ OR
 xhost +
 
 docker run -it --rm --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" host_bigfoot_host
+
+==== Run new terminal in the running container ====
+docker exec -it <container-name/ID> bash

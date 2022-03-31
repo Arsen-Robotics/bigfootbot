@@ -1,13 +1,13 @@
 version: '3.5'
 
 services:
-  basic_mobile_robot:
+  bigfootbot_description:
     build: 
       context: ./
       dockerfile: BigfootDescription.Dockerfile
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ./:/ros_ws/src/bigfoot_description # wee ned it to be able to update package source inside the container (for development)
+      - ./:/ros_ws/src/bigfootbot_description # wee ned it to be able to update package source inside the container (for development)
       #- ../:/bigfoot
     environment:
       - DISPLAY

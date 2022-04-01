@@ -59,9 +59,9 @@
   <!-- ********************** ROBOT BASE *********************************  -->
   <link name="base_link">
     <visual>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="${base_length/2} ${-base_width/2} ${-base_height/2}" rpy="0 0 1.57079632679"/>
       <geometry>
-        <mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2_m.stl"/>
       </geometry>
       <material name="Red">
         <color rgba="${255/255} ${0/255} ${0/255} 1.0"/>
@@ -84,10 +84,10 @@
 
   <!-- *********************** DRIVE WHEELS ******************************  -->
 
-  <xacro:macro name="wheel" params="prefix x_reflect y_reflect">
+  <xacro:macro name="wheel" params="prefix x_reflect y_reflect rotate_yaw">
     <link name="${prefix}_link">
       <visual>
-        <origin xyz="0 0 0" rpy="0 0 1.5707963267949"/>
+        <origin xyz="0 0 0" rpy="0 0 ${rotate_yaw}"/>
         <geometry>
             <!--cylinder radius="${wheel_radius}" length="${wheel_width}"/-->
             <mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
@@ -122,11 +122,12 @@
 
   <!-- Instantiate four wheels using the macro we just made through the 
        xacro:wheel tags. We also define the parameters to have one wheel
-       on both sides at the back and at the front of our robot (i.e. back: x_reflect=-1, front: x_reflect=1). -->
-  <xacro:wheel prefix="drivewhl_bl" x_reflect="-1" y_reflect="1" />
-  <xacro:wheel prefix="drivewhl_br" x_reflect="-1" y_reflect="-1" />
-  <xacro:wheel prefix="drivewhl_fl" x_reflect="1" y_reflect="1" />
-  <xacro:wheel prefix="drivewhl_fr" x_reflect="1" y_reflect="-1" />
+       on both sides at the back and at the front of our robot (i.e. back x_reflect=-1, front x_reflect=1). -->
+
+  <xacro:wheel prefix="drivewhl_fl" x_reflect="1" y_reflect="1" rotate_yaw="${pi}"/>
+  <xacro:wheel prefix="drivewhl_fr" x_reflect="1" y_reflect="-1" rotate_yaw="0"/>
+  <xacro:wheel prefix="drivewhl_bl" x_reflect="-1" y_reflect="1" rotate_yaw="${pi}"/>
+  <xacro:wheel prefix="drivewhl_br" x_reflect="-1" y_reflect="-1" rotate_yaw="0"/>
 
   <!-- *********************** CASTER WHEEL ******************************  -->
   <!-- We add a caster wheel. It will be modeled as sphere.

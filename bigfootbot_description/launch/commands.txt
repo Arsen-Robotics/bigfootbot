@@ -1,3 +1,5 @@
+source "/ros_ws/install/setup.bash"
+
 === Normal launch
 ros2 launch bigfootbot_description bigfootbot_description.launch.py
 

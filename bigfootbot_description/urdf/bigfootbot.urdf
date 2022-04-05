@@ -92,8 +92,8 @@
             <!--cylinder radius="${wheel_radius}" length="${wheel_width}"/-->
             <mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
         </geometry>
-        <material name="White">
-          <color rgba="${255/255} ${255/255} ${255/255} 1.0"/>
+        <material name="Gray">
+          <color rgba="${128/255} ${128/255} ${128/255} 1.0"/>
         </material>
       </visual>
       

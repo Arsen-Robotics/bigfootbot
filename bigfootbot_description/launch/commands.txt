@@ -8,3 +8,9 @@ ros2 launch -s bigfootbot_description bigfootbot_description.launch.py
 
 === Example of using launch arguments (e.g. launch the robot without RViz)
 ros2 launch bigfootbot_description bigfootbot_description.launch.py use_rviz:='False'
+
+ros2 run tf2_tools view_frames.py
+
+==== Docker commmands ===
+--- Run new terminal in the running container
+docker exec -it <container-name/ID> bash

@@ -4,10 +4,10 @@ services:
   bigfoot_host:
     build: 
       context: ./
-      dockerfile: Dockerfile
+      dockerfile: Host.Dockerfile
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ../:/bigfoot
+      - ../basic_mobile_robot:/ros_ws/src/basic_mobile_robot
     environment:
       - DISPLAY
       - QT_X11_NO_MITSHM=1

@@ -22,7 +22,7 @@ ARG ROS_CUSTOM_WS=/ros_ws
 #RUN mkdir -p ~/dev_ws/src 
 RUN mkdir -p ${ROS_CUSTOM_WS}/src
 
-# Copy contents (source) of the package basic_mobile_robot into container's 
+# Copy contents (source) of the package bigfootbot_description into container's 
 # ROS working directory
 COPY . ${ROS_CUSTOM_WS}/src/bigfootbot_description
 

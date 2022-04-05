@@ -1,0 +1,11 @@
+=== TF2 commands ===
+--- Generate pdf file with TF transform tree
+ros2 run tf2_tools view_frames.py
+
+---  tf_echo reports the transform between any two frames broadcast over ROS
+ros2 run tf2_ros tf2_echo <parent frame> <child frame>
+
+
+==== Docker commmands ===
+--- Run new terminal in the running container
+docker exec -it <container-name/ID> bash

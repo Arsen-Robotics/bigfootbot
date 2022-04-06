@@ -8,7 +8,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG ROS_CUSTOM_WS=/ros_ws
 
 # Install ROS2 packages: join-state-publisher, xacro, ros_navigation2, 
-# nav2_bringup, turtlebot3 (many packages like turtlebot3, turtlebot3_bringup, ...)
+# nav2_bringup, turtlebot3 (includes [depends on] many packages like turtlebot3, turtlebot3_bringup, ...)
 # ---- TODO check add flag '--no-install-recommends' to apt-get install? ---
 RUN apt-get update && apt-get install -y \   
     #ros-foxy-joint-state-publisher-gui \

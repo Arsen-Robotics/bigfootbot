@@ -7,7 +7,7 @@ services:
       dockerfile: BigfootDescription.Dockerfile
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ./:/ros_ws/src/bigfootbot_description # wee ned it to be able to update package source inside the container (for development)
+      - ./:/ros_ws/src/bigfootbot_description # we need it to be able to update package source inside the container (for development)
       #- ../:/bigfoot
     environment:
       - DISPLAY

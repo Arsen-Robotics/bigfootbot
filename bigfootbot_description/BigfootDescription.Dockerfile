@@ -7,16 +7,12 @@ ARG DEBIAN_FRONTEND=noninteractive
 # ROS custom workspace directory
 ARG ROS_CUSTOM_WS=/ros_ws
 
-# Install ROS2 packages: join-state-publisher, xacro, ros_navigation2, 
-# nav2_bringup, turtlebot3 (many packages like turtlebot3, turtlebot3_bringup, ...)
+# Install ROS2 packages: gazebo
+# NB! We don't need to install Gazebo in the image run on robot (Nvidia Jetson)
 # ---- TODO check add flag '--no-install-recommends' to apt-get install? ---
-#RUN apt-get update && apt-get install -y \   
-#    ros-foxy-joint-state-publisher-gui \
-#    ros-foxy-xacro \
-#    ros-foxy-navigation2 \
-#    ros-foxy-nav2-bringup \
-#    ros-foxy-turtlebot3* \
-#    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \   
+    ros-foxy-gazebo-ros-pkgs \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create ROS workspace directory and src directory inside it for storing source code of custom packages
 #RUN mkdir -p ~/dev_ws/src 
@@ -47,4 +43,18 @@ RUN rm -rf /var/lib/apt/lists/*
 # --event-handlers console_direct+ shows console output while building (can otherwise be found in the log directory)
 RUN cd ${ROS_CUSTOM_WS} && \
     . /opt/ros/$ROS_DISTRO/setup.sh && colcon build --symlink-install
+
+
+################ Final enviroment setup ####################
+
+# --- Setup entrypoint
+COPY ./ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+CMD ["bash"]
 

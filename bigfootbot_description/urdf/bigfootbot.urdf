@@ -13,7 +13,7 @@
 
   <!-- x-axis points forward, y-axis points to left, z-axis points upwards -->
   <!-- Define the gap between the wheel and chassis along y-axis in meters -->
-  <xacro:property name="wheel_ygap" value="0.07"/>
+  <xacro:property name="wheel_ygap" value="0.08"/>
 
   <!-- Position the wheels along the z-axis -->
   <xacro:property name="wheel_zoff" value="0.1"/>
@@ -126,8 +126,8 @@
 
   <xacro:wheel prefix="drivewhl_fl" x_reflect="1" y_reflect="1" rotate_yaw="${pi}"/>
   <xacro:wheel prefix="drivewhl_fr" x_reflect="1" y_reflect="-1" rotate_yaw="0"/>
-  <xacro:wheel prefix="drivewhl_bl" x_reflect="-1" y_reflect="1" rotate_yaw="${pi}"/>
-  <xacro:wheel prefix="drivewhl_br" x_reflect="-1" y_reflect="-1" rotate_yaw="0"/>
+  <xacro:wheel prefix="drivewhl_rl" x_reflect="-1" y_reflect="1" rotate_yaw="${pi}"/>
+  <xacro:wheel prefix="drivewhl_rr" x_reflect="-1" y_reflect="-1" rotate_yaw="0"/>
 
   <!-- *********************** CASTER WHEEL ******************************  -->
   <!-- We add a caster wheel. It will be modeled as sphere.

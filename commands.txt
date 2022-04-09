@@ -5,7 +5,16 @@ ros2 run tf2_tools view_frames.py
 ---  tf_echo reports the transform between any two frames broadcast over ROS
 ros2 run tf2_ros tf2_echo <parent frame> <child frame>
 
+=== ROS2 topic commands ===
+ros2 topic echo /wheel/odometry
+
 
 ==== Docker commmands ===
 --- Run new terminal in the running container
 docker exec -it <container-name/ID> bash
+
+
+=== Gazebo ===
+--- Add path to robot model (this line maybe added to ~/.bashrc or docker images entrypoint
+--- [ros_entrypoint.sh])
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/models/

@@ -260,10 +260,10 @@
 
       <!-- Kinematics -->
       <wheel_separation>0.62</wheel_separation> <!-- front wheel pair-->
-      <wheel_separation>0.62</wheel_separation> <!-- rear wheel pair-->
+      <!--wheel_separation>0.62</wheel_separation--> <!-- rear wheel pair-->
 
       <wheel_diameter>0.33</wheel_diameter> <!-- front wheels -->
-      <wheel_diameter>0.33</wheel_diameter> <!-- rear wheels -->
+      <!--wheel_diameter>0.33</wheel_diameter--> <!-- rear wheels -->
 
       <!-- limits -->
       <max_wheel_torque>20</max_wheel_torque> <!-- Maximum torque which the wheels can produce, in Nm, defaults to 5 Nm -->
@@ -282,7 +282,7 @@
       
       <!-- When true, publish coordinate transform from base_link to the wheels -->
       <!-- The robot_state_publisher package is often used to publish this transform -->   
-      <publish_wheel_tf>false</publish_wheel_tf>
+      <publish_wheel_tf>true</publish_wheel_tf>
 
       <!--odometry_topic>odom_ppp</odometry_topic-->
       <odometry_frame>odom</odometry_frame>

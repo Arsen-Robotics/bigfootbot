@@ -1,6 +1,6 @@
 # Author: Addison Sears-Collins
-# Date: August 27, 2021
-# Description: Launch a basic mobile robot URDF file using Rviz.
+# Date: August 30, 2021
+# Description: Launch a basic mobile robot
 # https://automaticaddison.com
 
 import os
@@ -16,24 +16,23 @@ def generate_launch_description():
 
   # Set the path to different files and folders.
   pkg_gazebo_ros = FindPackageShare(package='gazebo_ros').find('gazebo_ros')   
-  pkg_share = FindPackageShare(package='bigfootbot_description').find('bigfootbot_description')
+  pkg_share = FindPackageShare(package='basic_mobile_robot').find('basic_mobile_robot')
   default_launch_dir = os.path.join(pkg_share, 'launch')
-  default_model_path = os.path.join(pkg_share, 'urdf/bigfootbot.urdf')
-  robot_name_in_urdf = 'bigfootbot'
+  default_model_path = os.path.join(pkg_share, 'models/basic_mobile_bot_v1.urdf')
+  robot_name_in_urdf = 'basic_mobile_bot'
   default_rviz_config_path = os.path.join(pkg_share, 'rviz/urdf_config.rviz')
-  world_file_name = 'bigfootbot_world/smalltown.world'
+  world_file_name = 'basic_mobile_bot_world/smalltown.world'
   world_path = os.path.join(pkg_share, 'worlds', world_file_name)
   
   # Launch configuration variables specific to simulation
-  #gui = LaunchConfiguration('gui') # Flag to enable joint_state_publisher_gui
-  headless = LaunchConfiguration('headless') # Whether to execute gzclient
+  headless = LaunchConfiguration('headless')
   model = LaunchConfiguration('model')
   rviz_config_file = LaunchConfiguration('rviz_config_file')
-  use_robot_state_pub = LaunchConfiguration('use_robot_state_pub') # Whether to start the robot state publisher
-  use_rviz = LaunchConfiguration('use_rviz') # Whether to start RVIZ
-  use_sim_time = LaunchConfiguration('use_sim_time') # Use simulation (Gazebo) clock if true
-  use_simulator = LaunchConfiguration('use_simulator') # Whether to start the simulator
-  world = LaunchConfiguration('world') # Full path to the world model file to load
+  use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
+  use_rviz = LaunchConfiguration('use_rviz')
+  use_sim_time = LaunchConfiguration('use_sim_time')
+  use_simulator = LaunchConfiguration('use_simulator')
+  world = LaunchConfiguration('world')
 
   # Declare the launch arguments  
   declare_model_path_cmd = DeclareLaunchArgument(
@@ -45,17 +44,12 @@ def generate_launch_description():
     name='rviz_config_file',
     default_value=default_rviz_config_path,
     description='Full path to the RVIZ config file to use')
-    
-  #declare_use_joint_state_publisher_cmd = DeclareLaunchArgument(
-  # name='gui',
-  # default_value='True',
-  # description='Flag to enable joint_state_publisher_gui')
 
   declare_simulator_cmd = DeclareLaunchArgument(
     name='headless',
     default_value='False',
     description='Whether to execute gzclient')
-  
+    
   declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
     name='use_robot_state_pub',
     default_value='True',
@@ -82,20 +76,6 @@ def generate_launch_description():
     description='Full path to the world model file to load')
    
   # Specify the actions
-
-  # Publish the joint state values for the non-fixed joints in the URDF file.
-  #start_joint_state_publisher_cmd = Node(
-  # condition=UnlessCondition(gui),
-  # package='joint_state_publisher',
-  # executable='joint_state_publisher',
-  # name='joint_state_publisher')
-
-  # A GUI to manipulate the joint state values
-  #start_joint_state_publisher_gui_node = Node(
-  # condition=IfCondition(gui),
-  # package='joint_state_publisher_gui',
-  # executable='joint_state_publisher_gui',
-  # name='joint_state_publisher_gui')
 
   # Start Gazebo server
   start_gazebo_server_cmd = IncludeLaunchDescription(
@@ -132,7 +112,6 @@ def generate_launch_description():
   # Declare the launch options
   ld.add_action(declare_model_path_cmd)
   ld.add_action(declare_rviz_config_file_cmd)
-  #ld.add_action(declare_use_joint_state_publisher_cmd)
   ld.add_action(declare_simulator_cmd)
   ld.add_action(declare_use_robot_state_pub_cmd)  
   ld.add_action(declare_use_rviz_cmd) 
@@ -141,8 +120,6 @@ def generate_launch_description():
   ld.add_action(declare_world_cmd)
 
   # Add any actions
-  #ld.add_action(start_joint_state_publisher_cmd)
-  #ld.add_action(start_joint_state_publisher_gui_node)
   ld.add_action(start_gazebo_server_cmd)
   ld.add_action(start_gazebo_client_cmd)
   ld.add_action(start_robot_state_publisher_cmd)

@@ -12,9 +12,9 @@ ARG ROS_CUSTOM_WS=/ros_ws
 #RUN mkdir -p ~/dev_ws/src 
 RUN mkdir -p ${ROS_CUSTOM_WS}/src
 
-################ BUILD & INSTALL ROBOCLAW DRIVER and teleop_twist_keyboard (control by keyboard)) ####################
+################ BUILD & INSTALL ROS2 packages ####################
 
-# Clone sources of ROS tutorials packages into ROS workspace directory
+# Clone sources of roboclaw driver into ROS workspace directory
 RUN cd ${ROS_CUSTOM_WS}/src && \
     #git clone https://github.com/ros/ros_tutorials.git -b foxy-devel
     git clone https://github.com/wimblerobotics/ros2_roboclaw_driver.git
@@ -22,20 +22,36 @@ RUN cd ${ROS_CUSTOM_WS}/src && \
 # Install libboost (needed to build ros2_roboclaw_driver from source (C++))
 RUN apt-get update && \
     apt-get install -y libboost-dev \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone source of teleop_twist_keyboard package into ROS workspace directory
+# Clone sources of teleop_twist_keyboard package into ROS workspace directory
 RUN cd ${ROS_CUSTOM_WS}/src && \
     git clone https://github.com/ros2/teleop_twist_keyboard.git
 
+# Clone sources of nmea_navsat_driver package into ROS workspace directory
+# This package parses NMEA strings [that reads from GPS sensor] and publishes
+# standard ROS NavSat message types (sensor_msgs/NavSatFix).
+RUN cd ${ROS_CUSTOM_WS}/src && \
+    git clone https://github.com/ros-drivers/nmea_navsat_driver.git && \
+    cd nmea_navsat_driver && \
+    git checkout ros2
+
 # Bringup (robot starter) package
 COPY ./ros2_packages/bigfoot_bringup ${ROS_CUSTOM_WS}/src/bigfoot_bringup
+
+# We need to update APT database for the next step - rosdep install
+# So rosdep install can find and install all needed packages
+RUN apt-get update
 
 # Install ROS dependencies (ROS packages that packages located in the src directory depend on)
 # - y tell the package manager to default to y or fail when installing
 # - r continue installing despite errors
 RUN cd ${ROS_CUSTOM_WS} && \
     rosdep install --from-path src --ignore-src -y -r
+
+# Clean the image
+RUN rm -rf /var/lib/apt/lists/*
 
 # --- Build the ROS2 custom workspace
 # Colcon build arguments:
@@ -60,8 +76,8 @@ COPY ./ros_entrypoint.sh /
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
-#CMD ["bash"]
-CMD ["ros2", "launch", "bigfoot_bringup", "bigfoot.launch.py"]
+CMD ["bash"]
+#CMD ["ros2", "launch", "bigfoot_bringup", "bigfoot.launch.py"]
 
 # NB! alternative to above 2 lines of code (COPY ... and ENTRYPOINT [and creating new ros_entrypoint.sh])
 # can be the next script (it replaces [using command 'sed'] source of ROS2 main underlay 

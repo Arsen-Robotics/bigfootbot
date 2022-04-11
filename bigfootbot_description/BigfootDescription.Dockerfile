@@ -32,8 +32,9 @@ RUN apt-get update
 RUN cd ${ROS_CUSTOM_WS} && \
     rosdep install --from-path src --ignore-src -y
 
-# Clean image
+# Clean the image
 RUN rm -rf /var/lib/apt/lists/*
+
 # --- Build the ROS2 custom workspace
 # Colcon build arguments:
 # -- symlink-install if you change code in your source code, it will take effect, 

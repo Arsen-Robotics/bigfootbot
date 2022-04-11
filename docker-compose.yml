@@ -6,7 +6,9 @@ services:
     #devices: ["/dev/ttyACM0:/dev/ttyACM0"]
     devices:
       #- /dev/ttyACM0:/dev/ttyACM0
-      - /dev/ttyACM0:/dev/roboclaw
+     # - /dev/ttyACM0:/dev/roboclaw
+     - /dev/ttyACM0:/dev/tty.usbserial # for nmea_navsat_driver
+
     #TODO! access roboclaw by id (/dev/serial/by-id/usb-03eb_USB_Roboclaw_2x15A-if00)
     volumes:
       - ./roboclaw_config:/ros/install/ros2_roboclaw_driver/share/config
@@ -27,10 +29,10 @@ services:
     tty: true        # docker run -t
     #network_mode: service:husarnet
 
-  ros2:
-    image: ros:foxy
-    volumes:
-      - ./ros2_packages:/ros2_ws/src
+  #ros2:
+   # image: ros:foxy
+    #volumes:
+     # - ./ros2_packages:/ros2_ws/src
     
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
+    #stdin_open: true # docker run -i
+    #tty: true        # docker run -t

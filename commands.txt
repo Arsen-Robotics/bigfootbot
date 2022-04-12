@@ -18,3 +18,13 @@ docker exec -it <container-name/ID> bash
 --- Add path to robot model (this line maybe added to ~/.bashrc or docker images entrypoint
 --- [ros_entrypoint.sh])
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/models/
+
+=== WSL2 ===
+-- Attach USB devices
+--- From an administrator command prompt on Windows, run this command. 
+--- It will list all the USB devices connected to Windows.
+usbipd wsl list
+
+--- Select the bus ID of the device you’d like to attach to WSL and run this command. 
+--- You’ll be prompted by WSL for a password to run a sudo command.
+usbipd wsl attach --busid <busid>

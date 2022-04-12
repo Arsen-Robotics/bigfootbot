@@ -1,4 +1,4 @@
-# =============== PACKAGE bigfootbot ============
+# =============== Docker container run on RPi ============
 
 # Base image (note: ros:foxy = ros:foxy-base)
 FROM ros:foxy
@@ -16,35 +16,25 @@ RUN mkdir -p ${ROS_CUSTOM_WS}/src
 
 ################ BUILD & INSTALL ROS2 packages ####################
 
-# Clone sources of roboclaw driver into ROS workspace directory
-RUN cd ${ROS_CUSTOM_WS}/src && \
-    #git clone https://github.com/ros/ros_tutorials.git -b foxy-devel
-    git clone https://github.com/wimblerobotics/ros2_roboclaw_driver.git
-
 # Install libboost (needed to build ros2_roboclaw_driver from source (C++))
-RUN apt-get update && \
-    apt-get install -y libboost-dev \
-    python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && \
+#    apt-get install -y libboost-dev \
+#    python3-pip \
+#    && rm -rf /var/lib/apt/lists/*
 
 # Clone sources of teleop_twist_keyboard package into ROS workspace directory
 #RUN cd ${ROS_CUSTOM_WS}/src && \
 #    git clone https://github.com/ros2/teleop_twist_keyboard.git
 
 # Clone sources of ps_ros2_common package into ROS workspace directory
+# Package allows to use PS joysticks with ROS2 (reads /dev/input/js0 and outputs sensor_msgs/msg/Joy)
 RUN cd ${ROS_CUSTOM_WS}/src && \
     git clone https://github.com/Ar-Ray-code/ps_ros2_common.git
 
-# Clone sources of nmea_navsat_driver package into ROS workspace directory
-# This package parses NMEA strings [that reads from GPS sensor] and publishes
-# standard ROS NavSat message types (sensor_msgs/NavSatFix).
+# Clone sources of teleop_twist_joy package into ROS workspace directory
+# Package converts joy messages to velocity commands (sensor_msgs/msg/Joy --> geometry_msgs/msg/Twist)
 RUN cd ${ROS_CUSTOM_WS}/src && \
-    git clone https://github.com/ros-drivers/nmea_navsat_driver.git && \
-    cd nmea_navsat_driver && \
-    git checkout ros2
-
-# Bringup (robot starter) package
-COPY ./ros2_packages/bigfoot_bringup ${ROS_CUSTOM_WS}/src/bigfoot_bringup
+    git clone https://github.com/ros2/teleop_twist_joy.git
 
 # We need to update APT database for the next step - rosdep install
 # So rosdep install can find and install all needed packages

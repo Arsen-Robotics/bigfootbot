@@ -4,10 +4,10 @@ services:
   bigfoot_roboclaw:
     #privileged: true - allow access to host
     #devices: ["/dev/ttyACM0:/dev/ttyACM0"]
-    devices:
-      #- /dev/ttyACM0:/dev/ttyACM0
-     # - /dev/ttyACM0:/dev/roboclaw
-     - /dev/ttyACM0:/dev/tty.usbserial # for nmea_navsat_driver
+    #devices:
+     #- /dev/ttyACM0:/dev/ttyACM0
+     #- /dev/ttyACM0:/dev/roboclaw
+     #- /dev/ttyACM0:/dev/tty.usbserial # for nmea_navsat_driver
 
     #TODO! access roboclaw by id (/dev/serial/by-id/usb-03eb_USB_Roboclaw_2x15A-if00)
     volumes:

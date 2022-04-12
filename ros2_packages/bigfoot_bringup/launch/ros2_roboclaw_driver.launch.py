@@ -52,12 +52,4 @@ def generate_launch_description():
         output='screen')
     ld.add_action(motor_driver_node)
 
-    ############ TELEOP KEYBOARD NODE ###########
-    teleop_twist_keyboard_node = Node(
-        package='teleop_twist_keyboard',
-        executable='teleop_twist_keyboard',
-        name='teleop_MY',
-        output='screen')
-    ld.add_action(teleop_twist_keyboard_node)
-
     return ld

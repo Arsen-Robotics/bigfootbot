@@ -22,19 +22,15 @@ RUN mkdir -p ${ROS_CUSTOM_WS}/src
 #    python3-pip \
 #    && rm -rf /var/lib/apt/lists/*
 
-# Clone sources of teleop_twist_keyboard package into ROS workspace directory
-#RUN cd ${ROS_CUSTOM_WS}/src && \
-#    git clone https://github.com/ros2/teleop_twist_keyboard.git
-
-# Clone sources of ps_ros2_common package into ROS workspace directory
-# Package allows to use PS joysticks with ROS2 (reads /dev/input/js0 and outputs sensor_msgs/msg/Joy)
-RUN cd ${ROS_CUSTOM_WS}/src && \
-    git clone https://github.com/Ar-Ray-code/ps_ros2_common.git
-
 # Clone sources of teleop_twist_joy package into ROS workspace directory
-# Package converts joy messages to velocity commands (sensor_msgs/msg/Joy --> geometry_msgs/msg/Twist)
+# The purpose of this package is to provide a generic facility for tele-operating 
+# Twist-based ROS2 robots with a standard joystick. It also converts joy messages 
+# to velocity commands (sensor_msgs/msg/Joy --> geometry_msgs/msg/Twist)
+# None! It is also possible to install this package from APT: apt-get install ros-<rosdistro>-teleop-twist-joy
 RUN cd ${ROS_CUSTOM_WS}/src && \
     git clone https://github.com/ros2/teleop_twist_joy.git
+    #cd teleop_twist_joy && \
+    #git checkout foxy
 
 # We need to update APT database for the next step - rosdep install
 # So rosdep install can find and install all needed packages
@@ -44,7 +40,7 @@ RUN apt-get update
 # - y tell the package manager to default to y or fail when installing
 # - r continue installing despite errors
 RUN cd ${ROS_CUSTOM_WS} && \
-    rosdep install --from-path src --ignore-src -y -r
+    rosdep install --from-path src --ignore-src -y
 
 # Clean the image
 RUN rm -rf /var/lib/apt/lists/*

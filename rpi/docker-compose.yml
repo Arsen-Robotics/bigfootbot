@@ -17,7 +17,6 @@ services:
     build: 
       context: ./
       dockerfile: RPi.Dockerfile
-      #dockerfile: Dockerfile.create_pkg
     
     #user: "${UID}:${GID}"
 

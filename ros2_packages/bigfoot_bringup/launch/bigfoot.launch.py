@@ -33,5 +33,5 @@ def generate_launch_description():
    
    return LaunchDescription([
       roboclaw_ld,
-      #teleop_twist_keyboard_ld
+      teleop_twist_keyboard_ld
    ])

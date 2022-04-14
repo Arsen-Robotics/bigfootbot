@@ -32,8 +32,8 @@ RUN apt-get update && \
 #    git clone https://github.com/ros2/teleop_twist_keyboard.git
 
 # Clone sources of ps_ros2_common package into ROS workspace directory
-RUN cd ${ROS_CUSTOM_WS}/src && \
-    git clone https://github.com/Ar-Ray-code/ps_ros2_common.git
+#RUN cd ${ROS_CUSTOM_WS}/src && \
+#    git clone https://github.com/Ar-Ray-code/ps_ros2_common.git
 
 # Clone sources of nmea_navsat_driver package into ROS workspace directory
 # This package parses NMEA strings [that reads from GPS sensor] and publishes

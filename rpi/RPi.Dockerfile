@@ -26,7 +26,7 @@ RUN mkdir -p ${ROS_CUSTOM_WS}/src
 # The purpose of this package is to provide a generic facility for tele-operating 
 # Twist-based ROS2 robots with a standard joystick. It also converts joy messages 
 # to velocity commands (sensor_msgs/msg/Joy --> geometry_msgs/msg/Twist)
-# None! It is also possible to install this package from APT: apt-get install ros-<rosdistro>-teleop-twist-joy
+# Note! It is also possible to install this package from APT: apt-get install ros-<rosdistro>-teleop-twist-joy
 RUN cd ${ROS_CUSTOM_WS}/src && \
     git clone https://github.com/ros2/teleop_twist_joy.git
     #cd teleop_twist_joy && \

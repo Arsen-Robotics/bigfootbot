@@ -4,14 +4,15 @@ services:
   bigfoot_roboclaw:
     #privileged: true - allow access to host
     #devices: ["/dev/ttyACM0:/dev/ttyACM0"]
-    #devices:
+    devices:
      #- /dev/ttyACM0:/dev/ttyACM0
-     #- /dev/ttyACM0:/dev/roboclaw
+     - /dev/ttyACM0:/dev/roboclaw
      #- /dev/ttyACM0:/dev/tty.usbserial # for nmea_navsat_driver
 
     #TODO! access roboclaw by id (/dev/serial/by-id/usb-03eb_USB_Roboclaw_2x15A-if00)
     volumes:
-      - ./roboclaw_config:/ros/install/ros2_roboclaw_driver/share/config
+      #- ./config/roboclaw_config:/ros/install/ros2_roboclaw_driver/share/config
+      - ./config/roboclaw_config:/ros/install/bigfoot_bringup/share/config
     # - /dev:/dev
     #build: .
     build: 
@@ -28,6 +29,7 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     #network_mode: service:husarnet
+    network_mode: host
 
   #ros2:
    # image: ros:foxy

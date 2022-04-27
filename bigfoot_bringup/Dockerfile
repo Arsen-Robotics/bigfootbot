@@ -43,8 +43,9 @@ RUN cd ${ROS_CUSTOM_WS}/src && \
     cd nmea_navsat_driver && \
     git checkout ros2
 
-# Bringup (robot starter) package
-COPY ./ros2_packages/bigfoot_bringup ${ROS_CUSTOM_WS}/src/bigfoot_bringup
+# Copy sources of bringup (robot starter) package
+#COPY ./ros2_packages/bigfoot_bringup ${ROS_CUSTOM_WS}/src/bigfoot_bringup
+COPY . ${ROS_CUSTOM_WS}/src/bigfoot_bringup
 
 # We need to update APT database for the next step - rosdep install
 # So rosdep install can find and install all needed packages

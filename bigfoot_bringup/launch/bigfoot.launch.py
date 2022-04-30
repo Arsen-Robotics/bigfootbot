@@ -22,16 +22,16 @@ def generate_launch_description():
       )
 
    ############ TELEOP KEYBOARD NODE ###########
-   teleop_twist_keyboard_ld = LaunchDescription()
+   """teleop_twist_keyboard_ld = LaunchDescription()
    teleop_twist_keyboard_node = Node(
       package='teleop_twist_keyboard',
       executable='teleop_twist_keyboard',
       name='teleop_MY',
       output='screen')
-   teleop_twist_keyboard_ld.add_action(teleop_twist_keyboard_node)
+   teleop_twist_keyboard_ld.add_action(teleop_twist_keyboard_node)"""
 
    
    return LaunchDescription([
       roboclaw_ld,
-      teleop_twist_keyboard_ld
+      #teleop_twist_keyboard_ld
    ])

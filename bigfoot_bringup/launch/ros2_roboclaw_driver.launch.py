@@ -23,11 +23,18 @@ def generate_launch_description():
     # so it is expected that your will also create a yaml file to
     # match your hardware. See the README file for more information.
 
-    my_package_name = 'ros2_roboclaw_driver'
-    configFilePath = os.path.join(
+    #my_package_name = 'ros2_roboclaw_driver'
+    """configFilePath = os.path.join(
         get_package_share_directory(my_package_name),
         'config',
         'motor_driver.yaml'
+    )"""
+
+    my_package_name = 'bigfoot_bringup'
+    configFilePath = os.path.join(
+        get_package_share_directory(my_package_name),
+        'config',
+        'roboclaw_config.yaml'
     )
 
     # Extract the relevant configuration parameters from the yaml file.

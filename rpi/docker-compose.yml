@@ -5,7 +5,8 @@ services:
     #privileged: true - allow access to host
     #devices: ["/dev/ttyACM0:/dev/ttyACM0"]
     devices:
-     - /dev/input/js0:/dev/input/js0
+     #- /dev/input/js0:/dev/input/js0
+     - /dev/input:/dev/input
      #- /dev/ttyACM0:/dev/ttyACM0
      #- /dev/ttyACM0:/dev/roboclaw
      #- /dev/ttyACM0:/dev/tty.usbserial # for nmea_navsat_driver
@@ -28,6 +29,7 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     #network_mode: service:husarnet
+    network_mode: host
 
   #ros2:
    # image: ros:foxy

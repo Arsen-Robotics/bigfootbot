@@ -12,7 +12,7 @@ services:
     #TODO! access roboclaw by id (/dev/serial/by-id/usb-03eb_USB_Roboclaw_2x15A-if00)
     volumes:
       #- ./config/roboclaw_config:/ros/install/ros2_roboclaw_driver/share/config
-      - ./config/roboclaw_config:/ros/install/bigfoot_bringup/share/config
+      - ./config/roboclaw_config.yaml:/ros_ws/install/bigfoot_bringup/share/bigfoot_bringup/config/roboclaw_config.yaml                                     
     # - /dev:/dev
     #build: .
     build: 

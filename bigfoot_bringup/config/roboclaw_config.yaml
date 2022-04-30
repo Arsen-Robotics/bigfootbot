@@ -24,7 +24,6 @@ motor_driver_node:
     m2_d: 0.0
     m2_qpps: 2437
 
-
     # The maximum expected current (in amps) for both motors.
     # Used just to signal warnings.
     m1_max_current: 6.0
@@ -32,12 +31,12 @@ motor_driver_node:
 
     # Rate limiting commands. The driver will clip any value
     # exceeding these limits.
-    max_angular_velocity: 0.07
-    max_linear_velocity: 0.3
+    max_angular_velocity: 2.5 # m/s
+    max_linear_velocity: 2 # m/s
 
     # If no new motor commands is received since the last motor
     # command in this number of seconds, stop the motors.
-    max_seconds_uncommanded_travel: 0.25
+    max_seconds_uncommanded_travel: 1 # seconds
 
     # Based upon your particular motor gearing and encoders.
     # These values are used to scale cmd_vel commands 
@@ -45,10 +44,10 @@ motor_driver_node:
     quad_pulses_per_meter: 1566
     quad_pulses_per_revolution: 1000
 
-    # Based upon y our particular robot model.
+    # Based upon your particular robot model.
     # The wheel separation and radius, in meters.
-    wheel_radius: 0.10169
-    wheel_separation: 0.345
+    wheel_radius: 0.165
+    wheel_separation: 0.62
     
     # Topic name to be used to publish the RoboClaw status messages.
     roboclaw_status_topic: "roboclaw_status"
@@ -56,3 +55,9 @@ motor_driver_node:
     # See: http://unixwiz.net/techtips/termios-vmin-vtime.html
     vmin: 1
     vtime: 2
+
+    #|         __        |
+    # \       /  \      /
+    #   \____/    \____/
+    #           O
+    #           O

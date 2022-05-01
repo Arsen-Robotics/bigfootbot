@@ -15,11 +15,20 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
    ############ ROBOCLAW NODE ###########
+  
+   roboclaw_ld = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('bigfoot_bringup'), 'launch/'),
+         'ros2_roboclaw_driver.launch.py'])
+      )
+
+   """
    roboclaw_ld = IncludeLaunchDescription(
       PythonLaunchDescriptionSource([os.path.join(
          get_package_share_directory('ros2_roboclaw_driver'), 'launch'),
          '/ros2_roboclaw_driver.launch.py'])
-      )
+   )
+   """
 
    ############ TELEOP KEYBOARD NODE ###########
    """teleop_twist_keyboard_ld = LaunchDescription()

@@ -14,7 +14,7 @@ def generate_launch_description():
     return launch.LaunchDescription([
         launch.actions.DeclareLaunchArgument('joy_vel', default_value='cmd_vel'),
         launch.actions.DeclareLaunchArgument('joy_config', default_value='ps3'),
-        launch.actions.DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
+        #launch.actions.DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
         launch.actions.DeclareLaunchArgument('config_filepath', default_value=[
             launch.substitutions.TextSubstitution(text=os.path.join(
                 get_package_share_directory('teleop_twist_joy'), 'config', '')),
@@ -23,7 +23,8 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package='joy', executable='joy_node', name='joy_node',
             parameters=[{
-                'dev': joy_dev,
+                #'dev': joy_dev,
+                'device_id': 0,
                 'deadzone': 0.3,
                 'autorepeat_rate': 20.0,
             }]),

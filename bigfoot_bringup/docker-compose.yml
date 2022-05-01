@@ -13,6 +13,7 @@ services:
     volumes:
       #- ./config/roboclaw_config:/ros/install/ros2_roboclaw_driver/share/config
       - ./config/roboclaw_config.yaml:/ros_ws/install/bigfoot_bringup/share/bigfoot_bringup/config/roboclaw_config.yaml                                     
+      - ./launch:/ros_ws/install/bigfoot_bringup/share/bigfoot_bringup/launch                                    
     # - /dev:/dev
     #build: .
     build: 

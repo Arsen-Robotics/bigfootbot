@@ -6,7 +6,7 @@
 motor_driver_node:
   ros__parameters:
     # Incremental acceleration to use in quadrature pulses per second.
-    accel_quad_pulses_per_second: 1000
+    #accel_quad_pulses_per_second: 1000
 
     # The device name to be opened.
     device_name: "/dev/roboclaw"
@@ -15,14 +15,14 @@ motor_driver_node:
     device_port: 128
 
     # The P, I, D and maximum quadrature pulses per second for both motors.
-    m1_p: 7.26239
-    m1_i: 1.36838
-    m1_d: 0.0
-    m1_qpps: 2437
-    m2_p: 7.26239
-    m2_i: 1.28767
-    m2_d: 0.0
-    m2_qpps: 2437
+    #m1_p: 7.26239
+    #m1_i: 1.36838
+    #m1_d: 0.0
+    #m1_qpps: 2437
+    #m2_p: 7.26239
+    #m2_i: 1.28767
+    #m2_d: 0.0
+    #m2_qpps: 2437
 
     # The maximum expected current (in amps) for both motors.
     # Used just to signal warnings.
@@ -32,11 +32,11 @@ motor_driver_node:
     # Rate limiting commands. The driver will clip any value
     # exceeding these limits.
     max_angular_velocity: 2.5 # m/s
-    max_linear_velocity: 2 # m/s
+    max_linear_velocity: 2.0 # m/s
 
     # If no new motor commands is received since the last motor
     # command in this number of seconds, stop the motors.
-    max_seconds_uncommanded_travel: 1 # seconds
+    max_seconds_uncommanded_travel: 1.0 # seconds
 
     # Based upon your particular motor gearing and encoders.
     # These values are used to scale cmd_vel commands 

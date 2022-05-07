@@ -43,7 +43,18 @@ RUN cd ${ROS_CUSTOM_WS}/src && \
     cd nmea_navsat_driver && \
     git checkout ros2
 
+# Clone sources of the package Slamtec/rplidar_ros into ROS workspace directory
+# This package provides basic device handling for 2D Laser Scanner RPLIDAR A1/A2 and A3
+# rplidarNode is a driver for RPLIDAR. It reads RPLIDAR raw scan result 
+# using RPLIDAR's SDK and convert to ROS LaserScan message.
+# docs: http://wiki.ros.org/rplidar
+RUN cd ${ROS_CUSTOM_WS}/src && \
+    git clone https://github.com/Slamtec/rplidar_ros.git && \
+    cd rplidar_ros && \
+    git checkout ros2
+
 # Copy sources of bringup (robot starter) package
+# we copy sources of the package in order to compile it later
 #COPY ./ros2_packages/bigfoot_bringup ${ROS_CUSTOM_WS}/src/bigfoot_bringup
 COPY . ${ROS_CUSTOM_WS}/src/bigfoot_bringup
 

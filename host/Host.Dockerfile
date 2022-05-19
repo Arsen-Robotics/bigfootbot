@@ -26,3 +26,14 @@ RUN mkdir -p ${ROS_CUSTOM_WS}/src
 # Copy contents (source) of the package basic_mobile_robot into container's 
 # ROS working directory
 #COPY ../basic_mobile_robot ${ROS_CUSTOM_WS}/src/basic_mobile_robot
+
+# --- Setup entrypoint
+COPY ./ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+CMD ["bash"]

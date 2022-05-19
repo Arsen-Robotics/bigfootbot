@@ -6,8 +6,10 @@ services:
       context: ./
       dockerfile: Host.Dockerfile
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ../basic_mobile_robot:/ros_ws/src/basic_mobile_robot
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw # forward X socket to container to enable GUI   
+      #- ../basic_mobile_robot:/ros_ws/src/basic_mobile_robot
+      - ../bigfootbot_description/models:/ros_ws/src/bigfootbot_description/models # robot models for Gazebo simulator
+      - ../basic_mobile_robot/models:/ros_ws/src/basic_mobile_robot/models # robot models for Gazebo simulator
     environment:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
@@ -15,3 +17,4 @@ services:
     network_mode: host
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+    #runtime: nvidia

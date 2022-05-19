@@ -6,7 +6,7 @@ services:
       context: ./
       dockerfile: BigfootDescription.Dockerfile
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw # forward X socket to container to enable GUI 
       - ./:/ros_ws/src/bigfootbot_description # we need it to be able to update package source inside the container (for development)
       #- ../:/bigfoot
     environment:

@@ -129,6 +129,40 @@
   <xacro:wheel prefix="drivewhl_rl" x_reflect="-1" y_reflect="1" rotate_yaw="${pi}"/>
   <xacro:wheel prefix="drivewhl_rr" x_reflect="-1" y_reflect="-1" rotate_yaw="0"/>
 
+  <!-- *********************** LIDAR SETUP **********************************  -->
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0.215 0 0.13" rpy="0 0 0"/>
+  </joint>
+
+  <link name="lidar_link">
+  
+    <collision>
+     <origin xyz="0 0 0" rpy="0 0 0"/>
+     <geometry>
+      <cylinder radius="0.0508" length="0.18"/>
+     </geometry>
+    </collision>
+    
+    <visual>
+     <origin xyz="0 0 0" rpy="0 0 0"/>
+     <geometry>
+      <cylinder radius="0.0508" length="0.18"/>
+     </geometry>
+     <material name="Black">
+          <color rgba="${0/255} ${0/255} ${0/255} 1.0"/>
+     </material>
+    </visual>
+    
+    <inertial>
+      <mass value="0.114" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+    </inertial>
+  </link>
+  <!-- END OF BLOCK 'Lidar setup' -->
+
   <!-- *********************** CASTER WHEEL ******************************  -->
   <!-- We add a caster wheel. It will be modeled as sphere.
        We define the wheel’s geometry, material and the joint to connect it to 

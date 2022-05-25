@@ -1,7 +1,8 @@
 # =============== PACKAGE bigfootbot ============
 
 # Base image (note: ros:foxy = ros:foxy-base)
-FROM ros:foxy
+FROM ros:foxy  
+#nvidiajetson/l4t-ros2-foxy-pytorch:r32.5 - accelerating AI Modules for ROS and ROS 2 on NVIDIA Jetson Platform
 
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.

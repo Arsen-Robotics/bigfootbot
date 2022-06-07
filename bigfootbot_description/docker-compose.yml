@@ -13,6 +13,8 @@ services:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
     #privileged: true
-    network_mode: host
+    #network_mode: host
+    #pid: host
+    #ipc: host
     stdin_open: true # docker run -i
     tty: true        # docker run -t

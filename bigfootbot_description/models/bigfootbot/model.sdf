@@ -123,6 +123,9 @@
         </ray>
         <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
           <ros>
+            <!-- Set namespace -->
+            <namespace>/gazebo</namespace>
+            
             <remapping>~/out:=scan</remapping>
           </ros>
           <output_type>sensor_msgs/LaserScan</output_type>
@@ -306,6 +309,12 @@
       </axis>
     </joint>
 
+    <joint name="lidar_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>lidar_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+
     <!--joint name="imu_joint" type="fixed">
       <parent>base_link</parent>
       <child>imu_link</child>
@@ -361,8 +370,9 @@
       <!-- The robot_state_publisher package is often used to publish this transform -->   
       <publish_wheel_tf>true</publish_wheel_tf>
 
-      <!--odometry_topic>odom_ppp</odometry_topic-->
-      <odometry_frame>odom</odometry_frame>
+      <!-- Topic to publish nav_msgs/Odometry messages, defaults to `odom` -->
+      <!--odometry_topic>odomTTTTT</odometry_topic-->
+      <!--odometry_frame>odom</odometry_frame-->
       <robot_base_frame>base_footprint</robot_base_frame>
 
       <!-- Odometry source, 0 for ENCODER, 1 for WORLD, defaults to WORLD -->
@@ -371,7 +381,7 @@
       <!-- Change the ROS topic we will publish the odometry data to -->
       <ros>
         <!--remapping>odom:=wheel/odometry</remapping-->
-        <!-- Set namespace -->
+          <!-- Set namespace -->
           <namespace>/gazebo</namespace>
 
           <!-- Remap default topics -->

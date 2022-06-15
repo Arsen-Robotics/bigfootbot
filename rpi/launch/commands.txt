@@ -1,1 +1,8 @@
 ros2 launch teleop_twist_joy teleop-launch.py
+ros2 launch teleop_twist_joy teleop-launch.py joy_vel:='/gazebo/cmd_vel'
+
+=== To run launch file directly (for exampe from source directory):
+ros2 launch teleop-launch.py joy_vel:='/gazebo/cmd_vel'
+
+=== If you want to see the available arguments you can pass to the launch file from the terminal window, type
+ros2 launch -s teleop_twist_joy teleop-launch.py OR ros2 launch teleop-launch.py

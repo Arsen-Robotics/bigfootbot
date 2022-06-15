@@ -27,6 +27,8 @@ RUN mkdir -p ${ROS_CUSTOM_WS}/src
 # Twist-based ROS2 robots with a standard joystick. It also converts joy messages 
 # to velocity commands (sensor_msgs/msg/Joy --> geometry_msgs/msg/Twist)
 # Note! It is also possible to install this package from APT: apt-get install ros-<rosdistro>-teleop-twist-joy
+# Package teleop_twist_joy depends on the package joy (https://github.com/ros-drivers/joystick_drivers/tree/ros2/joy),
+# so the package joy is installed automatically
 RUN cd ${ROS_CUSTOM_WS}/src && \
     git clone https://github.com/ros2/teleop_twist_joy.git
     #cd teleop_twist_joy && \

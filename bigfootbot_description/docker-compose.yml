@@ -8,7 +8,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw # forward X socket to container to enable GUI 
       - ./:/ros_ws/src/bigfootbot_description # we need it to be able to update package source inside the container (for development)
-      #- ../:/bigfoot
+      - ./cyclonedds.xml:/cyclonedds.xml # for Husarnet VPN
     environment:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
@@ -18,3 +18,36 @@ services:
     #ipc: host
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+
+    # Without custom DDS configuration file it would be simply command: 
+    # ros2 run my_demo_pkg color_controller. 
+    # Construction:
+    # command:
+    #  - bash
+    #  - -c
+    #  - |
+    #    <multiple command, every in a new line>
+    # allows you to easily run a few additional commands while starting a container.
+    command:
+      - bash
+      - -c
+      - |
+          export CYCLONEDDS_URI=file:///cyclonedds.xml   
+          ros2 launch bigfootbot_description bigfootbot_description.launch.py use_rviz:='False' use_simulator:='True'
+       #   ros2 run my_demo_pkg color_controller
+    network_mode: service:husarnet
+  
+  # Husarnet VPN
+  husarnet:
+    image: husarnet/husarnet
+    restart: unless-stopped
+    volumes:
+        - /var/lib/husarnet  # This will persist your Husarnet Client keys, thus IP of the container will be stable/the same between (re)boots
+    sysctls:
+        - net.ipv6.conf.all.disable_ipv6=0  # Husarnet is using IPv6 for the internal connections
+    cap_add:
+        - NET_ADMIN
+    devices:
+        - /dev/net/tun
+    env_file: 
+        - ./.env  # create .env file in the same folder as Dockerfile and specify HOSTNAME and JOINCODE there

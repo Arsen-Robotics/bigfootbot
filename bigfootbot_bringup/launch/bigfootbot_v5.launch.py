@@ -15,18 +15,23 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
 
   # Set the path to different files and folders.
-  pkg_gazebo_ros = FindPackageShare(package='gazebo_ros').find('gazebo_ros')   
+  #pkg_gazebo_ros = FindPackageShare(package='gazebo_ros').find('gazebo_ros')   
+  pkg_gazebo_ros_share = FindPackageShare(package='gazebo_ros').find('gazebo_ros')  
   
+  #pkg_bf_description_share = FindPackageShare(package='bigfootbot_description').find('bigfootbot_description')
   pkg_share = FindPackageShare(package='bigfootbot_description').find('bigfootbot_description')
-  #descr_pkg_share = FindPackageShare(package='bigfootbot_description').find('bigfootbot_description')
+  pkg_gazebo_share = FindPackageShare(package='bigfootbot_gazebo').find('bigfootbot_gazebo')
 
   default_launch_dir = os.path.join(pkg_share, 'launch')
   default_model_path = os.path.join(pkg_share, 'urdf/bigfootbot.urdf')
   robot_localization_file_path = os.path.join(pkg_share, 'config/ekf.yaml') 
   robot_name_in_urdf = 'bigfootbot'
   default_rviz_config_path = os.path.join(pkg_share, 'rviz/nav2_config.rviz')
-  world_file_name = 'bigfootbot_world/smalltown.world'
-  world_path = os.path.join(pkg_share, 'worlds', world_file_name)
+
+  #world_file_name = 'bigfootbot_world/smalltown.world'
+  world_file_name = 'smalltown.world'
+  world_path = os.path.join(gazebo_pkg_share, 'worlds', world_file_name)
+  
   nav2_dir = FindPackageShare(package='nav2_bringup').find('nav2_bringup') 
   nav2_launch_dir = os.path.join(nav2_dir, 'launch') 
   static_map_path = os.path.join(pkg_share, 'maps', 'smalltown_world.yaml')
@@ -140,13 +145,13 @@ def generate_launch_description():
 
   # Start Gazebo server
   start_gazebo_server_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros, 'launch', 'gzserver.launch.py')),
+    PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros_share, 'launch', 'gzserver.launch.py')),
     condition=IfCondition(use_simulator),
     launch_arguments={'world': world}.items())
 
   # Start Gazebo client    
   start_gazebo_client_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros, 'launch', 'gzclient.launch.py')),
+    PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros_share, 'launch', 'gzclient.launch.py')),
     condition=IfCondition(PythonExpression([use_simulator, ' and not ', headless])))
 
   # Start robot localization using an Extended Kalman filter

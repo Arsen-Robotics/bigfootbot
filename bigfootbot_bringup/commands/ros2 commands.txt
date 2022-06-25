@@ -1,0 +1,4 @@
+# Run command ros2 param list and check values of use_sim_time parameter on different Nodes
+ros2 param get <node_name> <parameter_name>
+
+ros2 run tf2_tools view_frames.py

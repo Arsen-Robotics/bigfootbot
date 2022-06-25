@@ -11,6 +11,8 @@
 
   <exec_depend>bigfootbot_base</exec_depend>
   <exec_depend>bigfootbot_description</exec_depend>
+  <exec_depend>bigfootbot_teleop</exec_depend>
+  <!--exec_depend>bigfootbot_navigation</exec_depend-->
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

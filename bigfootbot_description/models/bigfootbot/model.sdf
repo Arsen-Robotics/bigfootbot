@@ -377,14 +377,16 @@
       
       <!-- When true, publish coordinate transform from base_link to the wheels, defaults to false -->
       <!-- The robot_state_publisher package is often used to publish this transform -->   
-      <publish_wheel_tf>true</publish_wheel_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
 
       <!-- Odometry source, 0 for ENCODER, 1 for WORLD, defaults to WORLD -->
       <odometry_source>1</odometry_source>
 
       <!-- Change the ROS topic we will publish the odometry data to -->
       <ros>
-          <remapping>odom:=wheel/odometry</remapping>
+          <remapping> odom:=wheel/odometry</remapping>
+          <remapping> /gazebo/cmd_vel:=/cmd_vel </remapping> <!-- we remap to /cmd_vel because the node teleop_twist_joy_node
+                                                                  publishes to the topic /cmd_vel -->
           <!-- Set namespace -->
           <namespace>/gazebo</namespace>
 

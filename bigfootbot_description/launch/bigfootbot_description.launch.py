@@ -115,7 +115,8 @@ def generate_launch_description():
     executable='robot_state_publisher',
     parameters=[{'use_sim_time': use_sim_time, 
     'robot_description': Command(['xacro ', model])}],
-    arguments=[default_model_path])
+    arguments=[default_model_path])  # TODO: Check - it seems robot_state_publisher 
+                                     # doesn't have this argument anymore
 
   # Launch RViz
   start_rviz_cmd = Node(

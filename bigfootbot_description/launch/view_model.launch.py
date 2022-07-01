@@ -18,6 +18,7 @@ def generate_launch_description():
     #model = LaunchConfiguration('model', default=default_model_path)
     model = LaunchConfiguration('model')
     rviz_config_file = LaunchConfiguration('rviz_config_file')
+    use_joint_state_publisher = LaunchConfiguration('use_joint_state_publisher')
     use_joint_state_publisher_gui = LaunchConfiguration('use_joint_state_publisher_gui')
     use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
     use_rviz = LaunchConfiguration('use_rviz')
@@ -35,8 +36,13 @@ def generate_launch_description():
         description='Full path to the RVIZ config file to use')
 
     declare_use_joint_state_publisher_cmd = DeclareLaunchArgument(
-        name='use_joint_state_publisher_gui',
+        name='use_joint_state_publisher',
         default_value='True',
+        description='Whether to start joint_state_publisher')
+
+    declare_use_joint_state_publisher_gui_cmd = DeclareLaunchArgument(
+        name='use_joint_state_publisher_gui',
+        default_value='False',
         description='Whether to start joint_state_publisher_gui')
 
     declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
@@ -57,6 +63,14 @@ def generate_launch_description():
     # --- END OF BLOCK 'Declare the launch arguments' ---
 
     # --- Specify the actions ---
+    
+    # Publish the joint state values for the non-fixed joints in the URDF file.
+    start_joint_state_publisher_node = Node(
+        condition=IfCondition(use_joint_state_publisher),
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher')
+
     # A GUI to manipulate the joint state values
     # Publish the joint state values for the non-fixed joints in the URDF file.
     start_joint_state_publisher_gui_node = Node(
@@ -94,11 +108,13 @@ def generate_launch_description():
     ld.add_action(declare_model_path_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_use_joint_state_publisher_cmd)
+    ld.add_action(declare_use_joint_state_publisher_gui_cmd)
     ld.add_action(declare_use_robot_state_pub_cmd)  
     ld.add_action(declare_use_rviz_cmd)
     ld.add_action(declare_use_sim_time_cmd) 
 
     # Add any actions (start Nodes)
+    ld.add_action(start_joint_state_publisher_node)
     ld.add_action(start_joint_state_publisher_gui_node)
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(start_rviz_cmd)

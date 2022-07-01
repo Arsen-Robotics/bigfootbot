@@ -124,7 +124,7 @@
         <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
           <ros>
             <!-- Set namespace -->
-            <namespace>/gazebo</namespace>
+            <!--namespace>/gazebo</namespace-->
             
             <remapping>~/out:=scan</remapping>
           </ros>
@@ -385,10 +385,10 @@
       <!-- Change the ROS topic we will publish the odometry data to -->
       <ros>
           <remapping> odom:=wheel/odometry</remapping>
-          <remapping> /gazebo/cmd_vel:=/cmd_vel </remapping> <!-- we remap to /cmd_vel because the node teleop_twist_joy_node
+          <!--remapping> /gazebo/cmd_vel:=/cmd_vel </remapping--> <!-- we remap to /cmd_vel because the node teleop_twist_joy_node
                                                                   publishes to the topic /cmd_vel -->
           <!-- Set namespace -->
-          <namespace>/gazebo</namespace>
+          <!--namespace>/gazebo</namespace-->
 
           <!-- Remap default topics -->
           <!--argument>cmd_vel:=cmd_demo</argument>

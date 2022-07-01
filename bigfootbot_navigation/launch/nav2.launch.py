@@ -29,7 +29,7 @@ def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
     use_namespace = LaunchConfiguration('use_namespace')
     autostart = LaunchConfiguration('autostart') # Parameter for nav2_lifecycle_manager
-    default_bt_xml_filename = LaunchConfiguration('default_bt_xml_filename') # NB! It seems that this argument is not needed anymore in the new verson of bt_navigator CHECK! 
+    bt_xml_filename = LaunchConfiguration('bt_xml_filename') # NB! It seems that this argument is not needed anymore in the new verson of bt_navigator CHECK! 
     map_yaml_file = LaunchConfiguration('map')
     params_file = LaunchConfiguration('params_file')
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -56,7 +56,7 @@ def generate_launch_description():
 
     # NB! It seems that this argument is not needed anymore in the new verson of bt_navigator CHECK! 
     declare_bt_xml_cmd = DeclareLaunchArgument(  
-        name='default_bt_xml_filename',
+        name='bt_xml_filename',
         default_value=default_behavior_tree_xml_path,
         description='Full path to the behavior tree xml file to use')
 
@@ -110,7 +110,7 @@ def generate_launch_description():
                                 'map': map_yaml_file,
                                 'use_sim_time': use_sim_time,
                                 'params_file': params_file,
-                                'default_bt_xml_filename': default_bt_xml_filename,  # NB! It seems there is no such argument. CHECK! 
+                                'default_bt_xml_filename': bt_xml_filename,  # NB! It seems there is no such argument. CHECK! 
                                 'autostart': autostart}.items())
 
     # Launch RViz
@@ -130,6 +130,7 @@ def generate_launch_description():
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_use_namespace_cmd)
     ld.add_action(declare_autostart_cmd)
+    ld.add_action(declare_bt_xml_cmd)
     ld.add_action(declare_map_yaml_file_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_use_sim_time_cmd)

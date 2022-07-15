@@ -4078,7 +4078,10 @@
       <!-- Set the location where we want to spawn the robot -->
       <pose>0.0 0.0 0.15 0.0 0.0 0.0</pose>
       <!-- Bigfootbot -->
-      <uri>model://bigfootbot</uri>
+      <uri>model://bigfootbot</uri> <!-- Path to the robot's model is added to /home/.bashrc -->
+
+      <!-- Basic mobile robot -->
+      <!--uri>model://basic_mobile_bot_description</uri --> <!-- Path to the robot's model is added to /home/.bashrc -->
     </include>
   </world>
 </sdf>

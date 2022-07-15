@@ -104,15 +104,15 @@
         <ray>
           <scan>
             <horizontal>
-              <samples>360</samples>
+              <samples>120</samples>
               <resolution>1.00000</resolution>
-              <min_angle>0.000000</min_angle>
-              <max_angle>6.280000</max_angle>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
             </horizontal>
           </scan>
           <range>
-            <min>0.120000</min>
-            <max>3.5</max>
+            <min>0.300000</min>
+            <max>15</max>
             <resolution>0.015000</resolution>
           </range>
           <noise>
@@ -134,6 +134,115 @@
       </sensor>
     </link>
     <!-- END OF BLOCK 'Lidar' -->
+
+    <!-- *********************** IMU SENSOR SETUP **************************  -->
+    <link name="imu_link">
+      <gravity>true</gravity>
+      <sensor name="bmb_imu" type="imu">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <visualize>true</visualize>
+        <imu>
+          <orientation>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </z>
+          </orientation>
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <plugin name="basic_mobile_bot_imu" filename="libgazebo_ros_imu_sensor.so">
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+          <frame_name>imu_link</frame_name>
+          <ros>
+            <namespace>/imu</namespace>
+            <remapping>~/out:=data</remapping>
+          </ros>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- *********************** GPS SETUP *********************************  -->
+    <!--link name="gps_link">
+      <sensor name="bmb_gps" type="gps">
+        <always_on>true</always_on>
+        <update_rate>10.0</update_rate>
+        <gps>
+          <position_sensing>
+            <horizontal>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1e-2</stddev>
+              </noise>
+            </horizontal>
+            <vertical>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1</stddev>
+              </noise>
+            </vertical>
+          </position_sensing>
+        </gps>
+        <plugin name="basic_mobile_bot_gps" filename="libgazebo_ros_gps_sensor.so">
+          <ros>
+            <remapping>~/out:=gps/fix</remapping>
+          </ros>
+        </plugin>
+      </sensor>
+    </link-->
 
     <!-- *********************** DRIVE WHEELS ******************************  -->
     <!-- front left wheel-->
@@ -260,7 +369,7 @@
         </material>
       </visual>
 
-    </link>>
+    </link>
     <!-- END OF DRIVE WHEELS -->
 
     <!-- ************************ JOINTS ***********************************  -->
@@ -315,13 +424,13 @@
       <pose>0 0 0 0 0 0</pose>
     </joint>
 
-    <!--joint name="imu_joint" type="fixed">
+    <joint name="imu_joint" type="fixed">
       <parent>base_link</parent>
       <child>imu_link</child>
       <pose>0 0 0 0 0 0</pose>
     </joint>  
 
-    <joint name="gps_joint" type="fixed">
+    <!--joint name="gps_joint" type="fixed">
       <parent>base_link</parent>
       <child>gps_link</child>
       <pose>0 0 0 0 0 0</pose>
@@ -331,7 +440,7 @@
     <!-- *********** DIFFERENTIAL DRIVE CONTROLLER + WHEEL ODOMETRY ***************************-->
     <plugin name="bigfootbot_skid_drive" filename="libgazebo_ros_diff_drive.so">
 
-      <update_rate>100</update_rate>
+      <update_rate>30</update_rate>
 
       <!-- Number of wheel pairs -->
       <num_wheel_pairs>2</num_wheel_pairs>
@@ -396,6 +505,17 @@
       </ros>
     </plugin>
     <!-- END OF DIFFERENTIAL DRIVE CONTROLLER + WHEEL ODOMETRY -->
+
+    <plugin name="bigfootbot_joint_state" filename="libgazebo_ros_joint_state_publisher.so">
+    <ros>
+      <remapping>~/out:=joint_states</remapping>
+    </ros>
+    <update_rate>30</update_rate>
+    <joint_name>drivewhl_fl_joint</joint_name>
+    <joint_name>drivewhl_fr_joint</joint_name>
+    <joint_name>drivewhl_rl_joint</joint_name>
+    <joint_name>drivewhl_rr_joint</joint_name>
+  </plugin>   
 
   </model>
 </sdf>

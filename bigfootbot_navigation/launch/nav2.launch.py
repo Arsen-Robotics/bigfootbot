@@ -51,7 +51,7 @@ def generate_launch_description():
 
     declare_autostart_cmd = DeclareLaunchArgument(
         name='autostart', 
-        default_value='true',
+        default_value='True',
         description='Automatically startup the nav2 stack')
 
     # NB! It seems that this argument is not needed anymore in the new verson of bt_navigator CHECK! 
@@ -110,7 +110,8 @@ def generate_launch_description():
                                 'map': map_yaml_file,
                                 'use_sim_time': use_sim_time,
                                 'params_file': params_file,
-                                'default_bt_xml_filename': bt_xml_filename,  # NB! It seems there is no such argument. CHECK! 
+                                'default_bt_xml_filename': bt_xml_filename,  # NB! It seems there is no such argument 
+                                                                              # in nav2_bringup/launch/bringup_launch.py. CHECK! 
                                 'autostart': autostart}.items())
 
     # Launch RViz
@@ -130,7 +131,7 @@ def generate_launch_description():
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_use_namespace_cmd)
     ld.add_action(declare_autostart_cmd)
-    ld.add_action(declare_bt_xml_cmd)
+    ld.add_action(declare_bt_xml_cmd) # Tt seems this is not needed anymore in the new verson of bt_navigator CHECK
     ld.add_action(declare_map_yaml_file_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_use_sim_time_cmd)

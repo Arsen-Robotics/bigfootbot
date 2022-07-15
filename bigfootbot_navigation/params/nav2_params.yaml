@@ -12,7 +12,8 @@ amcl:
     beam_skip_threshold: 0.3
     do_beamskip: false
     global_frame_id: "map"
-    initial_pose: [0.0, 0.0, 0.0, 0.0]
+    initial_pose: [0.0, 0.0, 0.0, 0.0] # X, Y, Z, and yaw coordinates of initial pose (meters and radians) 
+                                       # of robot base frame in global frame.
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
     laser_max_range: 100.0
@@ -29,10 +30,12 @@ amcl:
     resample_interval: 1
     robot_model_type: "differential"
     save_pose_rate: 0.5
-    set_initial_pose: False
+    set_initial_pose: True # Causes AMCL to set initial pose from the initial_pose* parameters instead of waiting
+                           # for the initial_pose message (geometry_msgs/Pose2D) (this message is sent by clicking 
+                           # the “2D Pose Estimate” on top of the rviz2 screen)
     sigma_hit: 0.2
     tf_broadcast: true
-    transform_tolerance: 1.0
+    transform_tolerance: 1.0 # Sets the maximum amount of latency allowed between these transforms
     update_min_a: 0.2
     update_min_d: 0.25
     z_hit: 0.5
@@ -49,7 +52,7 @@ amcl_rclcpp_node:
   ros__parameters:
     use_sim_time: True
 
-bt_navigator:
+bt_navigator: # https://navigation.ros.org/configuration/packages/configuring-bt-navigator.html#parameters
   ros__parameters:
     use_sim_time: True
     global_frame: map
@@ -58,7 +61,9 @@ bt_navigator:
     enable_groot_monitoring: True
     groot_zmq_publisher_port: 1666
     groot_zmq_server_port: 1667
-    default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
+    default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml" # NB! On Galactic and newer versions used: 
+                                                                      # default_nav_to_pose_bt_xml, and default_nav_through_poses_bt_xml
+
     plugin_lib_names:
     - nav2_compute_path_to_pose_action_bt_node
     - nav2_follow_path_action_bt_node
@@ -165,16 +170,19 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
-      rolling_window: true
+      rolling_window: true # Keeps the robot in the center of the costmap as it moves throughout the world,
+                           # dropping obstacle information from the map as the robot moves too far 
+                           # from a given area
       width: 10
       height: 10
       resolution: 0.05
-      robot_radius: 0.75
+      robot_radius: 0.45
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.95
+        inflation_radius: 0.95 # Propagating cost values outwards from each occupied cell out to 
+                               # the specified inflation radius.
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -209,7 +217,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: True
-      robot_radius: 0.75
+      robot_radius: 0.45
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -229,7 +237,8 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.95
+        inflation_radius: 0.95 # Propagating cost values outwards from each occupied cell out to 
+                               # the specified inflation radius.
       always_send_full_costmap: True
   global_costmap_client:
     ros__parameters:
@@ -241,7 +250,8 @@ global_costmap:
 map_server:
   ros__parameters:
     use_sim_time: True
-    yaml_filename: "turtlebot3_world.yaml"
+    yaml_filename: "turtlebot3_world.yaml" # This parameter is substituted in 
+                                           # navigation2/nav2_bringup/launch/localization_launch.py 
 
 map_saver:
   ros__parameters:

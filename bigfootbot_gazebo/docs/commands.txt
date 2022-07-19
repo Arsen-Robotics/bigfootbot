@@ -1,0 +1,2 @@
+# Spawn robot
+ros2 run gazebo_ros spawn_entity.py -topic /robot_description -entity bigfootbot

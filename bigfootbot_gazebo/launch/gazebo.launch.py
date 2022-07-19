@@ -6,6 +6,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.substitutions import FindPackageShare
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -15,6 +16,12 @@ def generate_launch_description():
     world_file_name = 'smalltown.world'
     world_path = os.path.join(bigfootbot_gazebo_pkg_share, 'worlds', world_file_name)
     # --- END OF BLOCK 'Set the path to different files and folders'
+
+    # Pose where we want to spawn the robot
+    spawn_x_val = '0.0'
+    spawn_y_val = '0.0'
+    spawn_z_val = '0.0'
+    spawn_yaw_val = '0.00'
 
     # Launch configuration variables
     world = LaunchConfiguration('world')
@@ -41,6 +48,19 @@ def generate_launch_description():
     start_gazebo_client_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(gazebo_ros_pkg_share, 'launch', 'gzclient.launch.py')))
         #condition=IfCondition(PythonExpression([use_simulator, ' and not ', headless])))
+
+    # Spawn the robot
+    spawn_entity_cmd = Node(
+        package='gazebo_ros', 
+        executable='spawn_entity.py',
+        arguments=['-entity', 'bigfootbot', 
+                    '-topic', 'robot_description',
+                        '-x', spawn_x_val,
+                        '-y', spawn_y_val,
+                        '-z', spawn_z_val,
+                        '-Y', spawn_yaw_val],
+                        output='screen')
+
     # --- END OF BLOCK 'Specify the actions' ---
 
 
@@ -53,6 +73,7 @@ def generate_launch_description():
     # Add any actions
     ld.add_action(start_gazebo_server_cmd)
     ld.add_action(start_gazebo_client_cmd)
+    ld.add_action(spawn_entity_cmd)
 
     return ld
     # --- END OF BLOCK 'Create the launch description and populate'

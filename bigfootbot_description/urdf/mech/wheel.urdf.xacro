@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+<!-- *********************** DRIVE WHEELS ******************************  -->
+  <xacro:macro name="wheel" params="prefix x_reflect y_reflect rotate_yaw">
+    <link name="${prefix}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 ${rotate_yaw}"/>
+        <geometry>
+            <!--cylinder radius="${wheel_radius}" length="${wheel_width}"/-->
+            <!--mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/-->
+
+            <mesh filename="file://$(find bigfootbot_description)/meshes/wheel.stl" scale="0.001 0.001 0.001"/> 
+            <!-- file:// is used instead on package:// because URDF->SDF converter converts package:// to model:// and Gazebo can't fint STLs -->
+        </geometry>
+        <material name="Gray"> <!-- Material for RViz -->
+          <color rgba="${128/255} ${128/255} ${128/255} 1.0"/>
+        </material>
+      </visual>
+      
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+           
+      <xacro:cylinder_inertia m="4" r="${wheel_radius}" h="${wheel_width}"/>     
+    </link>
+
+    <gazebo reference="${prefix}_link">  
+      <mu1>0.7</mu1> <!-- friction coefficients for the two principle contact directions --> 
+      <mu2>1.0</mu2> <!-- the static friction coefficient and the kinetic friction coefficient.-->      
+      <!--kp>300000.0</kp--> <!-- contact stiffness -->
+      <!--kd></kd--> <!-- contact damping -->
+      <!--material>Gazebo/Black</material-->
+      <visual>  
+        <material> <!-- Gray material for Gazebo -->
+          <ambient>0.0 0.0 0.0 1.0</ambient> <!-- RGB [0..1] + alpha [0..1]-->
+          <diffuse>0.5 0.5 0.5 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 0.0</emissive>
+        </material>
+      </visual> 
+    </gazebo>
+
+    <!-- Connect the wheels to the base_link at the appropriate location, and 
+         define a continuous joint to allow the wheels to freely rotate about
+         an axis -->
+    <joint name="${prefix}_joint" type="continuous"> 
+    <!-- joint type - revolute a hinge joint that rotates along the axis and has a 
+                                limited range specified by the upper and lower limits. 
+                      continuous  continuous hinge joint that rotates around the axis 
+                                   and has no upper and lower limits -->
+      <parent link="base_link"/>
+      <child link="${prefix}_link"/>
+      <origin xyz="${x_reflect*wheel_xoff} ${y_reflect*(base_width/2+wheel_ygap)} ${-wheel_zoff}" rpy="0 0 0"/>
+      <!--limit upper="3.1415" lower="-3.1415" effort="30" velocity="5.0"/-->
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+  
+</robot>

@@ -4074,14 +4074,15 @@
     </gui>
     
     <!-- Import our own robot -->
-    <include>
+    <!--include-->
       <!-- Set the location where we want to spawn the robot -->
-      <pose>0.0 0.0 0.15 0.0 0.0 0.0</pose>
+      <!--pose>0.0 0.0 0.15 0.0 0.0 0.0</pose-->
       <!-- Bigfootbot -->
-      <uri>model://bigfootbot</uri> <!-- Path to the robot's model is added to /home/.bashrc -->
+      <!--uri>model://bigfootbot</uri--> <!-- Path to the robot's model is added to /home/.bashrc --> 
+      <!--uri>model://bigfootbot_NEW</uri-->
 
       <!-- Basic mobile robot -->
       <!--uri>model://basic_mobile_bot_description</uri --> <!-- Path to the robot's model is added to /home/.bashrc -->
-    </include>
+    <!--/include-->
   </world>
 </sdf>

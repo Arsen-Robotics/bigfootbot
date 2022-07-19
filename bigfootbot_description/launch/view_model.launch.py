@@ -10,7 +10,7 @@ def generate_launch_description():
 
     # Set the path to different files and folders.
     bfb_description_pkg_share = FindPackageShare(package='bigfootbot_description').find('bigfootbot_description')
-    default_model_path = os.path.join(bfb_description_pkg_share, 'urdf/bigfootbot.urdf')
+    default_model_path = os.path.join(bfb_description_pkg_share, 'urdf/bigfootbot_NEW.urdf.xacro')
     #robot_name_in_urdf = 'bigfootbot'
     default_rviz_config_path = os.path.join(bfb_description_pkg_share, 'rviz/urdf_config.rviz')
 

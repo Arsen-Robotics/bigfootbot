@@ -1,0 +1,108 @@
+<?xml version="1.0" ?>
+<robot name="bigfootbot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- Robot common constants (like width, height, mass, ...) -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/bfb_common_properties.urdf.xacro"/>
+  
+  <!-- Inertial -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/inertials.urdf.xacro"/>
+
+  <!-- Base -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/mech/base.urdf.xacro"/>
+
+  <!-- Drive wheel -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/mech/wheel.urdf.xacro"/>
+
+  <!-- IMU -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/sensors/imu.urdf.xacro"/>
+
+  <!-- LiDAR -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/sensors/lidar.urdf.xacro"/>
+
+  <!-- Drive controller (Gazebo plugin) -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/controllers/skid_steer.urdf.xacro"/>
+
+  <!-- Joint state publisher (Gazebo plugin) -->
+  <!--xacro:include filename="$(find bigfootbot_description)/urdf/controllers/joint_state_publisher.urdf.xacro"/-->
+
+  <!-- Add robot base -->
+  <xacro:base 
+    length="${base_length}" 
+    width="${base_width}" 
+    height="${base_height}" 
+    mass="${base_mass}"
+    wheel_radius="${wheel_radius}"
+    wheel_zoff="${wheel_zoff}"
+  />
+
+  <!-- Add 4 wheels -->
+  <!-- Instantiate four wheels using the macro. We also define the parameters to have one wheel
+       on both sides at the back and at the front of our robot (i.e. back x_reflect=-1, front x_reflect=1). -->
+  <xacro:wheel prefix="drivewhl_fl" x_reflect="1" y_reflect="1" rotate_yaw="${pi}"/>
+  <xacro:wheel prefix="drivewhl_fr" x_reflect="1" y_reflect="-1" rotate_yaw="0"/>
+  <xacro:wheel prefix="drivewhl_rl" x_reflect="-1" y_reflect="1" rotate_yaw="${pi}"/>
+  <xacro:wheel prefix="drivewhl_rr" x_reflect="-1" y_reflect="-1" rotate_yaw="0"/>
+
+  <!-- Add IMU -->
+  <xacro:imu/>
+
+  <!-- Add LiDAR -->
+  <xacro:lidar/>
+
+  <!-- Add drive controller (Gazebo plugin) -->
+  <xacro:diff_drive_controller
+    wheel_separation="${(base_width/2+wheel_ygap) * 2}"
+    wheel_radius="${wheel_radius}"
+    wheel_torque="${wheel_torque}"
+  />
+
+  <!-- Add joint state publisher (Gazebo plugin) -->
+  <!--xacro:joint_state_publisher
+    front_left_whl_joint="drivewhl_fl_joint" front_right_whl_joint="drivewhl_fr_joint"
+    rear_left_whl_joint="drivewhl_rl_joint" rear_right_whl_joint="drivewhl_rr_joint"
+  /-->
+
+  <!-- *********************** GPS SETUP **********************************  -->
+  <!--joint name="gps_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="gps_link"/>
+    <origin xyz="0.10 0 0.05" rpy="0 0 0"/>
+  </joint>
+
+  <link name="gps_link"/-->
+
+  <!-- *********************** CASTER WHEEL ******************************  -->
+  <!-- We add a caster wheel. It will be modeled as sphere.
+       We define the wheel’s geometry, material and the joint to connect it to 
+       base_link at the appropriate location. -->
+  <!--link name="front_caster">
+    <visual>
+      <geometry>
+        <sphere radius="${(wheel_radius+wheel_zoff-(base_height/2))}"/>
+      </geometry>
+      <material name="White">
+        <color rgba="${255/255} ${255/255} ${255/255} 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="${(wheel_radius+wheel_zoff-(base_height/2))}"/>
+      </geometry>
+    </collision>
+    <xacro:sphere_inertia m="10.05" r="${(wheel_radius+wheel_zoff-(base_height/2))}"/>
+  </link-->
+
+  <!--gazebo reference="front_caster">
+    <mu1>0.01</mu1>
+    <mu2>0.01</mu2>
+    <material>Gazebo/White</material>
+  </gazebo-->
+
+  <!--joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_caster"/>
+    <origin xyz="${caster_xoff} 0.0 ${-(base_height/2)}" rpy="0 0 0"/>
+  </joint-->
+
+</robot>

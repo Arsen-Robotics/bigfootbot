@@ -1,5 +1,6 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
+
   <xacro:macro name="imu">
     <!-- Each sensor must be attached to a link. --> 
     <joint name="imu_joint" type="fixed">
@@ -17,7 +18,7 @@
         <always_on>true</always_on>
         <update_rate>100</update_rate>
         <visualize>true</visualize>
-        <imu>
+        <!--imu>
           <orientation>
             <x>
               <noise type="gaussian">
@@ -78,7 +79,7 @@
               </noise>
             </z>
           </linear_acceleration>
-        </imu>
+        </imu-->
 
         <plugin name="basic_mobile_bot_imu" filename="libgazebo_ros_imu_sensor.so">
           <initial_orientation_as_reference>false</initial_orientation_as_reference>

@@ -37,6 +37,6 @@ https://github.com/cra-ros-pkg/robot_localization/tree/ros2
 `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/basic_mobile_robot/models`
 
 ### Create alias 'tf2' to call view_frames.py
-*view_frames is a graphical debugging tool that creates a PDF graph of your current transform tree.*
+*(view_frames is a graphical debugging tool that creates a PDF graph of your current transform tree)*
 
 `alias tf2='cd /var/tmp && ros2 run tf2_tools view_frames.py && evince frames.pdf &'`

@@ -34,7 +34,7 @@ https://github.com/cra-ros-pkg/robot_localization/tree/ros2
 ### Gazebo models
 `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/bigfootbot_description/models` 
 `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/bigfootbot_description`  
-(`export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/basic_mobile_robot/models`)- DEMO
+DEMO - `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/basic_mobile_robot/models`
 
 ### Create alias 'tf2' to call view_frames.py
 *(view_frames is a graphical debugging tool that creates a PDF graph of your current transform tree)*

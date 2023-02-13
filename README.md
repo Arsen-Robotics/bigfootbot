@@ -33,7 +33,9 @@ https://github.com/cra-ros-pkg/robot_localization/tree/ros2
 
 ### Gazebo models
 `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/bigfootbot_description/models`
+
 `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/bigfootbot_description`
+
 `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/basic_mobile_robot/models`
 
 ### Create alias 'tf2' to call view_frames.py

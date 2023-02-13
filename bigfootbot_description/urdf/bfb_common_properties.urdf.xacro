@@ -35,6 +35,6 @@
   <xacro:property name="wheel_xoff" value="0.275"/>
 
   <!-- Maximum torque which the wheels can produce, in Nm -->
-  <xacro:property name="wheel_torque" value="20" />
+  <xacro:property name="wheel_torque" value="100" />
 
 </robot>

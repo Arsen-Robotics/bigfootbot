@@ -29,10 +29,10 @@
     </link>
 
     <gazebo reference="${prefix}_link">  
-      <mu1>0.7</mu1> <!-- friction coefficients for the two principle contact directions --> 
-      <mu2>1.0</mu2> <!-- the static friction coefficient and the kinetic friction coefficient.-->      
-      <!--kp>300000.0</kp--> <!-- contact stiffness -->
-      <!--kd></kd--> <!-- contact damping -->
+      <mu1>10</mu1> <!-- friction coefficients for the two principle contact directions --> 
+      <mu2>7</mu2> <!-- the static friction coefficient and the kinetic (sliding) friction coefficient.-->      
+      <!--kp>300000</kp--> <!-- contact stiffness -->
+      <!--kd>100</kd--> <!-- contact damping -->
       <!--material>Gazebo/Black</material-->
       <visual>  
         <material> <!-- Gray material for Gazebo -->

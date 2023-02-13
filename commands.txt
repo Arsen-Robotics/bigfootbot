@@ -15,6 +15,10 @@ ros2 param list
 To display the type and current value of a parameter
 ros2 param get <node_name> <parameter_name>
 
+This command will set the value of a particular parameter on a particular node. 
+ros2 param set <node_name> <parameter_name> <parameter_value>
+ros2 param set /my_node my_string off
+
 To save your current configuration of node’s parameters, enter the command:
 ros2 param dump <node_name>
 

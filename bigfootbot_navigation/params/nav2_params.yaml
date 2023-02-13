@@ -30,7 +30,7 @@ amcl:
     resample_interval: 1
     robot_model_type: "differential"
     save_pose_rate: 0.5
-    set_initial_pose: True # Causes AMCL to set initial pose from the initial_pose* parameters instead of waiting
+    set_initial_pose: False # Causes AMCL to set initial pose from the initial_pose* parameters instead of waiting
                            # for the initial_pose message (geometry_msgs/Pose2D) (this message is sent by clicking 
                            # the “2D Pose Estimate” on top of the rviz2 screen)
     sigma_hit: 0.2

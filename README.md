@@ -32,7 +32,7 @@ source "/home/jevgeni/ros_ws/install/setup.bash"
 export LC_NUMERIC="en_US.UTF-8"
 
 ### Gazebo models
-export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/bigfootbot_description/models
+`export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/bigfootbot_description/models`
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/bigfootbot_description
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:~/ros_ws/src/bigfootbot/basic_mobile_robot/models
 

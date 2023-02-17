@@ -51,6 +51,16 @@ xhost +
 docker run -it --rm --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" host_bigfoot_host
 --- end of block 'run docker containers wit GUI ---
 
+--- Create and start containers
+docker-compose up
+docker-compose up --build (Build images before starting containers.)
+
+--- Start the stopped containers, can't create new ones
+docker-compose start
+
+--- Stop and remove containers, networks, images, and volumes
+docker-compose down
+
 === END OF BLOCK 'docker commands' ===
 
 

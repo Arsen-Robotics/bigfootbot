@@ -33,6 +33,10 @@ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/m
 
 
 ==== Docker commmands ===
+
+--- Buid image
+docker build -f Dockerfile.realsense_and_ros2_wrapper -t humble_realsense:latest --build-arg BASE_IMAGE="nvidia_x86_64_humble_nv2" .
+
 --- Run new terminal in the running container
 docker exec -it <container-name/ID> bash
 
@@ -48,7 +52,10 @@ xhost +local:root
 OR
 xhost +
 
-docker run -it --rm --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" host_bigfoot_host
+docker run -it --privileged --runtime=nvidia --gpus all --rm --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" humble_realsense
+(--rm Automatically remove the container when it exits)
+(--privileged flag gives all capabilities to the container, and it also lifts all the limitations enforced by the device cgroup controller. 
+In other words, the container can then do almost everything that the host can do)
 --- end of block 'run docker containers wit GUI ---
 
 --- Create and start containers

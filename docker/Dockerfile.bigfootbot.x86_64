@@ -1,0 +1,5 @@
+FROM nvcr.io/nvidia/isaac/ros:x86_64-humble-nav2_7356480e8a4f3484b21ae13ec5c959ee
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive  

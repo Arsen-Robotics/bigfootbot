@@ -1,21 +1,24 @@
-ARG BASE_IMAGE
+#ARG BASE_IMAGE="nvcr.io/nvidia/l4t-base:r35.2.1"
+ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-humble-nav2_c2befe2b1d90532fc15ef72650ccd7b0"
 FROM ${BASE_IMAGE} 
 
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
-ARG DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+#ENV SHELL /bin/bash
+#SHELL ["/bin/bash", "-c"]
 
 # --- Install RealSense SDK
 # Register the server's public key:
-RUN sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE || \
-    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE || \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE
 
 # Add the server to the list of repositories:
-RUN sudo add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" -u
+RUN add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" -u
 
 # Install the libraries (see section below if upgrading packages):
 # The below two lines will deploy librealsense2 udev rules, build and activate kernel modules, runtime library and executable demos and tools.
-RUN sudo apt-get update && apt-get install -y \ 
+RUN apt-get update && apt-get install -y \ 
     librealsense2-dkms \
     librealsense2-utils \
     librealsense2-dev
@@ -31,7 +34,7 @@ RUN mkdir -p ~/ros2_ws/src \
 
 # --Install dependencies
 # Install rosdep
-RUN sudo apt-get install python3-rosdep -y
+RUN apt-get install python3-rosdep -y
 
 # Install ROS dependencies (ROS packages on which depend packages that located in the src directory)
 # - y Tell the package manager to default to y or fail when installing

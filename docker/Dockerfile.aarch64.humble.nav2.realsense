@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 #ENV SHELL /bin/bash
 #SHELL ["/bin/bash", "-c"]
 
-# --- Install RealSense SDK
+# === Install RealSense SDK
 # Register the server's public key:
 #RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE || \
 #    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE
@@ -22,15 +22,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 #    librealsense2-utils \
 #    librealsense2-dev
 
+# -- Build RealSense SDK from sources
 # https://github.com/jetsonhacks/installRealSenseSDK
 COPY scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
 COPY scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
 
 RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
 RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh
-# --- end of block 'install RealSense SDK'
+# === end of block 'install RealSense SDK'
 
-# --- Install ROS2 Wrapper for RealSense
+# === Install ROS2 Wrapper for RealSense
 # Create a ROS2 workspace
 # Clone the latest ROS2 Intel® RealSense™ wrapper to '~/ros2_ws/src/
 RUN mkdir -p ~/ros2_ws/src \
@@ -55,9 +56,9 @@ RUN source /opt/ros/humble/setup.bash \
 # Build workspace
 #RUN colcon build
 
-# --- end of block 'install ROS2 Wrapper for RealSense'
+# === end of block 'install ROS2 Wrapper for RealSense'
 
-# --- Setup entrypoint
+# === Setup entrypoint
 COPY ./ros_entrypoint.sh /
 
 # Change workdir
@@ -69,4 +70,4 @@ COPY ./ros_entrypoint.sh /
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
-# ---
+# ===

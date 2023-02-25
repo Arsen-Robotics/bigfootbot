@@ -35,7 +35,7 @@ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/m
 ==== Docker commmands ===
 
 --- Buid image
-docker build -f Dockerfile.realsense_and_ros2_wrapper -t humble_realsense:latest --build-arg BASE_IMAGE="nvidia_x86_64_humble_nv2" .
+docker build -f Dockerfile.aarch64.humble.nav2.realsense -t humble_realsense:latest --build-arg BASE_IMAGE="nvidia_x86_64_humble_nv2" .
 
 --- Run new terminal in the running container
 docker exec -it <container-name/ID> bash
@@ -67,6 +67,9 @@ docker-compose start
 
 --- Stop and remove containers, networks, images, and volumes
 docker-compose down
+
+--- List containers
+docker ps -a
 
 === END OF BLOCK 'docker commands' ===
 

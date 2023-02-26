@@ -44,30 +44,62 @@ RUN mkdir -p ~/ros2_ws/src \
 RUN apt-get install python3-rosdep -y
 
 # Install ROS dependencies (ROS packages on which depend packages that located in the src directory)
-# - y Tell the package manager to default to y or fail when installing
-# - r Continue installing despite errors
+# -y, --default-yes Tell the package manager to default to y or fail when installing
+# -r Continue installing despite errors
 # --skip-keys The specified rosdep keys will be ignored, i.e. not resolved and not installed
 RUN source /opt/ros/humble/setup.bash \
     && cd ~/ros2_ws/ \
     && rosdep update \
     && rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \
-    && colcon build
+    && colcon build 
+# TODO! add --symlink-install to colcon build ?
 
 # Build workspace
 #RUN colcon build
 
 # === end of block 'install ROS2 Wrapper for RealSense'
 
+# === Install foxglove_bridge for communication with Foxglove studio
+RUN cd ~/ros2_ws/src/ \
+    && git clone https://github.com/foxglove/ros-foxglove-bridge.git \
+    && cd ~/ros2_ws/ \
+    && source /opt/ros/humble/setup.bash \
+    && rosdep update \
+    && rosdep install -y -r --ignore-src --from-path src \
+    && colcon build 
+    #&& rm -rf src logs build \
+    #&& rm -rf /var/lib/apt/lists/* \
+    #&& apt-get clean
+# === end of block 'foxglove_bridge'
+
 # === Setup entrypoint
 COPY ./ros_entrypoint.sh /
 
+#COPY ./scripts/launch_foxglove.sh /
+#COPY ./scripts/launch_realsense.sh /
+COPY ./scripts/launch.sh /
+
 # Change workdir
-#WORKDIR ${ROS_CUSTOM_WS}
+#WORKDIR /root/ros2_ws
 
 # [] - is exec form
 # exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
-CMD ["bash"]
+#CMD ["bash"]
+CMD ["./launch.sh"]
+
+# We used the shell form of the CMD directive. The two echo commands were effectively executed sequentially.
+#CMD ros2 run foxglove_bridge foxglove_bridge; ros2 launch realsense2_camera rs_launch.py
+
+# Although the exec form doesn’t start a shell on its own, we can set the /bin/sh -c or the /bin/bash -c commands 
+# in the CMD executable position, and invoke the shell:
+#CMD ["/bin/bash", "-c", "echo FIRST COMMAND;echo SECOND COMMAND"]
+#CMD ["/bin/bash", "-c", "ros2 run foxglove_bridge foxglove_bridge; ros2 launch realsense2_camera rs_launch.py"]
+
+# ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765
+
+# Run foxglove_bridge
+#CMD ["ros2", "run", "foxglove_bridge", "foxglove_bridge"]
 # ===

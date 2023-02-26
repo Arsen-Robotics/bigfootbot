@@ -52,7 +52,7 @@ xhost +local:root
 OR
 xhost +
 
-docker run -it --privileged --runtime=nvidia --gpus all --rm --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" humble_realsense
+docker run -it --privileged --network host --runtime=nvidia --gpus all --rm --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" humble_realsense
 (--rm Automatically remove the container when it exits)
 (--privileged flag gives all capabilities to the container, and it also lifts all the limitations enforced by the device cgroup controller. 
 In other words, the container can then do almost everything that the host can do)

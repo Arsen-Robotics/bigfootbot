@@ -4,6 +4,9 @@ FROM ${BASE_IMAGE}
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
 ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_WS /ros2_ws
+#WORKDIR $ROS_WS
+
 #ENV SHELL /bin/bash
 #SHELL ["/bin/bash", "-c"]
 
@@ -33,9 +36,9 @@ RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librea
 
 # === Install ROS2 Wrapper for RealSense
 # Create a ROS2 workspace
-# Clone the latest ROS2 Intel® RealSense™ wrapper to '~/ros2_ws/src/
-RUN mkdir -p ~/ros2_ws/src \
-    && cd ~/ros2_ws/src/ \
+# Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
+RUN mkdir -p ${ROS_WS}/src \
+    && cd ${ROS_WS}/src/ \
     && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
     #&& rm -rf ./realsense-ros/realsense2_description
 
@@ -47,8 +50,8 @@ RUN apt-get install python3-rosdep -y
 # -y, --default-yes Tell the package manager to default to y or fail when installing
 # -r Continue installing despite errors
 # --skip-keys The specified rosdep keys will be ignored, i.e. not resolved and not installed
-RUN source /opt/ros/humble/setup.bash \
-    && cd ~/ros2_ws/ \
+RUN cd ${ROS_WS} \
+    && source /opt/ros/humble/setup.bash \
     && rosdep update \
     && rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \
     && colcon build 
@@ -60,9 +63,9 @@ RUN source /opt/ros/humble/setup.bash \
 # === end of block 'install ROS2 Wrapper for RealSense'
 
 # === Install foxglove_bridge for communication with Foxglove studio
-RUN cd ~/ros2_ws/src/ \
+RUN cd ${ROS_WS}/src/ \
     && git clone https://github.com/foxglove/ros-foxglove-bridge.git \
-    && cd ~/ros2_ws/ \
+    && cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \
     && rosdep update \
     && rosdep install -y -r --ignore-src --from-path src \
@@ -71,6 +74,12 @@ RUN cd ~/ros2_ws/src/ \
     #&& rm -rf /var/lib/apt/lists/* \
     #&& apt-get clean
 # === end of block 'foxglove_bridge'
+
+# === Install BigFootBot
+
+COPY ../bigfootbot_description ${ROS_WS}/src
+
+# === end of 'BigFootBot'
 
 # === Setup entrypoint
 COPY ./ros_entrypoint.sh /

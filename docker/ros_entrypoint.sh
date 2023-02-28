@@ -18,8 +18,8 @@ set -e
 # Source custom workspace overlay with underlay it was created in 
 # (in our case underlay is ROS2 main overlay which has no parent overlay) 
 #source ~/ros2_ws/install/setup.bash
-echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
-source ~/ros2_ws/install/setup.bash
+echo "source ${ROS_WS}/install/setup.bash" >> ~/.bashrc
+source ${ROS_WS}/install/setup.bash
 #source /ros_ws/install/local_setup.bash
 
 # This line is from default ros_entrypoint.sh script file

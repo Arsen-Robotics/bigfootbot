@@ -4,7 +4,8 @@ FROM ${BASE_IMAGE}
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
 ENV DEBIAN_FRONTEND=noninteractive
-ENV ROS_WS /ros2_ws
+ENV ROS_WS=/ros2_ws
+# OR ENV ROS_WS /ros2_ws 
 #WORKDIR $ROS_WS
 
 #ENV SHELL /bin/bash
@@ -27,8 +28,8 @@ ENV ROS_WS /ros2_ws
 
 # -- Build RealSense SDK from sources
 # https://github.com/jetsonhacks/installRealSenseSDK
-COPY scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
-COPY scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
+COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
+COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
 
 RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
 RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh
@@ -44,7 +45,7 @@ RUN mkdir -p ${ROS_WS}/src \
 
 # --Install dependencies
 # Install rosdep
-RUN apt-get install python3-rosdep -y
+#RUN apt-get install python3-rosdep -y
 
 # Install ROS dependencies (ROS packages on which depend packages that located in the src directory)
 # -y, --default-yes Tell the package manager to default to y or fail when installing
@@ -56,9 +57,6 @@ RUN cd ${ROS_WS} \
     && rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \
     && colcon build 
 # TODO! add --symlink-install to colcon build ?
-
-# Build workspace
-#RUN colcon build
 
 # === end of block 'install ROS2 Wrapper for RealSense'
 
@@ -77,16 +75,17 @@ RUN cd ${ROS_WS}/src/ \
 
 # === Install BigFootBot
 
-COPY ../bigfootbot_description ${ROS_WS}/src
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description 
 
 # === end of 'BigFootBot'
 
 # === Setup entrypoint
-COPY ./ros_entrypoint.sh /
+COPY docker/ros_entrypoint.sh /
 
+# Scripts launching Foxglove node and RealSense node
 #COPY ./scripts/launch_foxglove.sh /
 #COPY ./scripts/launch_realsense.sh /
-COPY ./scripts/launch.sh /
+COPY docker/scripts/launch.sh /
 
 # Change workdir
 #WORKDIR /root/ros2_ws

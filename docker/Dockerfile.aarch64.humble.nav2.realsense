@@ -95,8 +95,8 @@ COPY docker/scripts/launch.sh /
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
-#CMD ["bash"]
-CMD ["./launch.sh"]
+CMD ["bash"]
+#CMD ["./launch.sh"]
 
 # We used the shell form of the CMD directive. The two echo commands were effectively executed sequentially.
 #CMD ros2 run foxglove_bridge foxglove_bridge; ros2 launch realsense2_camera rs_launch.py

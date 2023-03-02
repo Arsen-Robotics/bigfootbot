@@ -69,6 +69,7 @@ docker-compose start
 docker-compose down
 
 --- List containers
+docker-compose ps
 docker ps -a
 
 === END OF BLOCK 'docker commands' ===

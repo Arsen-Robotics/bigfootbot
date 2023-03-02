@@ -1,82 +1,92 @@
 version: '3.5'
 
 services:
-  bigfootbot_description:
+  bigfootbot:
+    restart: unless-stopped
+
     build: 
-      context: ./
-      dockerfile: BigfootDescription.Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile.aarch64.humble.nav2.realsense
+
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw # forward X socket to container to enable GUI 
-      - ./:/ros_ws/src/bigfootbot_description # we need it to be able to update package source inside the container (for development)
-      - ./cyclonedds.xml:/cyclonedds.xml # for Husarnet VPN
+      #- ./cyclonedds.xml:/cyclonedds.xml # for Husarnet VPN
+
     environment:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
-    #privileged: true
-    #network_mode: host
-    #pid: host
-    #ipc: host
+      #- HTTP_PORT=81 # This means our app1 will listen on port 81 inside **Husarnet's** network namespace
+      #- DEBUG_HTTP=true
+      #- DEBUG_SERVER=true
+      #- DEBUG_CLIENT=true
+    
+    privileged: true # To allow container to access RealSense camera (USB) on the host
+    #runtime: nvidia NB! NO SUCH PARAMETER as runtime
+    #gpus: all NB! NO SUCH PARAMETER AS gpus
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+    #pid: host
+    #ipc: host
 
-    # Without custom DDS configuration file it would be simply command: 
-    # ros2 run my_demo_pkg color_controller. 
-    # Construction:
-    # command:
-    #  - bash
-    #  - -c
-    #  - |
-    #    <multiple command, every in a new line>
-    # allows you to easily run a few additional commands while starting a container.
-    command:
-      - bash
-      - -c
-      - |
-          export CYCLONEDDS_URI=file:///cyclonedds.xml   
-          ros2 launch bigfootbot_description bigfootbot_description.launch.py use_rviz:='False' use_simulator:='True'
-       #   ros2 run my_demo_pkg color_controller
+    # This section makes your app1 move into the namespace of Husarnet.
+    # This means you no longer can configure ports and other networking settings here
+    # and all of those configs need to be moved to declaration of service `husarnet`.
+    # This will also wait on Husarnet to actually start before starting your app
     network_mode: service:husarnet
-  
+    
+    depends_on:
+      - husarnet
+      #- husarnet: { condition: service_healthy }
+
+  test_app:
+    image: nginx
+    
+    volumes:
+      - ./test_html:/usr/share/nginx/html
+
+    # This section makes your app1 move into the namespace of Husarnet.
+    # This means you no longer can configure ports and other networking settings here
+    # and all of those configs need to be moved to declaration of service `husarnet`.
+    # This will also wait on Husarnet to actually start before starting your app
+    network_mode: service:husarnet
+    
+    depends_on:
+      - husarnet
+
+
   # Husarnet VPN
   husarnet:
     image: husarnet/husarnet:latest
     
-    restart: unless-stopped
-    
-    volumes:
+    #volumes:
       # This will persist your Husarnet Client keys, thus IP of the container
       # will be stable/the same between (re)boots.
       # Feel free to choose any volume storage method of your liking
-      - ./husarnet-config:/var/lib/husarnet
+     # - ./husarnet-config:/var/lib/husarnet
 
     # This is required to create new interface for communication over Husarnet
     cap_add:
       - NET_ADMIN
     
-    # Husarnet is using IPv6 for it's overlay network so we need to make sure
-    # it's not disabled
-    sysctls:
-      - net.ipv6.conf.all.disable_ipv6=0  # Husarnet is using IPv6 for the internal connections
-    devices:
-        - /dev/net/tun
-    env_file: 
-        - ./.env  # create .env file in the same folder as Dockerfile and specify HOSTNAME and JOINCODE there
-
-  husarnet:
-    
-
-    
+    # Husarnet is using IPv6 for it's overlay network so we need 
+    # to make sure it's not disabled
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=0
-
-    # See `Shared environment variables` section
+  
     environment:
-      - HUSARNET_HOSTNAME=my-app-deployment
-      - HUSARNET_JOIN_CODE=UcofxnS3MzGo69poeuA94Q
-      - HUSARNET_DEBUG=1
+      - HUSARNET_HOSTNAME=bigfootbot
+      - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
+      - HUSARNET_DEBUG=0
+
+    #env_file: 
+    #    - ./.env  # create .env file in the same folder as Dockerfile and specify HOSTNAME and JOINCODE there
 
     # As your apps are now running in Husarnet's container network namespace,
     # you need to move all the usual networking-related declarations here
-    ports:
-      - "8081:81"  # for app1
-      - "8082:82"  # for app2
+    # If you want to expose your services additionally to hosts from local network (possibly on different ports)
+    #ports:
+    #  - "8765:8765"
+    #  - "8081:81"  # for app1
+    #  - "8082:82"  # for app2
+
+      

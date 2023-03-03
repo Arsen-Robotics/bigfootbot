@@ -25,6 +25,11 @@ source ${ROS_WS}/install/setup.bash
 # This line is from default ros_entrypoint.sh script file
 #source "/opt/ros/$ROS_DISTRO/setup.bash"
 
+# Husarnet
+# Set this file as default profile in your .bashrc file, so as to use this configuration every time you boot your system.
+#echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
+echo "export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml" >> ~/.bashrc
+
 # Add path to the robot model for Gazebo simulator
 # NB! update directory name 'ros_ws' if it is changed in the docker file: ARG ROS_CUSTOM_WS
 #export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/models/

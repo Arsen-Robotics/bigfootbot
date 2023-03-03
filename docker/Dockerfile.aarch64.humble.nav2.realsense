@@ -79,6 +79,9 @@ COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 
 # === end of 'BigFootBot'
 
+# === Setup Fast DDS default profile configuration (env var. FASTRTPS_DEFAULT_PROFILES_FILE)
+COPY docker/fastdds_husarnet.xml /
+
 # === Setup entrypoint
 COPY docker/ros_entrypoint.sh /
 

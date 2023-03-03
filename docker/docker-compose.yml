@@ -58,11 +58,11 @@ services:
   husarnet:
     image: husarnet/husarnet:latest
     
-    #volumes:
+    volumes:
       # This will persist your Husarnet Client keys, thus IP of the container
       # will be stable/the same between (re)boots.
       # Feel free to choose any volume storage method of your liking
-     # - ./husarnet-config:/var/lib/husarnet
+      - ./husarnet-config:/var/lib/husarnet
 
     # This is required to create new interface for communication over Husarnet
     cap_add:

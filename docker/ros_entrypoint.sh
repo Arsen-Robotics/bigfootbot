@@ -20,7 +20,8 @@ set -e
 #source ~/ros2_ws/install/setup.bash
 echo "source ${ROS_WS}/install/setup.bash" >> ~/.bashrc
 source ${ROS_WS}/install/setup.bash
-#source /ros_ws/install/local_setup.bash
+#. ~/.bashrc - alternative to calling "source ${ROS_WS}/install/setup.bash" above
+#source /${ROS_WS}/install/local_setup.bash - calling this will make available ONLY packages installed in ${ROS_WS} directory
 
 # This line is from default ros_entrypoint.sh script file
 #source "/opt/ros/$ROS_DISTRO/setup.bash"

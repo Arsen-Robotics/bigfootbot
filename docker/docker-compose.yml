@@ -2,7 +2,7 @@ version: '3.5'
 
 services:
   bigfootbot:
-    restart: unless-stopped
+    #restart: unless-stopped
 
     build: 
       context: ..

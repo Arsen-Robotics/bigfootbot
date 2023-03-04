@@ -51,6 +51,9 @@ RUN mkdir -p ${ROS_WS}/src \
 # -y, --default-yes Tell the package manager to default to y or fail when installing
 # -r Continue installing despite errors
 # --skip-keys The specified rosdep keys will be ignored, i.e. not resolved and not installed
+# -- symlink-install if you change code in your source code, it will take effect, 
+#    you don't have to compile it again (ony with python, not c++)
+# --event-handlers console_direct+ shows console output while building (can otherwise be found in the log directory)
 RUN cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \
     && rosdep update \

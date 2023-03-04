@@ -35,27 +35,21 @@ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/m
 ==== Docker commmands ===
 
 --- Buid image
-docker build -f Dockerfile.aarch64.humble.nav2.realsense -t humble_realsense:latest --build-arg BASE_IMAGE="nvidia_x86_64_humble_nv2" .
+docker build -f Dockerfile.aarch64.humble.nav2.realsense -t humble_realsense:latest --build-arg BASE_IMAGE="nvidia_x86_64_humble_nv2" ..
 
 --- Run new terminal in the running container
 docker exec -it <container-name/ID> bash
 
 --- Run docker containers with GUI ---
-docker run -it \
-    --env="DISPLAY" \
-    --env="QT_X11_NO_MITSHM=1" \
-    --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
-    osrf/ros:indigo-desktop-full \
-    rqt
-
 xhost +local:root 
 OR
 xhost +
 
-docker run -it --privileged --network host --runtime=nvidia --gpus all --rm --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" aarch64_humble_realsense:latest
+docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" aarch64_humble_realsense:latest
 (--rm Automatically remove the container when it exits)
 (--privileged flag gives all capabilities to the container, and it also lifts all the limitations enforced by the device cgroup controller. 
 In other words, the container can then do almost everything that the host can do)
+
 --- end of block 'run docker containers wit GUI ---
 
 --- Create and start containers

@@ -28,7 +28,7 @@ source ${ROS_ROOT}/install/setup.bash
 # Husarnet
 # Set this file as default profile in your .bashrc file, so as to use this configuration every time you boot your system.
 #echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
-echo "export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml" >> ~/.bashrc
+#echo "export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml" >> ~/.bashrc
 
 # If you have an image with an entrypoint pointing to entrypoint.sh, and you run 
 # your container as docker run my_image server start, that will translate 

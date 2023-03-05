@@ -55,6 +55,8 @@ In other words, the container can then do almost everything that the host can do
 --- end of block 'run docker containers wit GUI ---
 
 --- Create and start containers
+docker compose -f docker-compose_lenovo.yml up # Version2
+
 docker-compose up
 docker-compose up --build (Build images before starting containers.)
 

@@ -8,3 +8,30 @@ COPY scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-
 
 RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
 RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh
+
+# === Install ROS2 Wrapper for RealSense
+# Create a ROS2 workspace
+# Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
+RUN mkdir -p ${ROS_WS}/src \
+    && cd ${ROS_WS}/src/ \
+    && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
+    #&& rm -rf ./realsense-ros/realsense2_description
+
+# --Install dependencies
+# Install rosdep
+#RUN apt-get install python3-rosdep -y
+
+# Install ROS dependencies (ROS packages on which depend packages that located in the src directory)
+# -y, --default-yes Tell the package manager to default to y or fail when installing
+# -r Continue installing despite errors
+# --skip-keys The specified rosdep keys will be ignored, i.e. not resolved and not installed
+# -- symlink-install if you change code in your source code, it will take effect, 
+#    you don't have to compile it again (ony with python, not c++)
+# --event-handlers console_direct+ shows console output while building (can otherwise be found in the log directory)
+RUN cd ${ROS_WS} \
+    && source /opt/ros/humble/setup.bash \
+    && rosdep update \
+    && rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \
+    && colcon build
+
+# === end of block 'install ROS2 Wrapper for RealSense'

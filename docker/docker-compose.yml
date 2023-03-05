@@ -20,6 +20,8 @@ services:
             - driver: nvidia
               capabilities: [gpu]
 
+    runtime: nvidia
+
     environment:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
@@ -29,8 +31,9 @@ services:
       #- DEBUG_CLIENT=true
     
     privileged: true # To allow container to access RealSense camera (USB) on the host
-    #runtime: nvidia NB! NO SUCH PARAMETER as runtime
-    #gpus: all NB! NO SUCH PARAMETER AS gpus
+    #devices:
+    #  - /dev:/dev
+    
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     #pid: host

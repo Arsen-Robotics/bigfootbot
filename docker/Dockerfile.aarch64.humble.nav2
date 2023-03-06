@@ -9,7 +9,8 @@ ENV ROS_WS=/ros2_ws
 #WORKDIR $ROS_WS
 
 # === Install foxglove_bridge for communication with Foxglove studio
-RUN cd ${ROS_WS}/src/ \
+RUN apt-get update \
+    && mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src/ \
     && git clone https://github.com/foxglove/ros-foxglove-bridge.git \
     && cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \

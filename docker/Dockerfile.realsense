@@ -9,8 +9,8 @@ COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
 COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
 
 RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
-# NB! we build a particular (NB! not the latest one) release of Librealsense because the latest release (by 06.03.2023 4.51.1)
-# of the ROS2 Wrapper for RealSense supported only RealSense v2.51.1 
+# NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release (by 06.03.2023 4.51.1)
+# of the ROS2 Wrapper for RealSense supported only LibRealSense v2.51.1 
 RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.51.1 
 # === end of block 'install RealSense SDK'
 

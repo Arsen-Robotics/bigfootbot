@@ -6,6 +6,9 @@ services:
 
     image: humble_realsense:latest
 
+    #container_name: webcam
+    #working_dir: /webcam
+
     #build: 
     #  context: ..
     #  dockerfile: docker/Dockerfile.aarch64.humble.nav2.realsense
@@ -47,24 +50,24 @@ services:
     # This will also wait on Husarnet to actually start before starting your app
     network_mode: service:husarnet
     
-    depends_on:
-      - husarnet
+    #depends_on:
+    #  - husarnet
       #- husarnet: { condition: service_healthy }
 
-  test_app:
-    image: nginx
+  #test_app:
+  #  image: nginx
     
-    volumes:
-      - ./test_html:/usr/share/nginx/html
+  #  volumes:
+  #    - ./test_html:/usr/share/nginx/html
 
     # This section makes your app1 move into the namespace of Husarnet.
     # This means you no longer can configure ports and other networking settings here
     # and all of those configs need to be moved to declaration of service `husarnet`.
     # This will also wait on Husarnet to actually start before starting your app
-    network_mode: service:husarnet
+  #  network_mode: service:husarnet
     
-    depends_on:
-      - husarnet
+  #  depends_on:
+  #    - husarnet
 
 
   # Husarnet VPN

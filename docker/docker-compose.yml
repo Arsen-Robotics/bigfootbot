@@ -10,8 +10,8 @@ services:
     #working_dir: /webcam
 
     #build: 
-    #  context: ..
-    #  dockerfile: docker/Dockerfile.aarch64.humble.nav2.realsense
+      #context: ..
+      #dockerfile: docker/Dockerfile.aarch64.humble.nav2.realsense
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw # forward X socket to container to enable GUI 
@@ -48,63 +48,19 @@ services:
     # This means you no longer can configure ports and other networking settings here
     # and all of those configs need to be moved to declaration of service `husarnet`.
     # This will also wait on Husarnet to actually start before starting your app
-    network_mode: service:husarnet
-    
-    #depends_on:
-    #  - husarnet
-      #- husarnet: { condition: service_healthy }
+    network_mode: host
 
-  #test_app:
-  #  image: nginx
-    
-  #  volumes:
-  #    - ./test_html:/usr/share/nginx/html
-
-    # This section makes your app1 move into the namespace of Husarnet.
-    # This means you no longer can configure ports and other networking settings here
-    # and all of those configs need to be moved to declaration of service `husarnet`.
-    # This will also wait on Husarnet to actually start before starting your app
-  #  network_mode: service:husarnet
-    
-  #  depends_on:
-  #    - husarnet
-
-
-  # Husarnet VPN
-  husarnet:
-    image: husarnet/husarnet:latest
+  # Test app (Web server)
+  test_app:
+    image: nginx
     
     volumes:
-      # This will persist your Husarnet Client keys, thus IP of the container
-      # will be stable/the same between (re)boots.
-      # Feel free to choose any volume storage method of your liking
-      #- ./husarnet-config:/var/lib/husarnet
-      - ~/husarnet-config:/var/lib/husarnet
-      # NB! Try to set - /var/lib/husarnet (without :)
+      - ./test_html:/usr/share/nginx/html
 
-    # This is required to create new interface for communication over Husarnet
-    cap_add:
-      - NET_ADMIN
-    
-    # Husarnet is using IPv6 for it's overlay network so we need 
-    # to make sure it's not disabled
-    sysctls:
-      - net.ipv6.conf.all.disable_ipv6=0
-  
-    environment:
-      - HUSARNET_HOSTNAME=bigfootbot
-      - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
-      - HUSARNET_DEBUG=0
+    network_mode: host
 
-    #env_file: 
-    #    - ./.env  # create .env file in the same folder as Dockerfile and specify HOSTNAME and JOINCODE there
-
-    # As your apps are now running in Husarnet's container network namespace,
-    # you need to move all the usual networking-related declarations here
-    # If you want to expose your services additionally to hosts from local network (possibly on different ports)
+    # Published ports are discarded when using host network mode               
     #ports:
-    #  - "8765:8765"
-    #  - "8081:81"  # for app1
-    #  - "8082:82"  # for app2
-
+    #  - "80:80"
+    
       

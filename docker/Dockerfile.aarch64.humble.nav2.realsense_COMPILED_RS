@@ -4,26 +4,40 @@ FROM ${BASE_IMAGE}
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
 ENV DEBIAN_FRONTEND=noninteractive
-
 ENV ROS_WS=/ros2_ws
+# OR ENV ROS_WS /ros2_ws 
 #WORKDIR $ROS_WS
 
-# === Build and install RealSense SDK (LibRealSense)
+#ENV SHELL /bin/bash
+#SHELL ["/bin/bash", "-c"]
 
+# === Install RealSense SDK
+# Register the server's public key:
+#RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE || \
+#    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE
+
+# Add the server to the list of repositories:
+#RUN add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" -u
+
+# Install the libraries (see section below if upgrading packages):
+# The below two lines will deploy librealsense2 udev rules, build and activate kernel modules, runtime library and executable demos and tools.
+#RUN apt-get update && apt-get install -y \ 
+#    librealsense2-dkms \
+#    librealsense2-utils \
+#    librealsense2-dev
+
+# -- Build RealSense SDK from sources
 # https://github.com/jetsonhacks/installRealSenseSDK
 COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
 COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
 
 RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
-# NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release (by 06.03.2023 4.51.1)
-# of the ROS2 Wrapper for RealSense supported only LibRealSense v2.51.1 
+# NB! we build a particular (NB! not the latest one) release of Librealsense because the latest release (by 06.03.2023 4.51.1)
+# of the ROS2 Wrapper for RealSense supported only RealSense v2.51.1 
 RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.51.1 
+# === end of block 'install RealSense SDK'
 
-# === end of block 'build and install RealSense SDK'
-
-
-# === Build and install ROS2 Wrapper for RealSense
-
+# === Install ROS2 Wrapper for RealSense
 # Create a ROS2 workspace
 # Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
 RUN mkdir -p ${ROS_WS}/src \
@@ -53,11 +67,8 @@ RUN cd ${ROS_WS} \
 
 # === end of block 'install ROS2 Wrapper for RealSense'
 
-
-# === Build and install foxglove_bridge for communication with Foxglove studio
-
-RUN apt-get update \
-    && mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src/ \
+# === Install foxglove_bridge for communication with Foxglove studio
+RUN cd ${ROS_WS}/src/ \
     && git clone https://github.com/foxglove/ros-foxglove-bridge.git \
     && cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \
@@ -67,15 +78,16 @@ RUN apt-get update \
     #&& rm -rf src logs build \
     #&& rm -rf /var/lib/apt/lists/* \
     #&& apt-get clean
-    
 # === end of block 'foxglove_bridge'
 
 # === Install BigFootBot
-#COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description 
+
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description 
+
 # === end of 'BigFootBot'
 
 # === Setup Fast DDS default profile configuration (env var. FASTRTPS_DEFAULT_PROFILES_FILE)
-#COPY docker/fastdds_husarnet.xml /
+COPY docker/fastdds_husarnet.xml /
 
 # === Setup entrypoint
 COPY docker/ros_entrypoint.sh /
@@ -95,3 +107,17 @@ COPY docker/scripts/launch.sh /
 ENTRYPOINT ["/ros_entrypoint.sh"]
 # CMD ["bash"]
 CMD ["./launch.sh"]
+
+# We used the shell form of the CMD directive. The two echo commands were effectively executed sequentially.
+#CMD ros2 run foxglove_bridge foxglove_bridge; ros2 launch realsense2_camera rs_launch.py
+
+# Although the exec form doesn’t start a shell on its own, we can set the /bin/sh -c or the /bin/bash -c commands 
+# in the CMD executable position, and invoke the shell:
+#CMD ["/bin/bash", "-c", "echo FIRST COMMAND;echo SECOND COMMAND"]
+#CMD ["/bin/bash", "-c", "ros2 run foxglove_bridge foxglove_bridge; ros2 launch realsense2_camera rs_launch.py"]
+
+# ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765
+
+# Run foxglove_bridge
+#CMD ["ros2", "run", "foxglove_bridge", "foxglove_bridge"]
+# ===

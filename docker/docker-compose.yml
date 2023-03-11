@@ -6,12 +6,12 @@ services:
 
     image: humble_realsense:latest
 
+    #build: 
+     # context: ..
+     # dockerfile: docker/Dockerfile.aarch64.humble.nav2.realsense
+
     #container_name: webcam
     #working_dir: /webcam
-
-    #build: 
-      #context: ..
-      #dockerfile: docker/Dockerfile.aarch64.humble.nav2.realsense
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw # forward X socket to container to enable GUI 

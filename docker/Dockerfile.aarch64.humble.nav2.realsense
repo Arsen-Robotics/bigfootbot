@@ -62,7 +62,7 @@ RUN apt-get update \
     && cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \
     && rosdep update \
-    && rosdep install -y -r --ignore-src --from-path src \
+    && rosdep install -y -r --ignore-src --from-path src --skip-keys=librealsense2 \
     && colcon build 
     #&& rm -rf src logs build \
     #&& rm -rf /var/lib/apt/lists/* \
@@ -70,8 +70,18 @@ RUN apt-get update \
     
 # === end of block 'foxglove_bridge'
 
-# === Install BigFootBot
-#COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description 
+# === Build and install BigFootBot 
+COPY bigfootbot ${ROS_WS}/src/bigfootbot
+COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
+COPY bigfootbot_bringup ${ROS_WS}/src/bigfootbot_bringup
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description 
+
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && source /opt/ros/humble/setup.bash \
+    && rosdep update \
+    && rosdep install -y -r --ignore-src --from-path src --skip-keys=librealsense2 \
+    && colcon build 
 # === end of 'BigFootBot'
 
 # === Setup Fast DDS default profile configuration (env var. FASTRTPS_DEFAULT_PROFILES_FILE)

@@ -8,8 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_WS=/ros2_ws
 #WORKDIR $ROS_WS
 
-# === Build and install RealSense SDK (LibRealSense)
-
+##### Build and install RealSense SDK (LibRealSense)
 # https://github.com/jetsonhacks/installRealSenseSDK
 COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
 COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
@@ -18,12 +17,10 @@ RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/
 # NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release (by 06.03.2023 4.51.1)
 # of the ROS2 Wrapper for RealSense supported only LibRealSense v2.51.1 
 RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.51.1 
+##### end of block 'build and install RealSense SDK'
 
-# === end of block 'build and install RealSense SDK'
 
-
-# === Build and install ROS2 Wrapper for RealSense
-
+##### Build and install ROS2 Wrapper for RealSense
 # Create a ROS2 workspace
 # Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
 RUN mkdir -p ${ROS_WS}/src \
@@ -31,7 +28,6 @@ RUN mkdir -p ${ROS_WS}/src \
     && git clone https://github.com/IntelRealSense/realsense-ros.git -b 4.51.1
     # NB! We clone a particular release/tag 4.51.1 of the Librealsense in order to be sure 
     # it is compatible during a build with the RealSense SDK version (by 06.03.2023 is v2.51.1)
-    #&& rm -rf ./realsense-ros/realsense2_description
 
 # --Install dependencies
 # Install rosdep
@@ -43,6 +39,7 @@ RUN mkdir -p ${ROS_WS}/src \
 # --skip-keys The specified rosdep keys will be ignored, i.e. not resolved and not installed
 # --symlink-install if you change code in your source code, it will take effect, 
 #   you don't have to compile it again (ony with python, not c++)
+#   or e.g., the yaml configuration file in the workspace without having to rebuild the workspace.
 # --event-handlers console_direct+ shows console output while building (can otherwise be found in the log directory)
 RUN cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \
@@ -50,12 +47,10 @@ RUN cd ${ROS_WS} \
     && rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \
     && colcon build 
 # TODO! add --symlink-install to colcon build ?
+##### end of block 'install ROS2 Wrapper for RealSense'
 
-# === end of block 'install ROS2 Wrapper for RealSense'
 
-
-# === Build and install foxglove_bridge for communication with Foxglove studio
-
+##### Build and install foxglove_bridge for communication with Foxglove studio
 RUN apt-get update \
     && mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src/ \
     && git clone https://github.com/foxglove/ros-foxglove-bridge.git \
@@ -67,27 +62,33 @@ RUN apt-get update \
     #&& rm -rf src logs build \
     #&& rm -rf /var/lib/apt/lists/* \
     #&& apt-get clean
-    
-# === end of block 'foxglove_bridge'
+##### end of block 'foxglove_bridge'
 
-# === Build and install BigFootBot 
+##### Build and install BigFootBot 
 COPY bigfootbot ${ROS_WS}/src/bigfootbot
 COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 COPY bigfootbot_bringup ${ROS_WS}/src/bigfootbot_bringup
 COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description 
 
+# Clone sources of roboclaw driver into ROS workspace directory
+RUN mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src \
+    && git clone https://github.com/wimblerobotics/ros2_roboclaw_driver.git
+
 RUN apt-get update \
     && cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \
     && rosdep update \
-    && rosdep install -y -r --ignore-src --from-path src --skip-keys=librealsense2 \
-    && colcon build 
-# === end of 'BigFootBot'
+    && rosdep install -y -r --symlink-install --ignore-src --from-path src --skip-keys=librealsense2 \
+    && colcon build \
+    && rm -rf src logs build \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean 
+##### end of 'BigFootBot'
 
-# === Setup Fast DDS default profile configuration (env var. FASTRTPS_DEFAULT_PROFILES_FILE)
+##### Setup Fast DDS default profile configuration (env var. FASTRTPS_DEFAULT_PROFILES_FILE)
 #COPY docker/fastdds_husarnet.xml /
 
-# === Setup entrypoint
+#####Setup entrypoint
 COPY docker/ros_entrypoint.sh /
 
 # Scripts launching Foxglove node and RealSense node
@@ -105,3 +106,18 @@ COPY docker/scripts/launch.sh /
 ENTRYPOINT ["/ros_entrypoint.sh"]
 # CMD ["bash"]
 CMD ["./launch.sh"]
+
+
+############################################ TODO!
+# 1) Add  
+#    && rm -rf src logs build \
+#    && rm -rf /var/lib/apt/lists/* \
+#    && apt-get clean 
+# to every RUN with apt-get update and colcon build
+
+# 2) Add --skip-keys=librealsense2 in every call "rosdep install"
+
+# 3) Refactoring
+#    Don't call rosdep update before every rosdep install call. 
+#    Maybe gather all git calls git clone of ROS packages and then 
+#    call apt-get update and rosdep install and colcon build only once?

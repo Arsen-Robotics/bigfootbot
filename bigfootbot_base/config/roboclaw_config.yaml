@@ -6,7 +6,7 @@
 motor_driver_node:
   ros__parameters:
     # Incremental acceleration to use in quadrature pulses per second.
-    #accel_quad_pulses_per_second: 1000
+    accel_quad_pulses_per_second: 1000
 
     # The device name to be opened.
     #device_name: "/dev/roboclaw"
@@ -32,8 +32,8 @@ motor_driver_node:
 
     # Rate limiting commands. The driver will clip any value
     # exceeding these limits.
-    max_angular_velocity: 2.5 # m/s
-    max_linear_velocity: 2.0 # m/s
+    max_angular_velocity: 1.0 # m/s
+    max_linear_velocity: 1.0 # rad/s
 
     # If no new motor commands is received since the last motor
     # command in this number of seconds, stop the motors.
@@ -42,8 +42,8 @@ motor_driver_node:
     # Based upon your particular motor gearing and encoders.
     # These values are used to scale cmd_vel commands 
     # and encoder values to motor commands and odometry, respectfully.
-    quad_pulses_per_meter: 1566
-    quad_pulses_per_revolution: 1000
+    quad_pulses_per_meter: 3000
+    quad_pulses_per_revolution: 3000
 
     # Based upon your particular robot model.
     # The wheel separation and radius, in meters.

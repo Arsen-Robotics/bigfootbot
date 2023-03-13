@@ -14,9 +14,13 @@ services:
     #working_dir: /webcam
 
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw # forward X socket to container to enable GUI 
-      # Roboclaw motor driver config file
+      # forward X socket to container to enable GUI 
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      
+      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
+      # on the fly in the running container
       - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml
+
       #- ./cyclonedds.xml:/cyclonedds.xml # for Husarnet VPN
 
     # Enable GPU access for the container

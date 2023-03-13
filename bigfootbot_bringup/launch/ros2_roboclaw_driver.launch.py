@@ -30,7 +30,7 @@ def generate_launch_description():
         'motor_driver.yaml'
     )"""
 
-    my_package_name = 'bigfoot_bringup'
+    my_package_name = 'bigfootbot_base'
     configFilePath = os.path.join(
         get_package_share_directory(my_package_name),
         'config',

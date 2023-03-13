@@ -8,6 +8,8 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 &
 #./launch_realsense.sh &
 #ros2 launch realsense2_camera rs_launch.py &
 ros2 launch realsense2_camera rs_launch.py rgb_camera.profile:=640x480x30 &
+
+ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py &
   
 # Wait for any process to exit
 wait -n

@@ -65,6 +65,11 @@ RUN apt-get update \
 ##### end of block 'foxglove_bridge'
 
 ##### Build and install BigFootBot 
+
+# FOR TESTING ONLY!
+COPY bigfootbot_gazebo ${ROS_WS}/bigfootbot_gazebo_TEST
+#------------------
+
 COPY bigfootbot ${ROS_WS}/src/bigfootbot
 COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 COPY bigfootbot_bringup ${ROS_WS}/src/bigfootbot_bringup
@@ -78,9 +83,10 @@ RUN apt-get update \
     && cd ${ROS_WS} \
     && source /opt/ros/humble/setup.bash \
     && rosdep update \
-    && rosdep install -y -r --symlink-install --ignore-src --from-path src --skip-keys=librealsense2 \
+    && rosdep install -y -r --ignore-src --from-path src --skip-keys=librealsense2 \
+    # NB! colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
     && colcon build \
-    && rm -rf src logs build \
+    #&& rm -rf src logs build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean 
 ##### end of 'BigFootBot'
@@ -121,3 +127,4 @@ CMD ["./launch.sh"]
 #    Don't call rosdep update before every rosdep install call. 
 #    Maybe gather all git calls git clone of ROS packages and then 
 #    call apt-get update and rosdep install and colcon build only once?
+# 4) Add --symlink-install to every call "colcon build"

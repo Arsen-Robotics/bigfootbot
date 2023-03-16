@@ -16,14 +16,14 @@ motor_driver_node:
     device_port: 128
 
     # The P, I, D and maximum quadrature pulses per second for both motors.
-    #m1_p: 7.26239
-    #m1_i: 1.36838
-    #m1_d: 0.0
-    #m1_qpps: 2437
-    #m2_p: 7.26239
-    #m2_i: 1.28767
-    #m2_d: 0.0
-    #m2_qpps: 2437
+    m1_p: 1.0
+    m1_i: 0.0
+    m1_d: 0.0
+    m1_qpps: 9000
+    m2_p: 1.0
+    m2_i: 0.0
+    m2_d: 0.0
+    m2_qpps: 9000
 
     # The maximum expected current (in amps) for both motors.
     # Used just to signal warnings.
@@ -60,5 +60,6 @@ motor_driver_node:
     #|         __        |
     # \       /  \      /
     #   \____/    \____/
+    #           O
     #           O
     #           O

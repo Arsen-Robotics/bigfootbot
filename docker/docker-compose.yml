@@ -1,14 +1,14 @@
 #version: '3.5' # version flag is Depricated?
 
 services:
-  bigfootbot:
+  bigfootbot_drive:
     #restart: unless-stopped
 
-    image: humble_realsense:latest
+    #image: humble_realsense:latest
 
-    #build: 
-     # context: ..
-     # dockerfile: docker/Dockerfile.aarch64.humble.nav2.realsense
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.aarch64.humble.nav2.bigfootbot_drive
 
     #container_name: webcam
     #working_dir: /webcam
@@ -19,7 +19,7 @@ services:
       
       # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
       # on the fly in the running container
-      - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml
+      - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
 
       #- ./cyclonedds.xml:/cyclonedds.xml # for Husarnet VPN
 
@@ -57,13 +57,13 @@ services:
     network_mode: host
 
   # Test app (Web server)
-  test_app:
-    image: nginx
+  #test_app:
+   # image: nginx
     
-    volumes:
-      - ./test_html:/usr/share/nginx/html
+    #volumes:
+   #   - ./test_html:/usr/share/nginx/html
 
-    network_mode: host
+   # network_mode: host
 
     # Published ports are discarded when using host network mode               
     #ports:

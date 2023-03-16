@@ -1,4 +1,4 @@
-FROM osrf/ros:foxy-desktop
+FROM nvidiajetson/deepstream-ros2-foxy
 
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.

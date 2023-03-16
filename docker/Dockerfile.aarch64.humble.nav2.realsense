@@ -6,6 +6,8 @@ FROM ${BASE_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
 
 ENV ROS_WS=/ros2_ws
+ENV SHELL /bin/bash
+SHELL ["/bin/bash", "-c"] 
 #WORKDIR $ROS_WS
 
 ##### Build and install RealSense SDK (LibRealSense)

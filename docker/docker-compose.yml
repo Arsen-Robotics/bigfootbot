@@ -1,4 +1,4 @@
-#version: '3.5' # version flag is Depricated?
+#version: '3.5' # version flag is Depricated in Docker compose V2?
 
 services:
   bigfootbot_drive:
@@ -21,7 +21,49 @@ services:
       # on the fly in the running container
       - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
 
-      #- ./cyclonedds.xml:/cyclonedds.xml # for Husarnet VPN
+    # Enable GPU access for the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+    runtime: nvidia
+
+    environment:
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+    
+    privileged: true # To allow container to access RealSense camera (USB) on the host
+    #devices:
+    #  - /dev:/dev
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    network_mode: host
+
+   ####################  BIGFOOTBOT REALSENSE ################
+  bigfootbot_realsense:
+    #restart: unless-stopped
+
+    #image: humble_realsense:latest
+
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.aarch64.humble.nav2_bigfootbot_realsense
+
+    #container_name: webcam
+    #working_dir: /webcam
+
+    #volumes:
+      # forward X socket to container to enable GUI 
+     # - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      
+      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
+      # on the fly in the running container
+     # - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
 
     # Enable GPU access for the container
     deploy:
@@ -36,10 +78,6 @@ services:
     environment:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
-      #- HTTP_PORT=81 # This means our app1 will listen on port 81 inside **Husarnet's** network namespace
-      #- DEBUG_HTTP=true
-      #- DEBUG_SERVER=true
-      #- DEBUG_CLIENT=true
     
     privileged: true # To allow container to access RealSense camera (USB) on the host
     #devices:
@@ -47,13 +85,7 @@ services:
     
     stdin_open: true # docker run -i
     tty: true        # docker run -t
-    #pid: host
-    #ipc: host
 
-    # This section makes your app1 move into the namespace of Husarnet.
-    # This means you no longer can configure ports and other networking settings here
-    # and all of those configs need to be moved to declaration of service `husarnet`.
-    # This will also wait on Husarnet to actually start before starting your app
     network_mode: host
 
   # Test app (Web server)

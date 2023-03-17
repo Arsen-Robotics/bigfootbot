@@ -1,7 +1,0 @@
-# Docker file for aarch64 based Jetson device
-ARG BASE_IMAGE="nvcr.io/nvidia/l4t-base:r35.2.1"
-FROM ${BASE_IMAGE}
-
-# Zero interaction while installing or upgrading the system via apt. 
-# It accepts the default answer for all questions.
-ARG DEBIAN_FRONTEND=noninteractive  

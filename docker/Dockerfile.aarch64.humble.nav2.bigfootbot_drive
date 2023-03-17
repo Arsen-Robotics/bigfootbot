@@ -12,7 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # The SHELL instruction allows the default shell used for the shell form of commands to be overridden. 
 # The default shell on Linux is ["/bin/sh", "-c"]
-SHELL ["/bin/bash", "-c"] 
+#SHELL ["/bin/bash", "-c"] 
 
 # ROS2 workspace
 ENV ROS_WS=/ros2_ws

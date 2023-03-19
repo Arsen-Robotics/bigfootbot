@@ -3,14 +3,14 @@
 services:
   bigfootbot_drive:
     #restart: unless-stopped
-
-    #image: humble_realsense:latest
-
+    
     build: 
       context: ..
       dockerfile: docker/Dockerfile.aarch64.humble.nav2.bigfootbot_drive
 
-    #container_name: webcam
+    image: bigfootbot_drive
+
+    container_name: bigfootbot_drive
     #working_dir: /webcam
 
     volumes:
@@ -47,14 +47,13 @@ services:
    ####################  BIGFOOTBOT REALSENSE ################
   bigfootbot_realsense:
     #restart: unless-stopped
-
-    #image: humble_realsense:latest
-
     build: 
       context: ..
       dockerfile: docker/Dockerfile.aarch64.humble.nav2_bigfootbot_realsense
 
-    #container_name: webcam
+    image: bigfootbot_realsense
+
+    container_name: bigfootbot_realsense
     #working_dir: /webcam
 
     #volumes:

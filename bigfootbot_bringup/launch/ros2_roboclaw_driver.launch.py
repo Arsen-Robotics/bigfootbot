@@ -52,9 +52,12 @@ def generate_launch_description():
     motor_driver_node = Node(
         emulate_tty=True,
         executable='ros2_roboclaw_driver_node',
+        #name='xxx',
+        #namespace='xxx',
         package='ros2_roboclaw_driver',
         parameters=[configParams],
-        #prefix=['xterm -e gdb -ex run --args'],
+        #prefix=['xterm -e gdb -ex run --args'], # NB! Comment this out for productuion! This is needed for debugging only!
+        prefix=["gdbserver localhost:3000"],
         respawn=True,
         output='screen')
     ld.add_action(motor_driver_node)

@@ -43,6 +43,7 @@ services:
     tty: true        # docker run -t
 
     network_mode: host
+    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
    ####################  BIGFOOTBOT REALSENSE ################
   bigfootbot_realsense:

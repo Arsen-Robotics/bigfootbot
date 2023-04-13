@@ -87,9 +87,10 @@ RUN apt-get update \
     && apt-get clean 
 ##### end of 'BigFootBot drive packages'
 
-# Install GDB server
-RUN apt-get update \
-    && apt-get install -y gdb
+# Install GDB and GDB server
+#RUN apt-get update \
+#    && apt-get install -y gdb \
+#      gdbserverr
 
 ##### Setup entrypoint
 COPY docker/ros_entrypoint.sh /

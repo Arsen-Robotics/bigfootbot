@@ -16,14 +16,27 @@ motor_driver_node:
     device_port: 128
 
     # The P, I, D and maximum quadrature pulses per second for both motors.
-    m1_p: 1.0
-    m1_i: 0.0
+
+    # --- BarrelBot ---
+    m1_p: 1.95074
+    m1_i: 0.28177
     m1_d: 0.0
-    m1_qpps: 9000
-    m2_p: 1.0
-    m2_i: 0.0
+    m1_qpps: 9562
+    m2_p: 2.00313
+    m2_i: 0.29676
     m2_d: 0.0
-    m2_qpps: 9000
+    m2_qpps: 9375
+
+    # --- BigfootBot ---
+    # m1_p: 1.0
+    # m1_i: 0.0
+    # m1_d: 0.0
+    # m1_qpps: 9000
+    # m2_p: 1.0
+    # 2_i: 0.0
+    # m2_d: 0.0
+    # m2_qpps: 9000
+    # ------------------
 
     # The maximum expected current (in amps) for both motors.
     # Used just to signal warnings.
@@ -32,23 +45,33 @@ motor_driver_node:
 
     # Rate limiting commands. The driver will clip any value
     # exceeding these limits.
-    max_angular_velocity: 1.0 # m/s
-    max_linear_velocity: 1.0 # rad/s
+    max_angular_velocity: 0.07 # m/s
+    max_linear_velocity: 0.3 # rad/s
 
     # If no new motor commands is received since the last motor
     # command in this number of seconds, stop the motors.
-    max_seconds_uncommanded_travel: 1.0 # seconds
+    max_seconds_uncommanded_travel: 0.25 # seconds
 
     # Based upon your particular motor gearing and encoders.
     # These values are used to scale cmd_vel commands 
     # and encoder values to motor commands and odometry, respectfully.
-    quad_pulses_per_meter: 3000
-    quad_pulses_per_revolution: 3000
+    # --- BarrelBot
+    quad_pulses_per_meter: 10700
+    quad_pulses_per_revolution: 4385
+    
+    # --- BigfootBot ---
+    # quad_pulses_per_meter: 3000
+    # quad_pulses_per_revolution: 3000
 
     # Based upon your particular robot model.
     # The wheel separation and radius, in meters.
-    wheel_radius: 0.165
-    wheel_separation: 0.62
+    # --- BarrelBot
+    wheel_radius: 0.065
+    wheel_separation: 0.29
+    
+    # --- BigfootBot ---
+    # wheel_radius: 0.165
+    # wheel_separation: 0.62
     
     # Topic name to be used to publish the RoboClaw status messages.
     roboclaw_status_topic: "roboclaw_status"

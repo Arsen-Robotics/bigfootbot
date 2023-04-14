@@ -54,17 +54,20 @@ ENV ROS_WS=/ros2_ws
 #&& rm -rf /var/lib/apt/lists/* \
 #&& apt-get clean
 
+# Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
 ##### Build and install BigfootBot drive packages 
 COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 COPY bigfootbot_bringup ${ROS_WS}/src/bigfootbot_bringup
 
-# Clone sources of roboclaw driver into ROS workspace directory
-#RUN mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src \
-#    && git clone https://github.com/wimblerobotics/ros2_roboclaw_driver.git
-RUN mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src \
+# Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git) 
+RUN cd ${ROS_WS}/src \
     && git clone https://github.com/jevgenik/ros2_roboclaw_driver.git
+
+# Clone sources of joystick driver (ROS2 package "joy")
+RUN cd ${ROS_WS}/src \
+    && git clone https://github.com/ros-drivers/joystick_drivers.git
 
 # Clone foxglove_bridge for communication with Foxglove studio
 #RUN mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src \

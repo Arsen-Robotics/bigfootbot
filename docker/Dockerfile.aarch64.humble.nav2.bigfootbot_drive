@@ -62,12 +62,26 @@ COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 COPY bigfootbot_bringup ${ROS_WS}/src/bigfootbot_bringup
 
 # Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git) 
+# ROS2 package "ros2_roboclaw_driver"
 RUN cd ${ROS_WS}/src \
     && git clone https://github.com/jevgenik/ros2_roboclaw_driver.git
 
 # Clone sources of joystick driver (ROS2 package "joy")
+# NB! Repository forked from https://github.com/ros-drivers/joystick_drivers.git
+# Repository ros-drivers/joystick_drivers contains many packages,
+# we use package "joy" only
+# joy_node, a node that interfaces a generic joystick to ROS 2. This node publishes a 
+# "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
+# NB! Use branch ros2
 RUN cd ${ROS_WS}/src \
-    && git clone https://github.com/ros-drivers/joystick_drivers.git
+    && git clone -b ros2 https://github.com/jevgenik/joystick_drivers.git \
+    && cp -r joystick_drivers/joy . \
+    && rm -rf ./joystick_drivers/
+
+# Clone sources of ROS2 package "teleop_twist_joy"
+# teleop_node that republishes sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages.
+RUN cd ${ROS_WS}/src \
+    && git clone -b humble https://github.com/ros2/teleop_twist_joy.git
 
 # Clone foxglove_bridge for communication with Foxglove studio
 #RUN mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src \
@@ -81,7 +95,7 @@ RUN apt-get update \
       --ignore-src \
       --from-path src \ 
       --rosdistro ${ROS_DISTRO} \
-      --skip-keys "bigfootbot_teleop bigfootbot_teleop bigfootbot_description" \
+      --skip-keys "bigfootbot_teleop bigfootbot_description" \
     # NB! colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
     ##&& colcon build \
     && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \

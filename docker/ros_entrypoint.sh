@@ -37,8 +37,10 @@ source ${ROS_WS}/install/setup.bash
 #export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/models/
 #export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/basic_mobile_robot/models/
 
-sudo apt-get update
-rosdep update
+# ----- NB! Does it needed?
+#sudo apt-get update
+#rosdep update
+# -----
 
 # If you have an image with an entrypoint pointing to entrypoint.sh, and you run 
 # your container as docker run my_image server start, that will translate 

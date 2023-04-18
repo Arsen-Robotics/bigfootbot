@@ -69,7 +69,7 @@ RUN cd ${ROS_WS}/src \
 # Clone sources of joystick driver (ROS2 package "joy")
 # NB! Repository forked from https://github.com/ros-drivers/joystick_drivers.git
 # Repository ros-drivers/joystick_drivers contains many packages,
-# we use package "joy" only
+# we use package "joy" only:
 # joy_node, a node that interfaces a generic joystick to ROS 2. This node publishes a 
 # "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
 # NB! package "joy" depends on the package "joystick_drivers/sdl2_vendor"

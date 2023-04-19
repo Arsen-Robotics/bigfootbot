@@ -30,6 +30,8 @@ def generate_launch_description():
         'motor_driver.yaml'
     )"""
 
+    # Get path to config yaml file for RoboClaw
+    # Config file is located in the package "bigfootbot_base"
     my_package_name = 'bigfootbot_base'
     configFilePath = os.path.join(
         get_package_share_directory(my_package_name),
@@ -57,7 +59,7 @@ def generate_launch_description():
         package='ros2_roboclaw_driver',
         parameters=[configParams],
         #prefix=['xterm -e gdb -ex run --args'], # NB! Comment this out for productuion! This is needed for debugging only!
-        prefix=["gdbserver localhost:3000"],
+        #prefix=["gdbserver localhost:3000"], # For debugging (either of these 2 lines)
         respawn=True,
         output='screen')
     ld.add_action(motor_driver_node)

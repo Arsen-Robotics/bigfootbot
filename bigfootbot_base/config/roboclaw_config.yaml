@@ -6,7 +6,8 @@
 motor_driver_node:
   ros__parameters:
     # Incremental acceleration to use in quadrature pulses per second.
-    accel_quad_pulses_per_second: 1000
+    # --- BarrelBot ---
+    accel_quad_pulses_per_second: 4500
 
     # The device name to be opened.
     #device_name: "/dev/roboclaw"

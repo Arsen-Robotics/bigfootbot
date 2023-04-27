@@ -1,9 +1,8 @@
 
-# For running on x86 PC OR on Nvidia Jetson device
-# Nvidia GPU accelerated (Graphics card on x86 PC or GPU on Jetson device)
+# For running on Nvidia Jetson device (Nvidia GPU accelerated)
 ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-humble-nav2_c2befe2b1d90532fc15ef72650ccd7b0"
 
-# For running on x86 PC 
+# For running on x86/amd64 PC 
 # NB! Not Nvidia GPU accelerated
 #ARG BASE_IMAGE="ros:humble-ros-base"
 

@@ -8,8 +8,10 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.aarch64.humble.nav2.bigfootbot_drive
 
+    # the name of the Docker image to be created from the Dockerfile.
     image: bigfootbot_drive
 
+    # the name to be given to the container created from the image.
     container_name: bigfootbot_drive
     #working_dir: /webcam
 

@@ -53,6 +53,9 @@ motor_driver_node:
     # command in this number of seconds, stop the motors.
     max_seconds_uncommanded_travel: 0.25 # seconds
 
+    publish_joint_states: false
+    publish_odom: false
+
     # Based upon your particular motor gearing and encoders.
     # These values are used to scale cmd_vel commands 
     # and encoder values to motor commands and odometry, respectfully.

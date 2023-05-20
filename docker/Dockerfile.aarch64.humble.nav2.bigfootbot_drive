@@ -1,3 +1,10 @@
+# ----- Docker commands ---
+# Build docker image:
+#   `docker build -f Dockerfile.aarch64.humble.nav2.bigfootbot_drive -t bfb_drive:latest ..`
+#
+# Run docker container:
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name dfb_drive_container bfb_drive:latest`
+# -------------------------
 
 # For running on Nvidia Jetson device (Nvidia GPU accelerated)
 #ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-humble-nav2_c2befe2b1d90532fc15ef72650ccd7b0"

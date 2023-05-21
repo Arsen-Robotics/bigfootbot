@@ -1,10 +1,24 @@
-# ----- Docker commands ---
+# --- Docker commands ---
 # Build docker image:
 #   `docker build -f Dockerfile.aarch64.humble.nav2.bigfootbot_drive -t bfb_drive:latest ..`
 #
 # Run docker container:
 #   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name dfb_drive_container bfb_drive:latest`
 # -------------------------
+
+# --- ROS2 launch commands ---
+# Launch Roboclaw (motor controller):
+# `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
+#
+# Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
+# This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
+# of a joystick buttons and axes
+# `ros2 launch joy joy-launch.py` 
+#
+# Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
+# sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
+# `ros2 launch teleop_twist_joy teleop-launch.py`
+#-----------------------------
 
 # For running on Nvidia Jetson device (Nvidia GPU accelerated)
 #ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-humble-nav2_c2befe2b1d90532fc15ef72650ccd7b0"
@@ -19,6 +33,9 @@ FROM ${BASE_IMAGE}
 # It accepts the default answer for all questions.
 ENV DEBIAN_FRONTEND=noninteractive
 
+# ROS2 workspace
+ENV ROS_WS=/ros2_ws
+
 # If you only need to set the SHELL environment variable for other purposes, such as in a 
 # script that will be run inside the container
 # NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
@@ -29,9 +46,6 @@ ENV SHELL=/bin/bash
 # (the default shell on Linux is ["/bin/sh", "-c"])
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"] 
-
-# ROS2 workspace
-ENV ROS_WS=/ros2_ws
 
 # Fundamentals
 #RUN apt-get update && apt-get install -y \
@@ -117,8 +131,8 @@ RUN cd ${ROS_WS}/src \
     && cp -r joystick_drivers/sdl2_vendor . \
     && rm -rf ./joystick_drivers/
 
-# Clone sources of ROS2 package "teleop_twist_joy"
-# teleop_node that republishes sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages.
+# Clone sources of ROS2 package 'teleop_twist_joy'
+# 'teleop_node' that republishes sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages.
 RUN cd ${ROS_WS}/src \
     && git clone -b humble https://github.com/ros2/teleop_twist_joy.git
 

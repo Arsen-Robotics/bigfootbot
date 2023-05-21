@@ -46,8 +46,8 @@ motor_driver_node:
 
     # Rate limiting commands. The driver will clip any value
     # exceeding these limits.
-    max_angular_velocity: 0.07 # m/s
-    max_linear_velocity: 0.3 # rad/s
+    max_angular_velocity: 0.07 # rad/s
+    max_linear_velocity: 0.3 # m/s
 
     # If no new motor commands is received since the last motor
     # command in this number of seconds, stop the motors.

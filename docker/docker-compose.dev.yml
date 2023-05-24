@@ -1,0 +1,61 @@
+#version: '3.5' # version flag is Depricated in Docker compose V2?
+
+# --- Docker compose commands ---
+# Create and start containers defined in the compose file:
+#  `docker compose -f docker-compose.dev.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#  `docker compose -f docker-compose.dev.yml down'
+# --------------------
+
+services:
+  bfb_drive:
+    #restart: unless-stopped
+    
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_dev:latest
+
+    # The name to be given to the container created from the image.
+    container_name: dfb_dev_container
+    #working_dir: /webcam
+
+    volumes:
+      # forward X socket to container to enable GUI 
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+      - ../bigfootbot_base:/ros2_ws/src/bigfootbot_base
+      - ../bigfootbot_bringup:/ros2_ws/src/bigfootbot_bringup
+      
+      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
+      # on the fly in the running container
+      - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
+
+    # Enable GPU access for the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+    runtime: nvidia
+
+    environment:
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+    
+    privileged: true # To allow container to access RealSense camera (USB) on the host
+    #devices:
+    #  - /dev:/dev
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    network_mode: host
+    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
+      

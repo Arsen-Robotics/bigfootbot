@@ -10,8 +10,8 @@ motor_driver_node:
     accel_quad_pulses_per_second: 4500
 
     # The device name to be opened.
-    #device_name: "/dev/roboclaw"
-    device_name: "/dev/ttyACM0"
+    device_name: "/dev/roboclaw" # NB! To access device by name, udev rules must be applied
+    #device_name: "/dev/ttyACM0"
 
     # The assigned port for the device (as configured on the RoboClaw).
     device_port: 128

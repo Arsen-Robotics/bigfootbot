@@ -1,12 +1,12 @@
 # --- Docker commands ---
 # Build docker image:
-#   `docker build -f Dockerfile.aarch64.humble.nav2.bigfootbot_drive -t bfb_drive:latest ..`
+#   `docker build -f Dockerfile.bfb_drive -t bfb_drive:latest ..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name dfb_drive_container bfb_drive:latest`
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_drive_container bfb_drive:latest`
 #
 # To connect to a running container: 
-#   `docker exec -it dfb_drive_container bash`
+#   `docker exec -it bfb_drive_container bash`
 # -------------------------
 
 # --- ROS2 launch commands ---
@@ -26,12 +26,16 @@
 # `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}`
 #-----------------------------
 
-# For running on Nvidia Jetson device (Nvidia GPU accelerated)
-#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-humble-nav2_c2befe2b1d90532fc15ef72650ccd7b0"
+# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Image built: 05/23/2023
+ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
 
-# For running on x86/amd64 PC 
+# --- For running on x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated
-ARG BASE_IMAGE="ros:humble-ros-base"
+# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
+# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
+# ARG BASE_IMAGE="ros:humble-ros-base"
+# --------
 
 FROM ${BASE_IMAGE}
 
@@ -117,6 +121,9 @@ RUN mkdir -p ${ROS_WS}/src
 ##### Build and install BigfootBot drive packages 
 COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 COPY bigfootbot_bringup ${ROS_WS}/src/bigfootbot_bringup
+
+# Copy udev rules for Roboclaw conroller 
+COPY bigfootbot_base/config/99-roboclaw.rules /etc/udev/rules.d/
 
 # Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git) 
 # ROS2 package "ros2_roboclaw_driver"

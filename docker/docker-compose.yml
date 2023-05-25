@@ -1,18 +1,34 @@
 #version: '3.5' # version flag is Depricated in Docker compose V2?
 
+# --- Docker compose commands ---
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#  `docker compose -f docker-compose.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#  `docker compose -f docker-compose.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#  `docker-compose -f docker-compose.yml up --build`
+# --------------------
+
 services:
   bfb_drive:
     #restart: unless-stopped
     
     build: 
       context: ..
-      dockerfile: docker/Dockerfile.aarch64.humble.nav2.bigfootbot_drive
+      dockerfile: docker/Dockerfile.bfb_drive
 
     # the name of the Docker image to be created from the Dockerfile.
-    image: bigfootbot_drive
+    image: bfb_drive:latest
 
     # the name to be given to the container created from the image.
-    container_name: bigfootbot_drive
+    container_name: bfb_drive_container
     #working_dir: /webcam
 
     volumes:
@@ -37,7 +53,7 @@ services:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
     
-    privileged: true # To allow container to access RealSense camera (USB) on the host
+    privileged: true # Allow a container to access a Motor controller (RoboClaw) through USB on the host
     #devices:
     #  - /dev:/dev
     
@@ -47,48 +63,48 @@ services:
     network_mode: host
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
-   ####################  BIGFOOTBOT REALSENSE ################
-  bfb_realsense:
-    #restart: unless-stopped
-    build: 
-      context: ..
-      dockerfile: docker/Dockerfile.aarch64.humble.nav2_bigfootbot_realsense
+  ####################  BIGFOOTBOT REALSENSE ################
+  #bfb_realsense:
+    ##restart: unless-stopped
+   # build: 
+    #  context: ..
+     # dockerfile: docker/Dockerfile.aarch64.humble.nav2_bigfootbot_realsense
 
-    image: bigfootbot_realsense
+   # image: bigfootbot_realsense
 
-    container_name: bigfootbot_realsense
-    #working_dir: /webcam
+    #container_name: bigfootbot_realsense
+    ##working_dir: /webcam
 
-    #volumes:
-      # forward X socket to container to enable GUI 
-     # - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    ##volumes:
+      ## forward X socket to container to enable GUI 
+     ## - /tmp/.X11-unix:/tmp/.X11-unix:rw
       
       # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
-      # on the fly in the running container
-     # - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
+      ## on the fly in the running container
+     ## - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
 
     # Enable GPU access for the container
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [gpu]
+    #deploy:
+     # resources:
+      #  reservations:
+       #   devices:
+        #    - driver: nvidia
+         #     capabilities: [gpu]
 
-    runtime: nvidia
+    #runtime: nvidia
 
-    environment:
-      - DISPLAY
-      - QT_X11_NO_MITSHM=1
+    #environment:
+    #  - DISPLAY
+    #  - QT_X11_NO_MITSHM=1
     
-    privileged: true # To allow container to access RealSense camera (USB) on the host
-    #devices:
-    #  - /dev:/dev
+    #privileged: true # To allow container to access RealSense camera (USB) on the host
+    ##devices:
+    ##  - /dev:/dev
     
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
+    #stdin_open: true # docker run -i
+    #tty: true        # docker run -t
 
-    network_mode: host
+    #network_mode: host
 
   # Test app (Web server)
   #test_app:

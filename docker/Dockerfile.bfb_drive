@@ -122,9 +122,6 @@ RUN mkdir -p ${ROS_WS}/src
 COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 COPY bigfootbot_bringup ${ROS_WS}/src/bigfootbot_bringup
 
-# Copy udev rules for Roboclaw conroller 
-COPY bigfootbot_base/config/99-roboclaw.rules /etc/udev/rules.d/
-
 # Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git) 
 # ROS2 package "ros2_roboclaw_driver"
 RUN cd ${ROS_WS}/src \

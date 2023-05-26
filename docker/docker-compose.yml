@@ -32,7 +32,14 @@ services:
     #working_dir: /webcam
 
     volumes:
-      # forward X socket to container to enable GUI 
+      # Docker's privileged:true creates a tmpfs inside the container 
+      # and recreates all device nodes currently in the hosts /dev. 
+      # However, it does not create or update symlinks from hosts /dev
+      # We bound /dev to have access symlinks to devices created by 
+      # udev rules on the host
+      #- /dev:/dev 
+      
+      # Forward X socket to container to enable GUI 
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       
       # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
@@ -53,9 +60,23 @@ services:
       - DISPLAY
       - QT_X11_NO_MITSHM=1
     
-    privileged: true # Allow a container to access a Motor controller (RoboClaw) through USB on the host
-    #devices:
-    #  - /dev:/dev
+    # It grants the container elevated privileges and bypasses certain 
+    # security measures enforced by Docker. With this flag, the container gains 
+    # full access to all devices in the /dev directory, among other privileged operations.
+    # NB! Docker's privileged:true creates a tmpfs inside the container 
+    # and recreates all device nodes currently in the hosts /dev. 
+    # However, it does not create or update symlinks from hosts /dev
+    # You should bind (in volumes section) /dev:/dev to have access symlinks 
+    # to devices created by udev rules on the host
+    #privileged: true
+    
+    # Allows you to explicitly specify device files that should be made 
+    # available within the container. For example, devices: /dev/ttyACM0:/dev/ttyACM0 
+    # would make the /dev/ttyACM0 device file accessible within the container. 
+    # NOTE: parameter 'devices' works fine (unlike privileged:true) with symlinks 
+    # for devices in /dev folder created on the host using udev rules 
+    devices:
+      - /dev/roboclaw:/dev/roboclaw
     
     stdin_open: true # docker run -i
     tty: true        # docker run -t

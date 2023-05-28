@@ -29,7 +29,7 @@ To use the Udev rules for the Roboclaw motor controller, follow these steps:
 
    ```bash
    sudo udevadm trigger
-   ``
+   ```
 
    This will immediately apply the Udev rules, and the Roboclaw motor controller should now be accessible with the assigned device name.
 

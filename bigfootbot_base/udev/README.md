@@ -15,11 +15,13 @@ To use the Udev rules for the Roboclaw motor controller, follow these steps:
 
    ```bash
    sudo cp 99-roboclaw.rules /etc/udev/rules.d/
+   ```
 
 2. Reload the Udev rules by running the following command:
 
    ```bash
    sudo udevadm control --reload-rules
+   ```
    
    This ensures that any changes made to the Udev rules are taken into account.
 
@@ -27,6 +29,7 @@ To use the Udev rules for the Roboclaw motor controller, follow these steps:
 
    ```bash
    sudo udevadm trigger
+   ``
 
    This will immediately apply the Udev rules, and the Roboclaw motor controller should now be accessible with the assigned device name.
 

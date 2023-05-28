@@ -47,7 +47,6 @@ Alternatively, you can use the provided script in the script directory to apply 
    ```bash
    sudo ./apply_udev_rules.sh
 
-
 ## Notes
 
 - Make sure to run the above commands with administrative privileges using `sudo`.

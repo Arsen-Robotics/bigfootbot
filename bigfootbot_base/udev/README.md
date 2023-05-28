@@ -6,7 +6,7 @@ This folder contains the Udev rules file (`99-roboclaw.rules`) for the Roboclaw 
 
 The Udev rules file ensures that the Roboclaw motor controller is assigned a predictable device name, making it easier to identify and interact with the device from your application or software. By providing a consistent device name (e.g., `/dev/roboclaw`), you can access the motor controller reliably without relying on changing device identifiers.
 
-## Usage
+## Usage (manual installation)
 
 To use the Udev rules for the Roboclaw motor controller, follow these steps:
 
@@ -33,8 +33,22 @@ To use the Udev rules for the Roboclaw motor controller, follow these steps:
 
    This will immediately apply the Udev rules, and the Roboclaw motor controller should now be accessible with the assigned device name.
 
+## Usage (installation using script)
+
+Alternatively, you can use the provided script in the script directory to apply the Udev rules automatically. The script simplifies the process of copying the rules file and reloading the rules. Follow these steps:
+
+1. Navigate to the script directory:
+
+   ```bash 
+   cd script
+
+2. Run the script to apply the Udev rules:
+  
+   ```bash
+   sudo ./apply_udev_rules.sh
+
+
 ## Notes
 
 - Make sure to run the above commands with administrative privileges using `sudo`.
-- After applying the Udev rules, reconnect the Roboclaw motor controller to the computer to ensure the new device name is assigned.
 

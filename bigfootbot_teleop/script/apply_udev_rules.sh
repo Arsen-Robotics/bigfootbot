@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Specify the path to the Udev rules file
-RULES_FILE="../udev/99-roboclaw.rules"
+RULES_FILE="../udev/99-ps3-controller.rules"
 
 # Check if the rules file exists
 if [[ ! -f "$RULES_FILE" ]]; then

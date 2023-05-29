@@ -3,6 +3,9 @@
 # NB! Rules work only for USB connection!
 # TODO Fix rules to work with Bluetooth connection too 
 
+# To list all properties for event7:
+#   `udevadm info -a -n /dev/input/event7`
+
 # MODE = "0666" directive ensures that the device file (not the symbolic link) is readable 
 # and writable by the file's owner, group, and others on the system.
 

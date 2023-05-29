@@ -6,27 +6,39 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 
 - Make sure your computer has Bluetooth capabilities and that Bluetooth is enabled.
 
-## Steps
+## Initial pairing
 
-1. Open a terminal on your Linux system.
-
-2. Install the required dependencies by running the following command:
+1. Install the required dependencies by running the following command:
 
     ```
     sudo apt-get install bluez
     ```
 
-
-3. Run the `bluetoothctl` command to start the Bluetooth control tool:
+2. Run the `bluetoothctl` command to start the Bluetooth control tool:
 
     ```
     bluetoothctl
     ```
 
-4. Press and hold the "PS" button on your PS3 DualShock 3 controller until the LEDs start blinking rapidly. 
-   This puts the controller into pairing mode.
+3. Connect the PS3 DualShock 3 controller to your PC using the USB cable.
 
-5. Enter the following commands in the `bluetoothctl` prompt:
+4. PS3 DualShock 3 controller should appear in the list of discovered devices.
+
+5. Message like this should appear 'Authorize service 00001124-0000-1000-8000-00805f9b34fb (yes/no):' 
+   Type yes
+
+6. Pair the PS3 Controller pressing the "PS" button on your PS3 DualShock 3 controller 
+
+7. Disconnect the PS3 Controller from your PC's USB port.
+
+8. To connect already paired PS3 Controller by Bluetooth, simly press the "PS" button
+
+
+## Pairing and connecting 
+
+1. Press and hold the "PS" button on your PS3 DualShock 3 controller until the LEDs start blinking rapidly. This puts the controller into pairing mode.
+
+2. Enter the following commands in the `bluetoothctl` prompt:
 
    ```
    power on
@@ -35,13 +47,13 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
    scan on
    ```
 
-6. Wait for the PS3 DualShock 3 controller to appear in the list of discovered devices. It should be listed as "Wireless Controller" or similar.
+3. Wait for the PS3 DualShock 3 controller to appear in the list of discovered devices. It should be listed as "Wireless Controller" or similar.
 
-7. Once the controller is discovered, note its MAC address.
+4. Once the controller is discovered, note its MAC address.
 
-8. Stop the scan by entering `scan off` in the `bluetoothctl` prompt.
+5. Stop the scan by entering `scan off` in the `bluetoothctl` prompt.
 
-9. Pair and connect the PS3 controller by entering the following commands, replacing `<mac_address>` with the actual MAC address of the PS3 controller:
+6. Pair and connect the PS3 controller by entering the following commands, replacing `<mac_address>` with the actual MAC address of the PS3 controller:
 
    ```
    pair <mac_address>
@@ -50,11 +62,9 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
    connect <mac_address>
    ```
 
-10. If the pairing and connection are successful, you should see a confirmation message.
+7. If the pairing and connection are successful, you should see a confirmation message.
 
-11. Exit the `bluetoothctl` prompt by entering `exit`.
-Once the PS3 controller is connected via Bluetooth, you can use it as an input device for games or other applications on your Linux system.
-Please note that the exact steps and commands may vary slightly depending on your Linux distribution and Bluetooth adapter.
+8. Exit the `bluetoothctl` prompt by entering `exit`.
 
 
 

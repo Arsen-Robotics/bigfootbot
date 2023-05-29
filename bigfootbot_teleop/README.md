@@ -12,15 +12,16 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 
 2. Install the required dependencies by running the following command:
 
-    ```bash
+    ```
     sudo apt-get install bluez
+    ```
 
 
 3. Run the `bluetoothctl` command to start the Bluetooth control tool:
 
     ```
     bluetoothctl
-
+    ```
 
 4. Enter the following commands in the `bluetoothctl` prompt:
 
@@ -29,6 +30,7 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
    agent on
    default-agent
    scan on
+   ```
 
 
 5. While the scan is active, put the PS3 controller into pairing mode by pressing and holding the "PS" button and the "Share" button on the controller simultaneously for a few seconds.
@@ -42,6 +44,7 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
    ```
    pair <mac_address>
    connect <mac_address>
+   ```
 
 
 9. If the pairing and connection are successful, you should see a confirmation message.

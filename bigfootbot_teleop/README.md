@@ -41,9 +41,8 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 
 8. Pair and connect the PS3 controller by entering the following commands, replacing `<mac_address>` with the actual MAC address of the PS3 controller:
 
-   `pair <mac_address>`
-   
-   `connect <mac_address>`
+   ```pair <mac_address>```
+   ```connect <mac_address>```
 
 9. If the pairing and connection are successful, you should see a confirmation message.
 

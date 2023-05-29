@@ -1,0 +1,14 @@
+# --- Parameters file for the package 'joy'
+#
+# 'joy_node' - a node that interfaces a generic joystick to ROS 2. This node publishes a 
+# 'sensor_msgs/msg/Joy' message, which contains the current state of each one of the 
+# joystick's buttons and axes.
+
+joy_node:
+    ros__parameters:
+        device_id: 0
+        device_name: ""
+        deadzone: 0.5
+        autorepeat_rate: 20.0
+        sticky_buttons: false
+        coalesce_interval_ms: 1

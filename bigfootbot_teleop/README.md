@@ -31,7 +31,7 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 
 7. Disconnect the PS3 Controller from your PC's USB port.
 
-8. To connect already paired PS3 Controller by Bluetooth, simly press the "PS" button
+8. To connect (already paired) PS3 Controller via Bluetooth, simly press the "PS" button
 
 
 ## Pairing and connecting 

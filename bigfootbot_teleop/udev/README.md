@@ -1,4 +1,4 @@
-# Udev Rules for Roboclaw Motor Controller
+# Udev Rules for Playstation 3 Controller
 
 This folder contains the Udev rules file (`99-ps3-controller.rules`) for the Playstation 3 Controller. The Udev rules allow the system to assign a consistent device name to the PS3 Controller when it is connected to the computer.
 

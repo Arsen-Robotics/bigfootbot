@@ -19,18 +19,18 @@
 # --------------------
 
 services:
-  bfb_base:
+  bfb_drive:
     #restart: unless-stopped
     
     build: 
       context: ..
-      dockerfile: docker/Dockerfile.bfb_base
+      dockerfile: docker/Dockerfile.bfb_drive
 
     # the name of the Docker image to be created from the Dockerfile.
-    image: bfb_base:latest
+    image: bfb_drive:latest
 
     # the name to be given to the container created from the image.
-    container_name: bfb_base_container
+    container_name: bfb_drive_container
     #working_dir: /webcam
 
     volumes:
@@ -83,8 +83,7 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
-    #network_mode: host
-
+    network_mode: host
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
   bfb_teleop:
@@ -100,15 +99,13 @@ services:
     # The name to be given to the container created from the image.
     container_name: bfb_teleop_container
 
-    #volumes:
+    volumes:
       # Docker's privileged:true creates a tmpfs inside the container 
       # and recreates all device nodes currently in the hosts /dev. 
       # However, it does not create or update symlinks from hosts /dev
       # We bound /dev to have access symlinks to devices created by 
       # udev rules on the host
-      #- /dev:/dev 
-
-    privileged: true
+      - /dev:/dev 
     
     stdin_open: true # docker run -i
     tty: true        # docker run -t

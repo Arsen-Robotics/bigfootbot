@@ -13,12 +13,31 @@
 # Rebuild all services (all the images are built from scratch)
 # --build option indicates that Docker Compose should rebuild the images, 
 # even if they already exist
-#  `docker-compose -f docker-compose.yml up --build`
+#  `docker compose -f docker-compose.yml up --build`
 # To rebuild a certain service:
-# `docker-compose up --build <service_name>`
+# `docker compose up --build <service_name>`
 # --------------------
 
 services:
+  # --- BRINGUP
+  bfb_bringup:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.bfb_bringup
+    image: bfb_bringup:latest
+    container_name: bfb_bringup_container
+    volumes:
+      - ../bigfootbot_bringup/launch:/ros2_ws/install/bigfootbot_bringup/share/bigfootbot_bringup/launch     
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: host
+    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
+
+    networks:
+      bfb_network:
+
+  # --- BASE (motor controller)
   bfb_base:
     #restart: unless-stopped
     
@@ -34,16 +53,6 @@ services:
     #working_dir: /webcam
 
     volumes:
-      # Docker's privileged:true creates a tmpfs inside the container 
-      # and recreates all device nodes currently in the hosts /dev. 
-      # However, it does not create or update symlinks from hosts /dev
-      # We bound /dev to have access symlinks to devices created by 
-      # udev rules on the host
-      #- /dev:/dev 
-      
-      # Forward X socket to container to enable GUI 
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      
       # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
       # on the fly in the running container
       - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
@@ -57,20 +66,6 @@ services:
               capabilities: [gpu]
 
     runtime: nvidia
-
-    environment:
-      - DISPLAY
-      - QT_X11_NO_MITSHM=1
-    
-    # It grants the container elevated privileges and bypasses certain 
-    # security measures enforced by Docker. With this flag, the container gains 
-    # full access to all devices in the /dev directory, among other privileged operations.
-    # NB! Docker's privileged:true creates a tmpfs inside the container 
-    # and recreates all device nodes currently in the hosts /dev. 
-    # However, it does not create or update symlinks from hosts /dev
-    # You should bind (in volumes section) /dev:/dev to have access symlinks 
-    # to devices created by udev rules on the host
-    #privileged: true
     
     # Allows you to explicitly specify device files that should be made 
     # available within the container. For example, devices: /dev/ttyACM0:/dev/ttyACM0 
@@ -87,6 +82,10 @@ services:
 
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
+    networks:
+      bfb_network:
+   
+  # --- TELEOPERATION
   bfb_teleop:
     #restart: unless-stopped
     
@@ -112,6 +111,13 @@ services:
     
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+    
+    networks:
+      bfb_network:
+
+
+networks:
+  bfb_network:
 
   ####################  BIGFOOTBOT REALSENSE ################
   #bfb_realsense:

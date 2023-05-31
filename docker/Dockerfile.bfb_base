@@ -57,68 +57,16 @@ ENV SHELL=/bin/bash
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"] 
 
-# Fundamentals
-#RUN apt-get update && apt-get install -y \
-#    build-essential \
-#    curl \
-#    git \
-#    lsb-release \
-#    sudo \
-#    tar \
-#    unzip \
-#    vim \
-#    wget \
-#    libgoogle-glog-dev \
-#    software-properties-common \
-#&& rm -rf /var/lib/apt/lists/* \
-#&& apt-get clean
-
-# Install additional packages needed for ROS2 dependencies
-#RUN apt-get update && apt-get install -y \
-#    python3-distutils \
-#    libboost-all-dev \
-#    libboost-dev \
-#    libpcl-dev \
-#    libode-dev \
-#    lcov \
-#    python3-zmq \
-#    libxaw7-dev \
-#    libgraphicsmagick++1-dev \
-#    graphicsmagick-libmagick-dev-compat \
-#    libceres-dev \
-#    libsuitesparse-dev \
-#    libncurses5-dev \
-#    libassimp-dev \
-#   libyaml-cpp-dev \
-#    libpcap-dev \
-#&& rm -rf /var/lib/apt/lists/* \
-#&& apt-get clean
-
 # Install additional packages needed for ROS2 dependencies
 RUN apt-get update && apt-get install -y \
-#    python3-distutils \
     libboost-all-dev \
-#    libboost-dev \
-#    libpcl-dev \
-#    libode-dev \
-#    lcov \
-#    python3-zmq \
-#    libxaw7-dev \
-#    libgraphicsmagick++1-dev \
-#    graphicsmagick-libmagick-dev-compat \
-#    libceres-dev \
-#    libsuitesparse-dev \
-#    libncurses5-dev \
-#    libassimp-dev \
-#   libyaml-cpp-dev \
-#    libpcap-dev \
-&& rm -rf /var/lib/apt/lists/* \
-&& apt-get clean
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-##### Build and install BigfootBot drive packages 
+# --- Build and install ROS2 packages
 COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 
 # Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git) 
@@ -141,7 +89,7 @@ RUN apt-get update \
     #&& rm -rf src logs build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean 
-##### end of 'BigFootBot drive packages'
+# --- end of 'Build and install ROS2 packages'
 
 # Install GDB and GDB server
 #RUN apt-get update \

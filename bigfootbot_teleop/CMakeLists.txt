@@ -21,8 +21,9 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
+# Install config and launch files
 install(
-  DIRECTORY launch params
+  DIRECTORY config launch
   DESTINATION share/${PROJECT_NAME}
 )
 

@@ -20,22 +20,22 @@
 
 services:
   # --- BRINGUP
-  bfb_bringup:
-    build: 
-      context: ..
-      dockerfile: docker/Dockerfile.bfb_bringup
-    image: bfb_bringup:latest
-    container_name: bfb_bringup_container
-    volumes:
-      - ../bigfootbot_bringup/launch:/ros2_ws/install/bigfootbot_bringup/share/bigfootbot_bringup/launch     
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
+  ##bfb_bringup:
+  ##  build: 
+  ##    context: ..
+  ##    dockerfile: docker/Dockerfile.bfb_bringup
+  ##  image: bfb_bringup:latest
+  ##  container_name: bfb_bringup_container
+  ##  volumes:
+  ##    - ../bigfootbot_bringup/launch:/ros2_ws/install/bigfootbot_bringup/share/bigfootbot_bringup/launch     
+  ##  stdin_open: true # docker run -i
+  ##  tty: true        # docker run -t
 
     #network_mode: host
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
-    networks:
-      bfb_network:
+  ##  networks:
+  ##    bfb_network:
 
   # --- BASE (motor controller)
   bfb_base:
@@ -78,6 +78,8 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
+    #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
+
     #network_mode: host
 
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
@@ -111,6 +113,8 @@ services:
     
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+
+    #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
     
     networks:
       bfb_network:

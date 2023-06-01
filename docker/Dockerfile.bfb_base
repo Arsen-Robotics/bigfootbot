@@ -23,7 +23,7 @@
 # `ros2 launch teleop_twist_joy teleop-launch.py`
 #  
 #  Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
-# `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}`
+# `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
 #-----------------------------
 
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
@@ -85,7 +85,8 @@ RUN apt-get update \
     #  --skip-keys "bigfootbot_teleop bigfootbot_description" \
     # NB! colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
     ##&& colcon build \
-    && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    && colcon build --symlink-install \
     #&& rm -rf src logs build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean 
@@ -105,5 +106,5 @@ COPY docker/ros_entrypoint.sh /
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
-#CMD ["ros2", "launch", "bigfootbot_bringup", "bfb_teleop.launch.py"]
-CMD ["bash"]
+CMD ["ros2", "launch", "bigfootbot_base", "bfb_roboclaw.launch.py"]
+#CMD ["bash"]

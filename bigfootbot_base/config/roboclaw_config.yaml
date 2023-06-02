@@ -51,7 +51,7 @@ motor_driver_node:
 
     # If no new motor commands is received since the last motor
     # command in this number of seconds, stop the motors.
-    max_seconds_uncommanded_travel: 0.25 # seconds
+    max_seconds_uncommanded_travel: 0.2 # seconds
 
     publish_joint_states: false
     publish_odom: false

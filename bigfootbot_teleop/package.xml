@@ -3,7 +3,10 @@
 <package format="3">
   <name>bigfootbot_teleop</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Package enables joystick control of a robot in ROS 2. It includes nodes for interfacing 
+  with the joystick ('joy_node') and converting joystick inputs into robot movement commands ('teleop_node'). 
+  The joystick inputs are published as 'sensor_msgs/msg/Joy' messages, while the converted 
+  movement commands are outputted as 'geometry_msgs/msg/Twist' messages to the '/cmd_vel' topic.</description>
   <maintainer email="jevgeni.kalbin@gmail.com">jevgeni</maintainer>
   <license>TODO: License declaration</license>
 

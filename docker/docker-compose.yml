@@ -54,7 +54,7 @@ services:
 
     volumes:
       # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
-      # on the fly in the running container
+      # on-the-fly in the running container
       - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
 
     # Enable GPU access for the container
@@ -101,13 +101,9 @@ services:
     # The name to be given to the container created from the image.
     container_name: bfb_teleop_container
 
-    #volumes:
-      # Docker's privileged:true creates a tmpfs inside the container 
-      # and recreates all device nodes currently in the hosts /dev. 
-      # However, it does not create or update symlinks from hosts /dev
-      # We bound /dev to have access symlinks to devices created by 
-      # udev rules on the host
-      #- /dev:/dev 
+    volumes:
+      # Enable on-the-fly parameter updates without the need for container restarts.
+      - ../bigfootbot_teleop/config:/ros2_ws/install/bigfootbot_teleop/share/bigfootbot_teleop/config 
 
     privileged: true
     

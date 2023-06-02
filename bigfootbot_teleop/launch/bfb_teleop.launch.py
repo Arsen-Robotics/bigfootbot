@@ -19,7 +19,8 @@ def generate_launch_description():
         executable='joy_node',
         output='screen',
         respawn=True,
-        emulate_tty=True
+        emulate_tty=True,
+        parameters=[os.path.join(get_package_share_directory('bigfootbot_teleop'), 'config', 'joy.yaml')]
     )
 
     # Declare 'teleop_node' from 'teleop_twist_joy package'
@@ -30,7 +31,8 @@ def generate_launch_description():
         executable='teleop_node',
         output='screen',
         respawn=True,
-        emulate_tty=True
+        emulate_tty=True,
+        parameters=[os.path.join(get_package_share_directory('bigfootbot_teleop'), 'config', 'teleop_twist_joy_ps3.yaml')]
     )
 
     # Create launch description and add nodes

@@ -1,12 +1,12 @@
 # --- Docker commands ---
 # Build docker image:
-#   `docker build -f Dockerfile.bfb_teleop -t bfb_teleop:latest ..`
+#   `docker build -f Dockerfile.bfb_description -t bfb_description:latest ..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_teleop_container bfb_teleop:latest`
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_description_container bfb_description:latest`
 #
 # To connect to a running container: 
-#   `docker exec -it bfb_teleop_container bash`
+#   `docker exec -it bfb_description_container bash`
 # -------------------------
 
 # --- ROS2 launch commands ---
@@ -48,26 +48,7 @@ SHELL ["/bin/bash", "-c"]
 RUN mkdir -p ${ROS_WS}/src
 
 # --- Build and install ROS2 packages
-COPY bigfootbot_teleop ${ROS_WS}/src/bigfootbot_teleop
-
-# Clone sources of joystick driver (ROS2 package "joy")
-# NB! Repository forked from https://github.com/ros-drivers/joystick_drivers.git
-# Repository ros-drivers/joystick_drivers contains many packages,
-# we use package "joy" only:
-# joy_node, a node that interfaces a generic joystick to ROS 2. This node publishes a 
-# "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
-# NB! package "joy" depends on the package "joystick_drivers/sdl2_vendor"
-# NB! Use branch ros2
-RUN cd ${ROS_WS}/src \
-    && git clone -b ros2 https://github.com/jevgenik/joystick_drivers.git \
-    && cp -r joystick_drivers/joy . \
-    && cp -r joystick_drivers/sdl2_vendor . \
-    && rm -rf ./joystick_drivers/
-
-# Clone sources of ROS2 package 'teleop_twist_joy'
-# 'teleop_node' that republishes sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages.
-RUN cd ${ROS_WS}/src \
-    && git clone -b humble https://github.com/ros2/teleop_twist_joy.git
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 
 RUN apt-get update \
     && cd ${ROS_WS} \

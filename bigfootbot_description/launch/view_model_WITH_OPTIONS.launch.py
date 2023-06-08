@@ -24,7 +24,10 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration('use_rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
 
-    # --- Declare the launch arguments  
+    # --- Declare the launch arguments
+    # launch arguments are variables that can be passed to launch files from 
+    # the command line (e.g. 'ros2 launch bigfootbot_description view_model.launch.py 
+    # model:=/home/user/my_robot.urdf')
     declare_model_path_cmd = DeclareLaunchArgument(
         name='model', 
         default_value=default_model_path, 

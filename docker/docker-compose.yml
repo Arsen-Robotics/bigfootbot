@@ -37,6 +37,42 @@ services:
   ##  networks:
   ##    bfb_network:
 
+  # --- DESCRIPTION
+  bfb_teleop:
+    #restart: unless-stopped
+    
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.bfb_description
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_description:latest
+
+    # The name to be given to the container created from the image.
+    container_name: bfb_description_container
+
+   ## volumes:
+      # Enable on-the-fly parameter updates without the need for container restarts.
+   ##   - ../bigfootbot_teleop/config:/ros2_ws/install/bigfootbot_teleop/share/bigfootbot_teleop/config 
+
+    # Enable GPU access for the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+    runtime: nvidia
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
+    
+    networks:
+      bfb_network:
+
   # --- BASE (motor controller)
   bfb_base:
     #restart: unless-stopped

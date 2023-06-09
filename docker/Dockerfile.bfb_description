@@ -50,7 +50,14 @@ RUN mkdir -p ${ROS_WS}/src
 # --- Build and install ROS2 packages
 COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 
+# Clone the xacro package from GitHub
+# We install xacro from sources because binary version of xacro package was not 
+# available for ROS2 Humble by 09.06.2023
+RUN cd ${ROS_WS}/src \
+    && git clone -b ros2 https://github.com/ros/xacro.git
+
 RUN apt-get update \
+    #&& apt-get install -y ros-foxy-xacro \
     && cd ${ROS_WS} \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
@@ -63,10 +70,14 @@ RUN apt-get update \
     ##&& colcon build \
     ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     && colcon build --symlink-install \
+    # colcon build --symlink-install --packages-select xacro # build only xacro package
     #&& rm -rf src logs build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean 
 # --- end of 'Build and install ROS2 packages'
+
+# Clean up the source directory
+#RUN rm -rf ${ROS_WS}/src/xacro
 
 ##### Setup entrypoint
 COPY docker/ros_entrypoint.sh /
@@ -77,5 +88,6 @@ COPY docker/ros_entrypoint.sh /
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
-CMD ["ros2", "launch", "bigfootbot_teleop", "bfb_teleop.launch.py"]
-#CMD ["bash"]
+# run ros2 launch command
+#CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py"]
+CMD ["bash"]

@@ -1,3 +1,5 @@
+# Description: Launch file for the RoboClaw motor driver node
+
 import os
 import yaml
 

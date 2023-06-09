@@ -38,7 +38,7 @@ services:
   ##    bfb_network:
 
   # --- DESCRIPTION
-  bfb_teleop:
+  bfb_description:
     #restart: unless-stopped
     
     build: 

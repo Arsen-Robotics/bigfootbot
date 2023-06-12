@@ -5,7 +5,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, Command # Command is a substitution that returns the output of a command
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare 
 
@@ -59,6 +59,9 @@ def generate_launch_description():
     
     # whether to start rviz
     use_rviz_lc = LaunchConfiguration('use_rviz')
+
+    # whether to use sim time (sim time is the time of the simulation, as opposed to the real time)
+    use_sim_time_lc = LaunchConfiguration('use_sim_time')
    
     # --- Declare launch arguments (actions)
     # DeclareLaunchArgument is an action that declares a launch argument (it returns an action object)
@@ -102,31 +105,51 @@ def generate_launch_description():
         'use_rviz',
         default_value='True',
         description='Whether to start rviz')
+
+    use_sim_time_la = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='False',
+        description='Use simulation (Gazebo) clock if true')
     
     
     # --- Nodes
     # Node is an action that launches a ROS node (it returns an action object)
     # a ROS node is a process that performs computation
-    # condition is a substitution that returns a boolean value
-    #robot_model_publisher_node = Node(
-    #    package='robot_model_publisher',
-    #    executable='robot_model_publisher',
-    #    name='robot_model_publisher',
-    #    condition=IfCondition(use_robot_model_pub_lc), # if use_robot_model_pub_lc is True, then launch the node
-    #    parameters=[{'use_sim_time': False}],
-    #    arguments=[model_lc]) # pass the value of the launch configuration variable 'model' to the node 
 
-    # robot_state_publisher publishes the state of the robot to tf2
+    # The robot_state_publisher node publishes the robot_description topic only once when it is started. 
+    # The 'robot_description' topic contains the URDF description of the robot, 
+    # which is typically loaded from a URDF file (other tools. e.g. rviz subscribe to this topic)
+    # When the robot_state_publisher node is launched, it reads the URDF file and extracts 
+    # the necessary information, such as joint names, parent-child relationships, joint limits, 
+    # and initial joint positions. It then publishes this information as a static 'robot_description topic'.
+    # Once the robot_state_publisher has published the robot_description topic, it primarily 
+    # focuses on updating and publishing the current state of the robot using joint state 
+    # information (from the joint_states topic)
+    # The node subscribes to joint state messages, typically published by joint state publisher nodes or 
+    # other components that provide the robot's joint values. It uses these joint state messages, 
+    # along with the URDF information, to calculate and publish the transformation between different robot links.
+    # So the node continuously receives joint state information makes claculations and 
+    # publishes these transformations as TF (Transform) messages.
     # Once the state gets published, it is available to all components in the system 
     # that also use tf2 (tf/tf2 is a tool that allows you to keep track 
     # of the relationship between different coordinate frames)
+    # 
+    # Published topics: /robot_description (std_msgs/msg/String), 
+    # /tf (tf2_msgs/msg/TFMessage), /tf_static (tf2_msgs/msg/TFMessage) 
+    # Subscribed topics: joint_states (sensor_msgs/msg/JointState)
     robot_state_publisher_node = Node(
+        condition=IfCondition(use_robot_state_pub_lc),
         package='robot_state_publisher',
         executable='robot_state_publisher',
         name='robot_state_publisher',
-        condition=IfCondition(use_robot_state_pub_lc),
-        parameters=[{'use_sim_time': False}],
-        arguments=[model_lc])
+        output='screen', # output='screen' will display the output of the node in the terminal
+        parameters=[
+            {
+                'use_sim_time': use_sim_time_lc,
+                'robot_description': Command(['xacro ', model_lc])
+            }
+        ]
+    )
     
     #joint_state_publisher_node = Node(
     #    package='joint_state_publisher',
@@ -141,11 +164,14 @@ def generate_launch_description():
     #    condition=IfCondition(use_joint_state_publisher_gui_lc))
     
     rviz_node = Node(
+        condition=IfCondition(use_rviz_lc),
         package='rviz2',
         executable='rviz2',
         name='rviz2',
-        condition=IfCondition(use_rviz_lc),
-        arguments=['-d', rviz_config_file_lc]) # -d is the argument that specifies the rviz config file to load
+        output='screen',
+        arguments=['-d', rviz_config_file_lc], # -d is the argument that specifies the rviz config file to load
+        parameters=[{'use_sim_time': use_sim_time_lc}]
+    )
     
     # --- Create the launch description and populate
     ld = LaunchDescription()
@@ -158,6 +184,7 @@ def generate_launch_description():
     #ld.add_action(use_joint_state_publisher_gui_la)
     ld.add_action(rviz_config_file_la)
     ld.add_action(use_rviz_la)
+    ld.add_action(use_sim_time_la)
 
     #ld.add_action(robot_model_publisher_node)
     ld.add_action(robot_state_publisher_node)

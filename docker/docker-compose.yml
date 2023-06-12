@@ -51,9 +51,17 @@ services:
     # The name to be given to the container created from the image.
     container_name: bfb_description_container
 
-   ## volumes:
-      # Enable on-the-fly parameter updates without the need for container restarts.
-   ##   - ../bigfootbot_teleop/config:/ros2_ws/install/bigfootbot_teleop/share/bigfootbot_teleop/config 
+    volumes:
+      # Forward X socket to container to enable GUI
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+      # Mount the bigfootbot_description package to the container
+      #- ../bigfootbot_description:/ros2_ws/src/bigfootbot_description:rw 
+
+    environment:
+      - DISPLAY=$DISPLAY  # To allow the container to access the host's 
+                          # X11 server for GUI applications.
+      - QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
 
     # Enable GPU access for the container
     deploy:

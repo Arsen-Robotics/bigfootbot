@@ -1,0 +1,58 @@
+# --- Docker commands ---
+# Build docker image:
+#   `docker build -f Dockerfile.bfb_description -t bfb_description:latest ..`
+#
+# Run docker container:
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_description_container bfb_description:latest`
+#
+# To connect to a running container: 
+#   `docker exec -it bfb_description_container bash`
+# -------------------------
+
+# --- ROS2 launch commands ---
+
+#-----------------------------
+
+# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Image built: 05/23/2023
+ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+
+# --- For running on x86/amd64 and arm64/aarch64
+# NB! Not Nvidia GPU accelerated
+# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
+# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
+# ARG BASE_IMAGE="ros:humble-ros-base"
+# --------
+
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ROS2 workspace
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"] 
+
+##### Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+# run ros2 launch command
+CMD ["rviz2"]
+#CMD ["bash"]

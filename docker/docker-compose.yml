@@ -78,8 +78,10 @@ services:
 
     #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
     
-    networks:
-      bfb_network:
+    #networks:
+    #  bfb_network:
+
+    network_mode: host
 
   # --- BASE (motor controller)
   bfb_base:
@@ -128,8 +130,10 @@ services:
 
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
-    networks:
-      bfb_network:
+    #networks:
+    #  bfb_network:
+
+    network_mode: host
    
   # --- TELEOPERATION
   bfb_teleop:
@@ -156,12 +160,13 @@ services:
 
     #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
     
-    networks:
-      bfb_network:
+    #networks:
+     # bfb_network:
+    network_mode: host
 
 
-networks:
-  bfb_network:
+#networks:
+ # bfb_network:
 
   ####################  BIGFOOTBOT REALSENSE ################
   #bfb_realsense:

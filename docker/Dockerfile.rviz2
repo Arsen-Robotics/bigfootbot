@@ -3,8 +3,17 @@
 #   `docker build -f Dockerfile.rviz2 -t humble_rviz2:latest ..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name humble_rviz2_container humble_rviz2:latest`
-#
+#   `docker run -it --rm --privileged --network host \ 
+#     --runtime=nvidia --gpus all --name humble_rviz2_container humble_rviz2:latest`
+#   
+#   Run container with GUI support: 
+#   `docker run -it --rm --privileged --network host \
+#     --runtime=nvidia --gpus all \ 
+#     --env="DISPLAY" \
+#     --env="QT_X11_NO_MITSHM=1" \
+#     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \ 
+#     --name humble_rviz2_container \
+#     humble_rviz2:latest`
 # To connect to a running container: 
 #   `docker exec -it humble_rviz2_container bash`
 # -------------------------

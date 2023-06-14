@@ -17,9 +17,17 @@ set -e
 
 # Source custom workspace overlay with underlay it was created in 
 # (in our case underlay is ROS2 main overlay which has no parent overlay) 
-#source ~/ros2_ws/install/setup.bash
-echo "source ${ROS_WS}/install/setup.bash" >> ~/.bashrc
-source ${ROS_WS}/install/setup.bash
+# Source custom workspace overlay if it exists, otherwise source default ROS setup.bash
+if [ -f "${ROS_WS}/install/setup.bash" ]; then
+  echo "Sourcing custom workspace overlay: ${ROS_WS}/install/setup.bash"
+  echo "source ${ROS_WS}/install/setup.bash" >> ~/.bashrc
+  source "${ROS_WS}/install/setup.bash"
+else
+  #ROS_DISTRO=<your_ros_distro>  # Set the appropriate ROS distribution
+  echo "Custom workspace overlay not found. Sourcing default ROS setup.bash for ROS_DISTRO: ${ROS_DISTRO}"
+  echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
+  source "/opt/ros/${ROS_DISTRO}/setup.bash"
+fi
 #. ~/.bashrc - alternative to calling "source ${ROS_WS}/install/setup.bash" (the line above)
 #source /${ROS_WS}/install/local_setup.bash - calling this will make available ONLY packages installed in ${ROS_WS} directory
 

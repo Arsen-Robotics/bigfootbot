@@ -1,3 +1,22 @@
+# --- Docker compose commands ---
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#  `docker compose -f docker-compose_rviz2.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#  `docker compose -f docker-compose_rviz2.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#  `docker compose -f docker-compose_rviz2.yml up --build`
+# To rebuild a certain service:
+# `docker compose up --build <service_name>`
+# --------------------
+
+
 #version: '3.5' # version flag is Depricated in Docker compose V2?
 services:
   humble_rviz2:
@@ -20,7 +39,7 @@ services:
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
                           # X11 server for GUI applications.
-      #- QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
+      - QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
 
     # Enable GPU access for the container NB! Only for NVIDIA GPUs
     #deploy:

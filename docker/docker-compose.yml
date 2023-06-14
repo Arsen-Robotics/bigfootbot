@@ -55,8 +55,10 @@ services:
       # Forward X socket to container to enable GUI
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
-      # Mount the bigfootbot_description package to the container
+      # Mount urf file to be able to change robot model on-the-fly in the running container
+      # Without a need to rebuild the image
       #- ../bigfootbot_description:/ros2_ws/src/bigfootbot_description:rw 
+      - ../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -76,7 +78,8 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
-    #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
+    # Overload the default command executed by the container
+    command: ros2 launch bigfootbot_description view_robot.launch.py use_rviz:=false model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro
     
     #networks:
     #  bfb_network:

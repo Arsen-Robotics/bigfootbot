@@ -20,9 +20,9 @@
         <origin xyz="${length/2} ${-width/2} ${-height/2}" rpy="0 0 1.57079632679"/>
         <geometry>
           <!--box size="${length} ${width} ${height}"/-->
-          <!--mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/--> <!-- scale="0.001 0.001 0.001"-->
+          <mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/> <!-- scale="0.001 0.001 0.001"-->
           
-          <mesh filename="file://$(find bigfootbot_description)/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/> <!-- scale="0.001 0.001 0.001"-->
+          <!--mesh filename="file://$(find bigfootbot_description)/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/--> <!-- scale="0.001 0.001 0.001"-->
           <!-- file:// is used instead on package:// because URDF->SDF converter converts package:// to model:// and Gazebo can't fint STLs -->
         </geometry>
         <material name="Red"/> <!-- Material for RViz-->

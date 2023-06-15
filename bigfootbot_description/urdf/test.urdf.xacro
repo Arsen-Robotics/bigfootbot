@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<robot name="bigfootbot" xmlns:xacro="http://ros.org/wiki/xacro">
+  
+  <!-- Robot common constants (like width, height, mass, ...) -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/bfb_common_properties.urdf.xacro"/>
+
+  <!-- Base -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/mech/base.urdf.xacro"/>
+  
+  <!-- Add robot base -->
+  <xacro:base 
+    length="${base_length}" 
+    width="${base_width}" 
+    height="${base_height}" 
+    mass="${base_mass}"
+    wheel_radius="${wheel_radius}"
+    wheel_zoff="${wheel_zoff}"
+  />
+
+</robot> 

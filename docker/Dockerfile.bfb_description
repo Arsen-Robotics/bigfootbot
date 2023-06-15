@@ -92,6 +92,5 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 #CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py"]
 
 # Run the launch file without enabling RViz
-CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py", "use_rviz:=false"]
-
-#CMD ["bash"]
+#CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py", "use_rviz:=false"]
+CMD ["bash"]

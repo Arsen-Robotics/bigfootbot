@@ -5,7 +5,7 @@
   <xacro:include filename="$(find bigfootbot_description)/urdf/bfb_common_properties.urdf.xacro"/>
   
   <!-- Inertial -->
-  <xacro:include filename="$(find bigfootbot_description)/urdf/inertials.urdf.xacro"/>
+  <!--xacro:include filename="$(find bigfootbot_description)/urdf/inertials.urdf.xacro"/-->
 
   <!-- Base -->
   <xacro:include filename="$(find bigfootbot_description)/urdf/mech/base.urdf.xacro"/>

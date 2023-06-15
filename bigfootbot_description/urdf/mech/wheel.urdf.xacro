@@ -1,16 +1,19 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-<!-- *********************** DRIVE WHEELS ******************************  -->
+  <!-- Inertial -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/inertials.urdf.xacro"/>
+
+  <!-- *********************** DRIVE WHEELS ******************************  -->
   <xacro:macro name="wheel" params="prefix x_reflect y_reflect rotate_yaw">
     <link name="${prefix}_link">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 ${rotate_yaw}"/>
         <geometry>
-            <!--cylinder radius="${wheel_radius}" length="${wheel_width}"/-->
+            <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
             <!--mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/-->
 
-            <mesh filename="file://$(find bigfootbot_description)/meshes/wheel.stl" scale="0.001 0.001 0.001"/> 
+            <!--mesh filename="file://$(find bigfootbot_description)/meshes/wheel.stl" scale="0.001 0.001 0.001"/--> 
             <!-- file:// is used instead on package:// because URDF->SDF converter converts package:// to model:// and Gazebo can't fint STLs -->
         </geometry>
         <material name="Gray"> <!-- Material for RViz -->

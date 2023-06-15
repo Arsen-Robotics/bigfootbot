@@ -1,7 +1,10 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-<!-- ********************** ROBOT BASE AND BASE FOOTPRINT *********************************  -->
+  <!-- Inertial -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/inertials.urdf.xacro"/>
+
+  <!-- ********************** ROBOT BASE AND BASE FOOTPRINT *********************************  -->
 
   <xacro:macro name="base" params="length width height mass wheel_radius wheel_zoff">
 
@@ -19,8 +22,8 @@
       <visual>
         <origin xyz="${length/2} ${-width/2} ${-height/2}" rpy="0 0 1.57079632679"/>
         <geometry>
-          <!--box size="${length} ${width} ${height}"/-->
-          <mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/> <!-- scale="0.001 0.001 0.001"-->
+          <box size="${length} ${width} ${height}"/>
+          <!--mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/--> <!-- scale="0.001 0.001 0.001"-->
           
           <!--mesh filename="file://$(find bigfootbot_description)/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/--> <!-- scale="0.001 0.001 0.001"-->
           <!-- file:// is used instead on package:// because URDF->SDF converter converts package:// to model:// and Gazebo can't fint STLs -->

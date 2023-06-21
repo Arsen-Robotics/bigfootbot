@@ -1,29 +1,15 @@
 # --- Docker commands ---
 # Build docker image:
-#   `docker build -f Dockerfile.bfb_drive -t bfb_drive:latest ..`
+#   `docker build -f Dockerfile.rosbridge -t rosbridge:latest ..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_drive_container bfb_drive:latest`
+#   `docker run -it --rm --privileged --network host --name rosbridge_container rosbridge:latest`
 #
 # To connect to a running container: 
-#   `docker exec -it bfb_drive_container bash`
+#   `docker exec -it rosbridge_container bash`
 # -------------------------
 
 # --- ROS2 launch commands ---
-# Launch Roboclaw (motor controller):
-# `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
-#
-# Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
-# This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
-# of a joystick buttons and axes
-# `ros2 launch joy joy-launch.py` 
-#
-# Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
-# sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
-# `ros2 launch teleop_twist_joy teleop-launch.py`
-#  
-#  Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
-# `ros2 topic pub -r 20 /cmd_vel geometry_msgs/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
 #-----------------------------
 
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
@@ -58,21 +44,18 @@ ENV SHELL=/bin/bash
 SHELL ["/bin/bash", "-c"] 
 
 # Install additional packages needed for ROS2 dependencies
-RUN apt-get update && apt-get install -y \
-    libboost-all-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+#RUN apt-get update && apt-get install -y \
+#    libboost-all-dev \
+#    && rm -rf /var/lib/apt/lists/* \
+#    && apt-get clean
 
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# --- Build and install ROS2 packages
-COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
-
 # Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git) 
 # ROS2 package "ros2_roboclaw_driver"
 RUN cd ${ROS_WS}/src \
-    && git clone https://github.com/jevgenik/ros2_roboclaw_driver.git
+    && git clone https://github.com/RobotWebTools/rosbridge_suite.git
 
 RUN apt-get update \
     && cd ${ROS_WS} \
@@ -106,5 +89,5 @@ COPY docker/ros_entrypoint.sh /
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
-CMD ["ros2", "launch", "bigfootbot_base", "bfb_roboclaw.launch.py"]
-#CMD ["bash"]
+#CMD ["ros2", "launch", "bigfootbot_base", "bfb_roboclaw.launch.py"]
+CMD ["bash"]

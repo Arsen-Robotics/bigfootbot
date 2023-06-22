@@ -37,6 +37,31 @@ services:
   ##  networks:
   ##    bfb_network:
 
+  # --- ROSBRIDGE SERVER
+  rosbridge:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.rosbridge
+    image: rosbridge:latest  
+    container_name: rosbridge_container
+    #volumes:
+    #  - ../bigfootbot_bringup/launch:/ros2_ws/install/bigfootbot_bringup/share/bigfootbot_bringup/launch     
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    ports:
+      - 9090:9090 # Expose port 9090 to allow external connections to rosbridge server
+
+    # Overload the default command executed by the container
+    command: ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+    #command: ros2 run rosbridge_server rosbridge_websocket
+
+    #network_mode: host
+    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
+
+    networks:
+      bfb_network:
+
   # --- DESCRIPTION
   bfb_description:
     #restart: unless-stopped
@@ -81,10 +106,10 @@ services:
     # Overload the default command executed by the container
     command: ros2 launch bigfootbot_description view_robot.launch.py use_rviz:=false model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro
     
-    #networks:
-    #  bfb_network:
+    #network_mode: host
 
-    network_mode: host
+    networks:
+      bfb_network:
 
   # --- BASE (motor controller)
   bfb_base:
@@ -133,10 +158,8 @@ services:
 
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
-    #networks:
-    #  bfb_network:
-
-    network_mode: host
+    networks:
+      bfb_network:
    
   # --- TELEOPERATION
   bfb_teleop:
@@ -163,13 +186,13 @@ services:
 
     #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
     
-    #networks:
-     # bfb_network:
-    network_mode: host
+    networks:
+      bfb_network:
+    #network_mode: host
 
 
-#networks:
- # bfb_network:
+networks:
+  bfb_network:
 
   ####################  BIGFOOTBOT REALSENSE ################
   #bfb_realsense:

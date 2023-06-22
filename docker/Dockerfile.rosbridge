@@ -83,6 +83,9 @@ RUN apt-get update \
 ##### Setup entrypoint
 COPY docker/ros_entrypoint.sh /
 
+# Expose the default ROS bridge port
+EXPOSE 9090
+
 # [] - is exec form
 # exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)

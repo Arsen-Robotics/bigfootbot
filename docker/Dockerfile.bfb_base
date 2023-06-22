@@ -23,7 +23,7 @@
 # `ros2 launch teleop_twist_joy teleop-launch.py`
 #  
 #  Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
-# `ros2 topic pub -r 20 /cmd_vel geometry_msgs/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+# `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
 #-----------------------------
 
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)

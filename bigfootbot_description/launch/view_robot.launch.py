@@ -71,20 +71,28 @@ def generate_launch_description():
     # 'model' is the name of the launch argument
     # 'description' is the description of the launch argument (this is the description that 
     #               is displayed when you run the launch file with the --help option)
-    model_path_la = DeclareLaunchArgument(
-        'model',
-        default_value=default_model_path,
-        description='Absolute path to robot urdf file')
+
+    declared_arguments = []
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'model',
+            default_value=default_model_path,
+            description='Absolute path to robot urdf file'
+        )
+    )
 
     #use_robot_model_pub_la = DeclareLaunchArgument(
     #    'use_robot_model_pub',
     #    default_value='True',
     #    description='Whether to start robot_model_publisher')
     
-    use_robot_state_pub_la = DeclareLaunchArgument(
-        'use_robot_state_pub',
-        default_value='True',
-        description='Whether to start robot_state_publisher')
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_robot_state_pub',
+            default_value='True',
+            description='Whether to start robot_state_publisher'
+        )
+    )
     
     #use_joint_state_publisher_la = DeclareLaunchArgument(
     #    'use_joint_state_publisher',
@@ -96,20 +104,29 @@ def generate_launch_description():
     #    default_value='True',
     #    description='Whether to start joint_state_publisher_gui')
     
-    rviz_config_file_la = DeclareLaunchArgument(
-        'rviz_config_file',
-        default_value=default_rviz_config_path,
-        description='Absolute path to rviz config file to load')
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'rviz_config_file',
+            default_value=default_rviz_config_path,
+            description='Absolute path to rviz config file to load'
+        )
+    )
     
-    use_rviz_la = DeclareLaunchArgument(
-        'use_rviz',
-        default_value='True',
-        description='Whether to start rviz')
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='True',
+            description='Whether to start rviz'
+        )
+    )
 
-    use_sim_time_la = DeclareLaunchArgument(
-        'use_sim_time',
-        default_value='False',
-        description='Use simulation (Gazebo) clock if true')
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='False',
+            description='Use simulation (Gazebo) clock if true'
+        )
+    )
     
     
     # --- Nodes
@@ -172,27 +189,34 @@ def generate_launch_description():
         arguments=['-d', rviz_config_file_lc], # -d is the argument that specifies the rviz config file to load
         parameters=[{'use_sim_time': use_sim_time_lc}]
     )
+
+    nodes = [
+        robot_state_publisher_node,
+        rviz_node
+    ]
+
+    return LaunchDescription(declared_arguments + nodes)
     
     # --- Create the launch description and populate
-    ld = LaunchDescription()
+    ##ld = LaunchDescription()
 
     # Add the actions to the launch description
-    ld.add_action(model_path_la)
+    ##ld.add_action(model_path_la)
     #ld.add_action(use_robot_model_pub_la)
-    ld.add_action(use_robot_state_pub_la)
+    ##ld.add_action(use_robot_state_pub_la)
     #ld.add_action(use_joint_state_publisher_la)
     #ld.add_action(use_joint_state_publisher_gui_la)
-    ld.add_action(rviz_config_file_la)
-    ld.add_action(use_rviz_la)
-    ld.add_action(use_sim_time_la)
+    ##ld.add_action(rviz_config_file_la)
+    ##ld.add_action(use_rviz_la)
+    ##ld.add_action(use_sim_time_la)
 
     #ld.add_action(robot_model_publisher_node)
-    ld.add_action(robot_state_publisher_node)
+    ##ld.add_action(robot_state_publisher_node)
     #ld.add_action(joint_state_publisher_node)
     #ld.add_action(joint_state_publisher_gui_node)
-    ld.add_action(rviz_node)
+    ##ld.add_action(rviz_node)
 
-    return ld
+    ##return ld
 
     
     

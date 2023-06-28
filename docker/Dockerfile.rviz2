@@ -1,19 +1,17 @@
 # --- Docker commands ---
+#
 # Build docker image:
 #   `docker build -f Dockerfile.rviz2 -t humble_rviz2:latest ..`
-#
-# Run docker container:
-#   `docker run -it --rm --privileged --network host \ 
-#     --runtime=nvidia --gpus all --name humble_rviz2_container humble_rviz2:latest`
 #   
-#   Run container with GUI support: 
-#   `docker run -it --rm --privileged --network host \
-#     --runtime=nvidia --gpus all \ 
-#     --env="DISPLAY" \
-#     --env="QT_X11_NO_MITSHM=1" \
-#     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \ 
+# Run container with GUI support: 
+#   `docker run -it --rm \
+#     --gpus all \  NB! --gpus all is not needed when container is run on WSL2
+#     -e DISPLAY \
+#     -e QT_X11_NO_MITSHM=1 \ NB! check whether this is needed (it was needed to fix a bug with OpenGL)
+#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \ 
 #     --name humble_rviz2_container \
 #     humble_rviz2:latest`
+#
 # To connect to a running container: 
 #   `docker exec -it humble_rviz2_container bash`
 # -------------------------
@@ -56,9 +54,17 @@ ENV SHELL=/bin/bash
 SHELL ["/bin/bash", "-c"] 
 
 # Install rqt and rviz2
-RUN apt-get update && apt-get install -y \
+# software-properties-common - for `add-apt-repository` command
+# `add-apt-repository ppa:kisak/kisak-mesa && apt upgrade -y` - to solve bug with rviz2 black screen
+RUN apt-get update \
+    && apt-get install -y \ 
+    software-properties-common \ 
     ros-${ROS_DISTRO}-rqt \
-    ros-${ROS_DISTRO}-rviz2
+    ros-${ROS_DISTRO}-rviz2 \
+    && add-apt-repository ppa:kisak/kisak-mesa \
+    && apt upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 ##### Setup entrypoint
 COPY docker/ros_entrypoint.sh /

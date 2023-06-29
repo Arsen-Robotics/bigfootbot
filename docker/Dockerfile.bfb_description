@@ -1,9 +1,17 @@
 # --- Docker commands ---
-# Build docker image:
-#   `docker build -f Dockerfile.bfb_description -t bfb_description:latest ..`
+#
+# Build docker image for ONLY Jetson device (Nvidia GPU accelerated):
+#   `docker build -f Dockerfile.bfb_description 
+#      --build-arg BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
+#      -t bfb_description:latest ..`
+#
+# Build docker image for BOTH x86/amd64 and any arm64/aarch64 device:
+#   `docker build -f Dockerfile.bfb_description --build-arg BASE_IMAGE=ros:humble-ros-base -t bfb_description:latest ..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_description_container bfb_description:latest`
+#  NEW: `docker run -it --rm --name bfb_description_container bfb_description:latest`
+#  OLD: (check when running on Nvidia Jetson wheteher --runtime=nvidia --gpus all are needed): 
+#  `docker run -it --rm --privileged --net=host --runtime=nvidia --gpus all --name bfb_description_container bfb_description:latest`
 #
 # To connect to a running container: 
 #   `docker exec -it bfb_description_container bash`
@@ -13,15 +21,17 @@
 
 #-----------------------------
 
-# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
-# Image built: 05/23/2023
-ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+ARG BASE_IMAGE
 
-# --- For running on x86/amd64 and arm64/aarch64
+# For running on ONLY Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Image built: 05/23/2023
+# BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+
+# --- For running on BOTH x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated
 # NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
 # ROS2 version: communication libraries, message packages, command line tools. No GUI tools
-# ARG BASE_IMAGE="ros:humble-ros-base"
+# BASE_IMAGE="ros:humble-ros-base"
 # --------
 
 FROM ${BASE_IMAGE}
@@ -92,5 +102,6 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 #CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py"]
 
 # Run the launch file without enabling RViz
-#CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py", "use_rviz:=false"]
-CMD ["bash"]
+#CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py", "use_robot_state_pub:=true", "use_rviz:=false", "use_sim_time:=false"]
+CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py"]
+#CMD ["bash"]

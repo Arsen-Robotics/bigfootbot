@@ -1,10 +1,10 @@
-<!-- 
-Configures the Hardware Interface (or Component) and its Command Iterfaces (Read/Write) and 
-State Interfaces (Read Only) for a specific robot for ros2_control framework
--->
-
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 
+  Configures the Hardware Interface (or Component) and its Command Iterfaces (Read/Write) and 
+  State Interfaces (Read Only) for a specific robot for ros2_control framework
+  -->
   
   <!-- 
   macro param 'name' is used to name the ros2_control system

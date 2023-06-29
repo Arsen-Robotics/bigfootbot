@@ -4,14 +4,16 @@
 #   `docker build -f Dockerfile.gazebo -t gazebo_my:latest ..`
 #   
 # Run container with GUI support: 
-#   `docker run -it --rm \
-#     --gpus all \ NB! --gpus all is not needed when container is run on WSL2
-#     -e DISPLAY \
-#     -e QT_X11_NO_MITSHM=1 \ NB! check whether this is needed (it was needed to fix a bug with OpenGL)
-#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-#     --name gazebo_container \
-#     gazebo_my:latest \
-#     gazebo /usr/share/gazebo-11/worlds/seesaw.world
+# Note. Maybe is needed to add next options:
+#   --gpus all (not needed when container is run on WSL2)
+#   -e QT_X11_NO_MITSHM=1 (it used to be a fix for a bug with QT and OpenGL)
+#
+# `docker run -it --rm \
+#   -e DISPLAY \
+#   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+#    --name gazebo_container \
+#    gazebo_my:latest \
+#    gazebo /usr/share/gazebo-11/worlds/seesaw.world
 #
 # To connect to a running container: 
 #   `docker exec -it gazebo_container bash`
@@ -31,8 +33,10 @@
 # ROS2 version: communication libraries, message packages, command line tools. No GUI tools
 # In the interest of keeping ros-core tag minimal in image size, developer tools such as rosdep, 
 # colcon and vcstools are not shipped in ros_core, but in ros-base instead.
-ARG BASE_IMAGE="gazebo:latest"
+#ARG BASE_IMAGE="gazebo:latest"
 # --------
+
+ARG BASE_IMAGE="ros:humble-ros-base"
 
 FROM ${BASE_IMAGE}
 
@@ -53,6 +57,22 @@ ENV SHELL=/bin/bash
 # (the default shell on Linux is ["/bin/sh", "-c"])
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"] 
+
+RUN apt-get update \
+    && apt-get install -y \ 
+    ros-${ROS_DISTRO}-ros-gz \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Bug/problem fix with gazebo gui black screen
+# software-properties-common - for `add-apt-repository` command
+RUN apt-get update \
+    && apt-get install -y \ 
+    software-properties-common \     
+    && add-apt-repository ppa:kisak/kisak-mesa \
+    && apt upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Install rqt and rviz2
 # software-properties-common - for `add-apt-repository` command
@@ -77,5 +97,5 @@ SHELL ["/bin/bash", "-c"]
 #ENTRYPOINT ["/ros_entrypoint.sh"]
 
 # run ros2 launch command
-CMD ["gazebo"]
+#CMD ["gazebo"]
 #CMD ["bash"]

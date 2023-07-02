@@ -7,6 +7,16 @@ ros2 run tf2_ros tf2_echo <parent frame> <child frame>
 
 === ROS2 topic commands ===
 ros2 topic echo /wheel/odometry
+`ros2 topic echo /my_topic --no-arr` --no-addr - don't print array fields of messages
+
+Retrieve information about a topic
+`ros2 topic info /tf --verbose`
+
+# Name remapping
+ros2 run rplidar_ros rplidar_node --ros-args -r __ns:=scanner2
+`-r __ns:=scanner2` this changes the namespace of the node rplidar_node to 'scanner2' (/scanner/rplidar_node) 
+`-r __node:=<new node name>` this renames the node to 'new_node_name'.
+Namespace allows you to run multiple instances of the same node with separate parameter spaces.
 
 === ROS2 params ===
 To see the parameters belonging to your nodes

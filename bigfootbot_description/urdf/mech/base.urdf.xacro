@@ -7,6 +7,7 @@
   <!-- ********************** ROBOT BASE AND BASE FOOTPRINT *********************************  -->
 
   <xacro:macro name="base" params="length width height mass wheel_radius wheel_zoff">
+  <!-- params is a list of parameters that can be passed to the macro -->
 
     <!-- Define the center of the main robot chassis projected on the ground -->	
     <link name="base_footprint"/>

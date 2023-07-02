@@ -4,20 +4,21 @@
 #   `docker build -f Dockerfile.rviz2 -t humble_rviz2:latest ..`
 #   
 # Run container with GUI support: 
-#   `docker run -it --rm \
-#     --gpus all \  NB! --gpus all is not needed when container is run on WSL2
-#     -e DISPLAY \
-#     -e QT_X11_NO_MITSHM=1 \ NB! check whether this is needed (it was needed to fix a bug with OpenGL)
-#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \ 
-#     --name humble_rviz2_container \
-#     humble_rviz2:latest`
+# Note. Maybe is needed to add next options:
+#  --gpus all (not needed when container is run on WSL2)
+#  -e QT_X11_NO_MITSHM=1 (it used to be a fix for a bug with QT and OpenGL)
+# `docker run -it --rm \
+#   -e DISPLAY \
+#   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \ 
+#   --name humble_rviz2_container \
+#   humble_rviz2:latest`
 #
 # To connect to a running container: 
 #   `docker exec -it humble_rviz2_container bash`
 # -------------------------
 
-# --- ROS2 launch commands ---
-
+# --- ROS2 commands ---
+# `ros2 topic echo /my_topic --no-arr` --no-addr - don't print array fields of messages
 #-----------------------------
 
 # For running on ONLY Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)

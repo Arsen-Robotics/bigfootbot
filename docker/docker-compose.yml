@@ -104,7 +104,10 @@ services:
     tty: true        # docker run -t
 
     # Overload the default command executed by the container
-    command: ros2 launch bigfootbot_description view_robot.launch.py use_rviz:=false model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro
+    command: ros2 launch bigfootbot_description view_robot.launch.py \
+             model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro
+             use_joint_state_publisher_gui:=true \
+             use_rviz:=false \              
     
     #network_mode: host
 

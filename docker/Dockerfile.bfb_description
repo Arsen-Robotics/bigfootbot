@@ -10,6 +10,11 @@
 #
 # Run docker container:
 #  NEW: `docker run -it --rm --name bfb_description_container bfb_description:latest`
+#       `docker run -it --rm --name bfb_description_container bfb_description:latest \ 
+#          ros2 launch bigfootbot_description view_robot.launch.py \
+#            model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro \
+#            use_joint_state_publisher_gui:=true use_rviz:=false`
+#
 #  OLD: (check when running on Nvidia Jetson wheteher --runtime=nvidia --gpus all are needed): 
 #  `docker run -it --rm --privileged --net=host --runtime=nvidia --gpus all --name bfb_description_container bfb_description:latest`
 #
@@ -68,6 +73,10 @@ RUN cd ${ROS_WS}/src \
 
 RUN apt-get update \
     #&& apt-get install -y ros-foxy-xacro \
+    # Install joint_state_publisher_gui package (GUI tool for setting and 
+    # publishing joint state values [messages sensor_msgs/JointState to a topic /joint_states] 
+    # for a given URDF [reads from a topic /robot_description]) 
+    && apt-get install -y ros-${ROS_DISTRO}-joint-state-publisher-gui \
     && cd ${ROS_WS} \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
@@ -79,7 +88,9 @@ RUN apt-get update \
     # NB! colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
     ##&& colcon build \
     ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    && colcon build --symlink-install \
+    # with --symlink-install you don't have to rebuild the package when URDF file is changed
+    # NB! package needs to be rebuilt if a new file is added to the package
+    && colcon build --symlink-install \  
     # colcon build --symlink-install --packages-select xacro # build only xacro package
     #&& rm -rf src logs build \
     && rm -rf /var/lib/apt/lists/* \
@@ -103,5 +114,5 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 
 # Run the launch file without enabling RViz
 #CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py", "use_robot_state_pub:=true", "use_rviz:=false", "use_sim_time:=false"]
-CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py"]
-#CMD ["bash"]
+#CMD ["ros2", "launch", "bigfootbot_description", "view_robot.launch.py"]
+CMD ["bash"]

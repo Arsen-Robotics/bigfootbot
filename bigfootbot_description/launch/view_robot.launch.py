@@ -1,4 +1,9 @@
-# Description: Launches rviz and loads the robot model urdf file
+# This launch file is used to launch the robot_state_publisher and rviz2 nodes 
+# for visualizing the robot model in ROS2. It also provides options to start 
+# joint_state_publisher and joint_state_publisher_gui nodes. 
+#
+# The launch file takes in arguments such as the path to the rviz config file, 
+# whether to use simulation time, and whether to start the robot_state_publisher and rviz2 nodes.
 
 import os;
 from ament_index_python.packages import get_package_share_directory 
@@ -9,8 +14,7 @@ from launch.substitutions import LaunchConfiguration, Command # Command is a sub
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare 
 
-#q: get_package_share_directory vs FindPackageShare? 
-# a: get_package_share_directory is a function that returns the path to the share directory of a package
+# get_package_share_directory is a function that returns the path to the share directory of a package
 # FindPackageShare is a substitution that returns the path to the share directory of a package
 # the difference is that get_package_share_directory is a function that returns a string, while FindPackageShare 
 # is a substitution that returns a substitution object
@@ -52,7 +56,7 @@ def generate_launch_description():
     # whether to start joint_state_publisher_gui
     # joint_state_publisher_gui is a tool that allows you to set the joint angles of the 
     # robot using a graphical interface
-    #use_joint_state_publisher_gui_lc = LaunchConfiguration('use_joint_state_publisher_gui')
+    use_joint_state_publisher_gui_lc = LaunchConfiguration('use_joint_state_publisher_gui')
     
     # the rviz config file
     rviz_config_file_lc = LaunchConfiguration('rviz_config_file')
@@ -72,7 +76,7 @@ def generate_launch_description():
     # 'description' is the description of the launch argument (this is the description that 
     #               is displayed when you run the launch file with the --help option)
 
-    declared_arguments = []
+    declared_arguments = [] # list of launch arguments (actions)
     declared_arguments.append(
         DeclareLaunchArgument(
             'model',
@@ -99,10 +103,13 @@ def generate_launch_description():
     #    default_value='True',
     #    description='Whether to start joint_state_publisher')
     
-    #use_joint_state_publisher_gui_la = DeclareLaunchArgument(
-    #    'use_joint_state_publisher_gui',
-    #    default_value='True',
-    #    description='Whether to start joint_state_publisher_gui')
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_joint_state_publisher_gui',
+            default_value='False',
+            description='Whether to start joint_state_publisher_gui'
+        )
+    )
     
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -163,7 +170,8 @@ def generate_launch_description():
         parameters=[
             {
                 'use_sim_time': use_sim_time_lc,
-                'robot_description': Command(['xacro ', model_lc])
+                #'robot_description': Command(['xacro ', model_lc])
+                'robot_description': Command(['xacro',' ', model_lc])
             }
         ]
     )
@@ -174,11 +182,14 @@ def generate_launch_description():
     #    name='joint_state_publisher',
     #    condition=IfCondition(use_joint_state_publisher_lc))
     
-    #joint_state_publisher_gui_node = Node(
-    #    package='joint_state_publisher_gui',
-    #    executable='joint_state_publisher_gui',
-    #    name='joint_state_publisher_gui',
-    #    condition=IfCondition(use_joint_state_publisher_gui_lc))
+    # Package joint_state_publisher_gui is a GUI tool for setting and 
+    # publishing joint state values [messages sensor_msgs/JointState to a topic /joint_states] 
+    # for a given URDF [reads from a topic /robot_description]) 
+    joint_state_publisher_gui_node = Node(
+        package='joint_state_publisher_gui',
+        executable='joint_state_publisher_gui',
+        name='joint_state_publisher_gui',
+        condition=IfCondition(use_joint_state_publisher_gui_lc))
     
     rviz_node = Node(
         condition=IfCondition(use_rviz_lc),
@@ -189,9 +200,11 @@ def generate_launch_description():
         arguments=['-d', rviz_config_file_lc], # -d is the argument that specifies the rviz config file to load
         parameters=[{'use_sim_time': use_sim_time_lc}]
     )
-
+     
+    # Nodes to launch
     nodes = [
         robot_state_publisher_node,
+        joint_state_publisher_gui_node,
         rviz_node
     ]
 

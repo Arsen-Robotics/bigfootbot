@@ -1,3 +1,11 @@
+ === Linux commands ====
+ `pstree` - display a tree diagram of running processes
+ `pstree <PID>` - This will show the process tree starting from the specified PID
+
+ `killall chrome` -  terminate all running instances of the Google Chrome browser on your Linux system
+ `killall -9 process_name` - This signal is commonly known as a "forceful" or "hard" kill signal because it immediately 
+                             terminates the processes without allowing them to perform any cleanup tasks or graceful shutdown procedures.
+
 === TF2 commands ===
 --- Generate pdf file with TF transform tree
 ros2 run tf2_tools view_frames.py

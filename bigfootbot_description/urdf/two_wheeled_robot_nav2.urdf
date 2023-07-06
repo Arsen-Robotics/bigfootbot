@@ -69,6 +69,10 @@
     <xacro:box_inertia m="15.0" w="${base_width}" d="${base_length}" h="${base_height}"/>
   </link>
 
+  <!-- This section defines the visual properties of the robot's base link in Gazebo simulation. 
+  The "reference" attribute specifies the link to which the visual properties apply. 
+  The "material" tag specifies the name of the material to be used for the link. 
+  base_link link will have a red color when rendered in the Gazebo simulation environment -->
   <gazebo reference="base_link">
     <material>Gazebo/Red</material>
   </gazebo>

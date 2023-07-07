@@ -1,19 +1,24 @@
 # --- Docker compose commands ---
+#
 # Create and start containers defined in the compose file
 # NOTE Docker Compose detects changes in your configuration files, 
 # including the Dockerfile, and automatically rebuilds the corresponding images if necessary
-#  `docker compose -f docker-compose_rviz2.yml up'
+#   `docker compose -f docker-compose_rviz2.yml up'
 #
 # Stop and remove containers that were created based on the 
 # configuration specified in the compose file.
-#  `docker compose -f docker-compose_rviz2.yml down'
+#   `docker compose -f docker-compose_rviz2.yml down'
 # 
 # Rebuild all services (all the images are built from scratch)
 # --build option indicates that Docker Compose should rebuild the images, 
 # even if they already exist
-#  `docker compose -f docker-compose_rviz2.yml up --build`
+#   `docker compose -f docker-compose_rviz2.yml up --build`
+#
 # To rebuild a certain service:
-# `docker compose up --build <service_name>`
+#   `docker compose up --build <service_name>`
+#
+# To run a certain service:
+#   `docker compose up <service_name>`
 # --------------------
 
 
@@ -32,11 +37,11 @@ services:
     # The name to be given to the container created from the image.
     container_name: humble_rviz2_container
 
-    #volumes:
+    volumes:
       # Forward X socket to container to enable GUI
       # Note: if privileged: true, then volumes: is not needed
       # because the container will have access to the host's X11 server
-      #- /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -53,15 +58,23 @@ services:
 
     #runtime: nvidia
 
-    privileged: true # To allow the container to access the host's 
+    #privileged: true # To allow the container to access the host's 
                      # X11 server and GPU for GUI applications.
     
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
-    #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
+    # Overload the default command executed by the container
+    command: "ros2 launch bigfootbot_description view_robot.launch.py \
+              model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro \
+              use_robot_state_pub:=false \
+              use_joint_state_pub_gui:=true \
+              use_rviz:=true \
+              use_sim_time:=false"              
+    #command: bash -c "rviz2 && joint_state_publisher_gui"
+    #command: "bash"
     
     #networks:
     #  bfb_network:
 
-    network_mode: host
+    #network_mode: host

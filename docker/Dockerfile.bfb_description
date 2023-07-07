@@ -1,11 +1,11 @@
 # --- Docker commands ---
 #
-# Build docker image for ONLY Jetson device (Nvidia GPU accelerated):
+# Build the docker image for ONLY Jetson device (Nvidia GPU accelerated):
 #   `docker build -f Dockerfile.bfb_description 
 #      --build-arg BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
 #      -t bfb_description:latest ..`
 #
-# Build docker image for BOTH x86/amd64 and any arm64/aarch64 device:
+# Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device:
 #   `docker build -f Dockerfile.bfb_description --build-arg BASE_IMAGE=ros:humble-ros-base -t bfb_description:latest ..`
 #
 # Run docker container:
@@ -62,7 +62,7 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# --- Build and install ROS2 packages
+# Copy the bigfootbot_description package to the ROS2 workspace
 COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 
 # Clone the xacro package from GitHub
@@ -76,7 +76,7 @@ RUN apt-get update \
     # Install joint_state_publisher_gui package (GUI tool for setting and 
     # publishing joint state values [messages sensor_msgs/JointState to a topic /joint_states] 
     # for a given URDF [reads from a topic /robot_description]) 
-    && apt-get install -y ros-${ROS_DISTRO}-joint-state-publisher-gui \
+    #&& apt-get install -y ros-${ROS_DISTRO}-joint-state-publisher-gui \
     && cd ${ROS_WS} \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \

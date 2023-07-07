@@ -54,16 +54,38 @@ ENV SHELL=/bin/bash
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"] 
 
-# Install rqt and rviz2
-# software-properties-common - for `add-apt-repository` command
-# `add-apt-repository ppa:kisak/kisak-mesa && apt upgrade -y` - to solve bug with rviz2 black screen
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+# Copy the bigfootbot_description package to the ROS2 workspace
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
+
 RUN apt-get update \
-    && apt-get install -y \ 
-    software-properties-common \ 
+    && apt-get install -y \
+    # Software-properties-common contains `add-apt-repository` command     
+    software-properties-common \
+    # Install joint_state_publisher_gui package (GUI tool for setting and 
+    # publishing joint state values [messages sensor_msgs/JointState to a topic /joint_states] 
+    # for a given URDF [reads from a topic /robot_description]):
+    ros-${ROS_DISTRO}-joint-state-publisher-gui \
     ros-${ROS_DISTRO}-rqt \
     ros-${ROS_DISTRO}-rviz2 \
+    # -- Build ROS2 workspace
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    # with --symlink-install you don't have to rebuild the package when URDF file is changed
+    # NB! package needs to be rebuilt if a new file is added to the package
+    && colcon build --symlink-install \  
+    # --- end of building ROS2 workspace
+    # To solve a bug with rviz2 black screen: 
     && add-apt-repository ppa:kisak/kisak-mesa \
     && apt upgrade -y \
+    # Clean up
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

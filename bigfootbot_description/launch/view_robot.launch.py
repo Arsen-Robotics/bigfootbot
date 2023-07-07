@@ -1,3 +1,6 @@
+# NB! TODO!!!! Launch argument 'model' (path to URDF robot model) is not working (it is ignored)
+# and hard coded path is used instead (bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro)
+
 # This launch file is used to launch the robot_state_publisher and rviz2 nodes 
 # for visualizing the robot model in ROS2. It also provides options to start 
 # joint_state_publisher and joint_state_publisher_gui nodes. 
@@ -5,12 +8,15 @@
 # The launch file takes in arguments such as the path to the rviz config file, 
 # whether to use simulation time, and whether to start the robot_state_publisher and rviz2 nodes.
 
-import os;
+import os
+import xacro
+
 from ament_index_python.packages import get_package_share_directory 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, Command # Command is a substitution that returns the output of a command
+                                                              # The Command class is used to execute a command in the shell
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare 
 
@@ -56,7 +62,7 @@ def generate_launch_description():
     # whether to start joint_state_publisher_gui
     # joint_state_publisher_gui is a tool that allows you to set the joint angles of the 
     # robot using a graphical interface
-    use_joint_state_publisher_gui_lc = LaunchConfiguration('use_joint_state_publisher_gui')
+    use_joint_state_pub_gui_lc = LaunchConfiguration('use_joint_state_pub_gui')
     
     # the rviz config file
     rviz_config_file_lc = LaunchConfiguration('rviz_config_file')
@@ -93,7 +99,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_robot_state_pub',
-            default_value='True',
+            default_value='False',
             description='Whether to start robot_state_publisher'
         )
     )
@@ -105,7 +111,7 @@ def generate_launch_description():
     
     declared_arguments.append(
         DeclareLaunchArgument(
-            'use_joint_state_publisher_gui',
+            'use_joint_state_pub_gui',
             default_value='False',
             description='Whether to start joint_state_publisher_gui'
         )
@@ -170,8 +176,10 @@ def generate_launch_description():
         parameters=[
             {
                 'use_sim_time': use_sim_time_lc,
+                'robot_description': xacro.process_file(default_model_path).toxml()     # NB! TODO! use model_lc instead of default_model_path
+                #'robot_description': xacro.process_file(model_lc.perform(None)).toxml()
                 #'robot_description': Command(['xacro ', model_lc])
-                'robot_description': Command(['xacro',' ', model_lc])
+                #'robot_description': Command(['xacro',' ', model_lc])
             }
         ]
     )
@@ -189,7 +197,7 @@ def generate_launch_description():
         package='joint_state_publisher_gui',
         executable='joint_state_publisher_gui',
         name='joint_state_publisher_gui',
-        condition=IfCondition(use_joint_state_publisher_gui_lc))
+        condition=IfCondition(use_joint_state_pub_gui_lc))
     
     rviz_node = Node(
         condition=IfCondition(use_rviz_lc),
@@ -218,7 +226,7 @@ def generate_launch_description():
     #ld.add_action(use_robot_model_pub_la)
     ##ld.add_action(use_robot_state_pub_la)
     #ld.add_action(use_joint_state_publisher_la)
-    #ld.add_action(use_joint_state_publisher_gui_la)
+    #ld.add_action(use_joint_state_pub_gui_la)
     ##ld.add_action(rviz_config_file_la)
     ##ld.add_action(use_rviz_la)
     ##ld.add_action(use_sim_time_la)

@@ -1,6 +1,24 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
+  <!--
+    Macro that generates a wheel link, collision, and joint for a robot model. 
+
+    The macro takes four parameters: prefix, x_reflect, y_reflect, and rotate_yaw. 
+    The prefix parameter is used to name the link and joint. The x_reflect and y_reflect parameters are used to 
+    mirror the wheel along the x and y axes, respectively. The rotate_yaw parameter is used to rotate the wheel about the z-axis. 
+    
+    The generated wheel link has a cylinder shape with a specified radius and length. It also has a visual and collision element, 
+    each with their own origin, geometry, and material properties. 
+    
+    The generated joint is a continuous joint that connects the wheel link to the base_link of the robot model. 
+    The joint has an axis of rotation along the y-axis and an origin that is offset from the base_link by a specified distance 
+    in the x, y, and z directions. 
+    
+    The generated wheel link and joint are also configured for use in the Gazebo simulator, with specified friction 
+    coefficients and material properties.
+  -->
+
   <!-- Inertial -->
   <xacro:include filename="$(find bigfootbot_description)/urdf/inertials.urdf.xacro"/>
 
@@ -10,8 +28,8 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 ${rotate_yaw}"/>
         <geometry>
-            <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-            <!--mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/-->
+            <!--cylinder radius="${wheel_radius}" length="${wheel_width}"/-->
+            <mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
 
             <!--mesh filename="file://$(find bigfootbot_description)/meshes/wheel.stl" scale="0.001 0.001 0.001"/--> 
             <!-- file:// is used instead on package:// because URDF->SDF converter converts package:// to model:// and Gazebo can't fint STLs -->
@@ -59,7 +77,7 @@
       <child link="${prefix}_link"/>
       <origin xyz="${x_reflect*wheel_xoff} ${y_reflect*(base_width/2+wheel_ygap)} ${-wheel_zoff}" rpy="0 0 0"/>
       <!--limit upper="3.1415" lower="-3.1415" effort="30" velocity="5.0"/-->
-      <axis xyz="0 1 0"/>
+      <axis xyz="0 1 0"/> <!-- axis of rotation along the y-axis, 1 is the direction of the axis of rotation  -->
     </joint>
   </xacro:macro>
   

@@ -78,3 +78,47 @@ services:
     #  bfb_network:
 
     #network_mode: host
+
+    # This section makes service 'bfb_description' move into the namespace of Husarnet.
+    # This means you no longer can configure ports and other networking settings here
+    # and all of those configs need to be moved to declaration of service 'husarnet'.
+    # This will also wait on Husarnet to actually start before starting your app
+    network_mode: service:husarnet
+    depends_on:
+      husarnet: { condition: service_healthy }
+
+  # Husarnet VPN
+  husarnet:
+    image: husarnet/husarnet:latest
+    
+    volumes:
+      # This will persist your Husarnet Client keys, thus IP of the container
+      # will be stable/the same between (re)boots.
+      # Feel free to choose any volume storage method of your liking
+      - ./husarnet-config:/var/lib/husarnet
+      #- ~/husarnet-config:/var/lib/husarnet      
+
+    # The cap_add key is used to add Linux capabilities to the containers in the application. 
+    # In this case, the cap_add key is used to add the NET_ADMIN capability to the containers.
+    # Linux capabilities are a way to give a process some privileges without giving it full root access. 
+    # The NET_ADMIN capability allows a process to perform various network-related tasks, such as 
+    # configuring network interfaces and setting up tunnels.
+    # This is required to create new interface for communication over Husarnet
+    cap_add:
+      - NET_ADMIN
+    
+    # The sysctls key in a Docker Compose file is used to set kernel parameters for 
+    # the containers in the application. These parameters are typically used to 
+    # tune the performance of the container or to enable certain features.
+    # Husarnet is using IPv6 for it's overlay network so we need 
+    # to make sure it's not disabled
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+  
+    environment:
+      - HUSARNET_HOSTNAME=lenovo_laptop
+      - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
+      - HUSARNET_DEBUG=0
+
+#networks:
+#  bfb_network:

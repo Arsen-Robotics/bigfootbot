@@ -79,10 +79,10 @@ services:
       # Pass arguments to Dockerfile to use different base images
       args:
         # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
-        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
         
         # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
-        #- BASE_IMAGE=ros:humble-ros-base
+        - BASE_IMAGE=ros:humble-ros-base
 
     # The name of the Docker image to be created from the Dockerfile.
     image: bfb_description:latest
@@ -105,7 +105,7 @@ services:
       - QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
 
     # Enable GPU access for the container  
-    # NOTE! Check! It seems that specifiing `runtime: nvidia` is enough to utilize Nvidia GPU
+    # NOTE! Check! It seems (as on 08.07.2023) that specifiing `runtime: nvidia` is enough to utilize Nvidia GPU
     ##deploy:
     ##  resources:
     ##    reservations:
@@ -113,7 +113,7 @@ services:
     ##        - driver: nvidia
     ##          capabilities: [gpu]
 
-    runtime: nvidia
+    #runtime: nvidia
     
     stdin_open: true # docker run -i
     tty: true        # docker run -t
@@ -136,6 +136,8 @@ services:
     # and all of those configs need to be moved to declaration of service 'husarnet'.
     # This will also wait on Husarnet to actually start before starting your app
     network_mode: service:husarnet
+    depends_on:
+      husarnet: { condition: service_healthy }
   # --- end  'bfb_description' service ---
 
   # === ROBOT BASE (motor controller) ===
@@ -216,9 +218,6 @@ services:
       #bfb_network:
     #network_mode: host
   # --- end of 'bfb_teleop' service ---
-
-#networks:
-  #bfb_network:
   
   # Husarnet VPN
   husarnet:
@@ -263,6 +262,9 @@ services:
     #  - "8765:8765"
     #  - "8081:81"  # for app1
     #  - "8082:82"  # for app2
+
+#networks:
+  #bfb_network:
 
   ####################  BIGFOOTBOT REALSENSE ################
   #bfb_realsense:

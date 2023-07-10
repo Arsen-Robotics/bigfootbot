@@ -110,12 +110,14 @@
       </geometry>
       <material name="red"/>
     </visual>
+    
     <collision>
       <origin xyz="0 0 0" rpy="${pi/2} 0 0"/> <!-- pi/2 = 90 degrees or 1.57 radians (1 radian = 57.2958 degrees) -->
       <geometry>
         <cylinder length="0.02" radius="0.065"/> <!-- Diamater of the wheel is 130mm, width is 20mm -->
       </geometry>
     </collision>
+    
     <xacro:inertial_cylinder mass="0.1" length="0.02" radius="0.065">
       <origin xyz="0 0 0" rpy="${pi/2} 0 0"/> <!-- origin is the same as for visual and collision -->
     </xacro:inertial_cylinder>
@@ -130,7 +132,7 @@
     <axis xyz="0 1 0"/> <!-- axis of rotation is the y-axis -->
   </joint>
 
-  <link name="right_wheel">
+  <link name="right_wheel">    
     <visual>
       <origin xyz="0 0 0" rpy="${pi/2} 0 0"/> <!-- pi/2 = 90 degrees or 1.57 radians (1 radian = 57.2958 degrees) -->
       <geometry>
@@ -138,12 +140,14 @@
       </geometry>
       <material name="red"/>
     </visual>
+    
     <collision>
       <origin xyz="0 0 0" rpy="${pi/2} 0 0"/> <!-- pi/2 = 90 degrees or 1.57 radians (1 radian = 57.2958 degrees) -->
       <geometry>
         <cylinder length="0.02" radius="0.065"/> <!-- Diamater of the wheel is 130mm, width is 20mm -->
       </geometry>
     </collision>
+    
     <xacro:inertial_cylinder mass="0.1" length="0.02" radius="0.065">
       <origin xyz="0 0 0" rpy="${pi/2} 0 0"/> <!-- origin is the same as for visual and collision -->
     </xacro:inertial_cylinder>
@@ -166,12 +170,14 @@
       </geometry>
       <material name="gray"/>
     </visual>
+    
     <collision>
       <origin xyz="0 0 0" rpy= "0 0 0"/>
       <geometry>
         <sphere radius="0.06" />
       </geometry>      
     </collision>
+    
     <xacro:inertial_sphere mass="0.1" radius="0.06">
       <origin xyz="0 0 0" rpy="0 0 0"/> <!-- origin is the same as for visual and collision -->
     </xacro:inertial_sphere>
@@ -193,12 +199,14 @@
       </geometry>
       <material name="gray"/>
     </visual>
+    
     <collision>
       <origin xyz="0 0 0" rpy= "0 0 0"/>
       <geometry>
         <sphere radius="0.06" />
       </geometry>
     </collision>
+    
     <xacro:inertial_sphere mass="0.1" radius="0.06">
       <origin xyz="0 0 0" rpy="0 0 0"/> <!-- origin is the same as for visual and collision -->
     </xacro:inertial_sphere>

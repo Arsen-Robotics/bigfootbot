@@ -34,7 +34,8 @@ def generate_launch_description():
     bfb_description_pkg_path = FindPackageShare(package='bigfootbot_description').find('bigfootbot_description')
     
     # get the path to the urdf file 
-    default_model_path = os.path.join(bfb_description_pkg_path, 'urdf/bigfootbot_NEW.urdf.xacro')
+    # default_model_path = os.path.join(bfb_description_pkg_path, 'urdf/bigfootbot_NEW.urdf.xacro') # BIGFOOTBOT 
+    default_model_path = os.path.join(bfb_description_pkg_path, 'urdf/barrelbot.xacro') # BARRELBOT
     
     # get the path to the rviz config file
     default_rviz_config_path = os.path.join(bfb_description_pkg_path, 'rviz/urdf_config.rviz')
@@ -205,7 +206,8 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2',
         output='screen',
-        arguments=['-d', rviz_config_file_lc], # -d is the argument that specifies the rviz config file to load
+        arguments=['-d', rviz_config_file_lc], # arguments is a list of strings that are passed as command line arguments to the executable 
+                                               # -d is the argument that specifies the rviz config file to load
         parameters=[{'use_sim_time': use_sim_time_lc}]
     )
      

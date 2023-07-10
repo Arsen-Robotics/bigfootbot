@@ -83,9 +83,9 @@ services:
     # This means you no longer can configure ports and other networking settings here
     # and all of those configs need to be moved to declaration of service 'husarnet'.
     # This will also wait on Husarnet to actually start before starting your app
-    network_mode: service:husarnet
-    depends_on:
-      husarnet: { condition: service_healthy }
+    #network_mode: service:husarnet
+    #depends_on:
+    #  husarnet: { condition: service_healthy }
 
   # Husarnet VPN
   husarnet:

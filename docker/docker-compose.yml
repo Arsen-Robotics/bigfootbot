@@ -94,10 +94,13 @@ services:
       # Forward X socket to container to enable GUI
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
-      # Mount URDF file to be able to change robot model on-the-fly in the running container
-      # Without the need to rebuild the image
-      #- ../bigfootbot_description:/ros2_ws/src/bigfootbot_description:rw 
+      # Mount folder with URDF files to be able to update URDFs on-the-fly in the running container,
+      # without the need to rebuild the image
       - ../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf
+
+      # Mount folder with RViz config files to be able to load and save RViz configs on 
+      # the fly in the running container, without the need to rebuild the image
+      - ../bigfootbot_description/rviz:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/rviz
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -135,9 +138,9 @@ services:
     # This means you no longer can configure ports and other networking settings here
     # and all of those configs need to be moved to declaration of service 'husarnet'.
     # This will also wait on Husarnet to actually start before starting your app
-    network_mode: service:husarnet
-    depends_on:
-      husarnet: { condition: service_healthy }
+    #network_mode: service:husarnet
+    #depends_on:
+    #  husarnet: { condition: service_healthy }
   # --- end  'bfb_description' service ---
 
   # === ROBOT BASE (motor controller) ===

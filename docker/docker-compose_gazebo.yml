@@ -43,6 +43,9 @@ services:
       # because the container will have access to the host's X11 server
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
+      # Mount the folder with URDF files
+      - ../bigfootbot_description/urdf:/urdf
+
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
                           # X11 server for GUI applications.

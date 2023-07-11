@@ -1,7 +1,7 @@
 # --- Docker commands ---
 #
 # Build docker image:
-#   `docker build -f Dockerfile.gazebo -t gazebo_my:latest ..`
+#   `docker build -f Dockerfile.gazebo -t humble_gazebo:latest ..`
 #   
 # Run container with GUI support: 
 # Note. Maybe is needed to add next options:
@@ -11,12 +11,12 @@
 # `docker run -it --rm \
 #   -e DISPLAY \
 #   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-#    --name gazebo_container \
-#    gazebo_my:latest \
+#    --name humble_gazebo_container \
+#    humble_gazebo:latest \
 #    gazebo /usr/share/gazebo-11/worlds/seesaw.world
 #
 # To connect to a running container: 
-#   `docker exec -it gazebo_container bash`
+#   `docker exec -it humble_gazebo_container bash`
 # -------------------------
 
 # --- ROS2 launch commands ---
@@ -68,6 +68,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# TODO: unite software-properties-common and gazebo installation in one RUN command
+
 # Install gazebo and gazebo packages
 RUN apt-get update \
     && apt-get install -y \ 
@@ -98,5 +100,6 @@ COPY docker/ros_entrypoint.sh /
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
 # run ros2 launch command
-#CMD ["gazebo"]
+# Open gazebo with spawned seesaw model
+CMD ["gazebo", "/usr/share/gazebo-11/worlds/seesaw.world"]
 #CMD ["bash"]

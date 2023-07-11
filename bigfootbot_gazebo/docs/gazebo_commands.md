@@ -8,7 +8,7 @@
 **Default worlds (in Ignition Fortress) are located here:**  
 `/usr/share/ignition/ignition-gazebo6/worlds`
 
-**NB! Before calling services, a world (sdf file with defined services) must be launched**
+> **NB! Before calling services, a world (sdf file with defined services) must be launched**
 
 #### Get the list of available services
 `ign service -l` (Old naming, Fortress)  

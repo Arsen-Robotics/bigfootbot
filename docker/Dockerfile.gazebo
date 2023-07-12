@@ -45,7 +45,7 @@ FROM ${BASE_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ROS2 workspace
-#ENV ROS_WS=/ros2_ws
+ENV ROS_WS=/ros2_ws
 
 # If you only need to set the SHELL environment variable for other purposes, such as in a 
 # script that will be run inside the container
@@ -58,37 +58,50 @@ ENV SHELL=/bin/bash
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"] 
 
-# Bug/problem fix with gazebo gui black screen
-# software-properties-common - for `add-apt-repository` command
+# Install ROS Gazebo
+# ROS Gazebo repository: https://github.com/gazebosim/ros_gz
+# By the 12.07.2023 binaries only of Gazebo Fortress existed for ROS2 Humble
+# We install binaries ros-humble-ros-gz, i.e. Gazebo Fortress (So we have ROS2 Humble + Gazebo Fortress)
 RUN apt-get update \
-    && apt-get install -y \ 
+    # Bug/problem fix with gazebo gui black screen (dated July 2023)
+    # software-properties-common - for `add-apt-repository` command
+    && apt-get install -y \     
     software-properties-common \     
     && add-apt-repository ppa:kisak/kisak-mesa \
-    && apt upgrade -y \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-# TODO: unite software-properties-common and gazebo installation in one RUN command
-
-# Install gazebo and gazebo packages
-RUN apt-get update \
-    && apt-get install -y \ 
+    && apt upgrade -y \    
+    # Install ROS Gazebo
+    && apt-get install -y \
     ros-${ROS_DISTRO}-ros-gz \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Install rqt and rviz2
-# software-properties-common - for `add-apt-repository` command
-# `add-apt-repository ppa:kisak/kisak-mesa && apt upgrade -y` - to solve bug with rviz2 black screen
-#RUN apt-get update \
-#    && apt-get install -y \ 
-#    software-properties-common \ 
-#    ros-${ROS_DISTRO}-rqt \
-#    ros-${ROS_DISTRO}-rviz2 \
-#    && add-apt-repository ppa:kisak/kisak-mesa \
-#    && apt upgrade -y \
-#    && rm -rf /var/lib/apt/lists/* \
-#    && apt-get clean
+# ---- Install ROS2 packages from sources ----
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+# Copy the bigfootbot_description package to the ROS2 workspace
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
+
+# Copy the bigfootbot_gazebo package to the ROS2 workspace
+COPY bigfootbot_gazebo ${ROS_WS}/src/bigfootbot_gazebo
+
+RUN apt-get update \    
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    #  --skip-keys "bigfootbot_teleop bigfootbot_description" \        
+    ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    # with --symlink-install you don't have to rebuild the package when launch or URDF file is changed
+    # NB! package needs to be rebuilt if a new file is added to the package
+    && colcon build --symlink-install \  
+    # colcon build --symlink-install --packages-select xacro # build only xacro package
+    #&& rm -rf src logs build \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 ##### Setup entrypoint
 COPY docker/ros_entrypoint.sh /
@@ -101,5 +114,5 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 
 # run ros2 launch command
 # Open gazebo with spawned seesaw model
-CMD ["gazebo", "/usr/share/gazebo-11/worlds/seesaw.world"]
-#CMD ["bash"]
+#CMD ["gazebo", "/usr/share/gazebo-11/worlds/seesaw.world"]
+CMD ["bash"]

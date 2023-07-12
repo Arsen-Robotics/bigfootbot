@@ -21,6 +21,7 @@
 #
 # To run a certain service:
 #   `docker compose up <service_name>`
+#   i.e `docker compose up bfb_description`
 # --------------------
 
 services:
@@ -93,6 +94,9 @@ services:
     volumes:
       # Forward X socket to container to enable GUI
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+      # Mount launch files to be able to update them inside the container without rebuilding the image
+      - ../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
 
       # Mount folder with URDF files to be able to update URDFs on-the-fly in the running container,
       # without the need to rebuild the image

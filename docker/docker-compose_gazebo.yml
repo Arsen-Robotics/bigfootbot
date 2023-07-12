@@ -43,8 +43,8 @@ services:
       # because the container will have access to the host's X11 server
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
-      # Mount the folder with URDF files
-      - ../bigfootbot_description/urdf:/urdf
+      # Mount launch files to be able to update them inside the container without rebuilding the image
+      - ../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -68,8 +68,10 @@ services:
     tty: true        # docker run -t
 
     # Overload the default command executed by the container
-    command: "ign gazebo /usr/share/ignition/ignition-gazebo6/worlds/empty.sdf"  #/usr/share/gazebo-11/worlds/seesaw.world
+    #command: "ign gazebo /usr/share/ignition/ignition-gazebo6/worlds/empty.sdf"  #/usr/share/gazebo-11/worlds/seesaw.world
     #command: bash -c "rviz2 && joint_state_publisher_gui"
+    #command: "ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=empty.sdf"
+    command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
     #command: "bash"
     
     #networks:

@@ -22,3 +22,15 @@
 `ign service -s /world/empty/create --reqtype ignition.msgs.EntityFactory --reptype ignition.msgs.Boolean --timeout 1000 --req 'sdf_filename: "/path/to/model.urdf", name: "urdf_model"'` (Old)
 
 `gz service -s /world/empty/create --reqtype gz.msgs.EntityFactory --reptype gz.msgs.Boolean --timeout 1000 --req 'sdf_filename: "/path/to/model.urdf", name: "urdf_model"'` (NEW)
+
+## ROS + Gazebo Sim (launch files, ROS-enabled executables) (package `ros_gz_sim`)
+https://github.com/gazebosim/ros_gz/tree/humble/ros_gz_sim  
+For example:  
+Launch the sim with an empty world: `ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=empty.sdf`  
+Spawn the robot in the launched world (named 'empty'): `ros2 run ros_gz_sim create -world empty -topic /robot_description`
+
+### PLugins
+> A plugin is a chunk of code that is compiled as a shared library and inserted into the simulation. Plugins make us control many aspects of the simulation like world, models, etc
+
+Plugin files (shared libraries) are located here:  
+/usr/lib/x86_64-linux-gnu/ign-gazebo-6/plugins (Ignition)

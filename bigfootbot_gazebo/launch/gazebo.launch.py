@@ -1,79 +1,44 @@
+# Made based on the following file:
+# https://github.com/joshnewans/articubot_one/blob/humble/launch/launch_sim.launch.py
 
 import os
+
+# This is a Python function that returns the path to the package share directory
+from ament_index_python.packages import get_package_share_directory
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-#from launch.conditions import IfCondition, UnlessCondition
+from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch_ros.substitutions import FindPackageShare
+
 from launch_ros.actions import Node
 
-
 def generate_launch_description():
-    # Set the path to different files and folders.
-    gazebo_ros_pkg_share = FindPackageShare(package='gazebo_ros').find('gazebo_ros')  
-    bigfootbot_gazebo_pkg_share = FindPackageShare(package='bigfootbot_gazebo').find('bigfootbot_gazebo') 
-    world_file_name = 'smalltown.world'
-    world_path = os.path.join(bigfootbot_gazebo_pkg_share, 'worlds', world_file_name)
-    # --- END OF BLOCK 'Set the path to different files and folders'
+    #package_name='articubot_one'
 
-    # Pose where we want to spawn the robot
-    spawn_x_val = '0.0'
-    spawn_y_val = '0.0'
-    spawn_z_val = '0.0'
-    spawn_yaw_val = '0.00'
+    # Launch the sim with and empty world
+    # Include the Gazebo launch file, provided by the ros_gz_sim package
+    # IncludeLaunchDescription class is used to include a launch file in another launch file
+    # PythonLaunchDescriptionSource class is used to specify the source of a launch file to be 
+    # included in a launch file.
+    gazebo_empty = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')]),
+            launch_arguments={'gz_args': 'empty.sdf'}.items()
+        )
 
-    # Launch configuration variables
-    world = LaunchConfiguration('world')
-    # --- END OF BLOCK 'Launch configuration variables'
+    # Spawn the robot in the empty world
+    # Create a node that runs the ROS executable ("ros2 run ros_gz_sim create")
+    # This node will terminate after spawning the robot
+    # 'empty' is the name of the world (inside the empty.sdf - <world name="empty">)
+    # NB! robot_state_publisher must be running before this node is started
+    # becasue it will look for the robot URDF in the topic /robot_description
+    create_node = Node(
+        package='ros_gz_sim',
+        executable='create',
+        arguments=['-world', 'empty', '-topic', '/robot_description']
+    )
 
-
-    # --- Declare the launch arguments 
-    declare_world_cmd = DeclareLaunchArgument(
-    name='world',
-    default_value=world_path,
-    description='Full path to the world model file to load')
-    # --- END OF BLOCK 'Declare the launch arguments '
-
-
-    # --- Specify the actions
-
-    # Start Gazebo server
-    start_gazebo_server_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(gazebo_ros_pkg_share, 'launch', 'gzserver.launch.py')),
-        #condition=IfCondition(use_simulator),
-        launch_arguments={'world': world}.items())
-
-    # Start Gazebo client    
-    start_gazebo_client_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(gazebo_ros_pkg_share, 'launch', 'gzclient.launch.py')))
-        #condition=IfCondition(PythonExpression([use_simulator, ' and not ', headless])))
-
-    # Spawn the robot
-    spawn_entity_cmd = Node(
-        package='gazebo_ros', 
-        executable='spawn_entity.py',
-        arguments=['-entity', 'bigfootbot', 
-                    '-topic', 'robot_description',
-                        '-x', spawn_x_val,
-                        '-y', spawn_y_val,
-                        '-z', spawn_z_val,
-                        '-Y', spawn_yaw_val],
-                        output='screen')
-
-    # --- END OF BLOCK 'Specify the actions' ---
-
-
-    # --- Create the launch description and populate
-    ld = LaunchDescription()
-
-    # Declare the launch options
-    ld.add_action(declare_world_cmd)
-
-    # Add any actions
-    ld.add_action(start_gazebo_server_cmd)
-    ld.add_action(start_gazebo_client_cmd)
-    ld.add_action(spawn_entity_cmd)
-
-    return ld
-    # --- END OF BLOCK 'Create the launch description and populate'
+    return LaunchDescription([
+        gazebo_empty,
+        create_node
+    ])

@@ -6,7 +6,7 @@
 
   <xacro:include filename="barrelbot_inertial_macros.xacro" />
   
-  <xacro:include filename="brlb_gazebo_control.xacro" />
+  <xacro:include filename="./controllers/brlb_gazebo_control.xacro" />
   
   <!-- MATERIALS -->
 

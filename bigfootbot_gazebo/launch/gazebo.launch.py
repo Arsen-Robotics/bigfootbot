@@ -35,10 +35,26 @@ def generate_launch_description():
     create_node = Node(
         package='ros_gz_sim',
         executable='create',
-        arguments=['-world', 'empty', '-topic', '/robot_description']
+        arguments=[
+            '-name', 'my_custom_model',
+            '-world', 'empty', 
+            '-topic', '/robot_description'],
+        output='screen'
+    )
+
+    # Bridge
+    bridge_node = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=['/model/barrelbot/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
+                   '/model/barrelbot/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry'],
+        parameters=[{'qos_overrides./model/barrelbot.subscriber.reliability': 'reliable',
+                     'qos_overrides./model/barrelbot.subscriber.reliability': 'reliable'}],
+        output='screen'
     )
 
     return LaunchDescription([
         gazebo_empty,
-        create_node
+        create_node,
+        bridge_node
     ])

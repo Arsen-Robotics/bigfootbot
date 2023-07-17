@@ -30,6 +30,11 @@
 
 `gz service -s /world/empty/create --reqtype gz.msgs.EntityFactory --reptype gz.msgs.Boolean --timeout 1000 --req 'sdf_filename: "/path/to/model.urdf", name: "urdf_model"'` (NEW)
 
+#### Gazebo topics
+- `ign topic -l` - list all of the topics that are currently available in the Ignition transport system  
+- `ign tipic -t /topic_name -i` - display information about a specific topic  
+- `ign topic -t /topic_name -e` - echo topic /topic_name (-t - topic name. -e -echo)
+
 ## ROS + Gazebo Sim (launch files, ROS-enabled executables) (package `ros_gz_sim`)
 [GitHub ros_gz_sum](https://github.com/gazebosim/ros_gz/tree/humble/ros_gz_sim)  
 For example:  

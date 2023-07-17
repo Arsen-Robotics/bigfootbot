@@ -36,9 +36,10 @@ def generate_launch_description():
         package='ros_gz_sim',
         executable='create',
         arguments=[
-            '-name', 'my_custom_model',
-            '-world', 'empty', 
-            '-topic', '/robot_description'],
+            #'-name', 'my_custom_model', # How to name the robot in Gazebo (if omitted, the 
+                                         # name is taken from the URDF)
+            '-world', 'empty', # The name of the world to spawn the robot in
+            '-topic', '/robot_description'], # The topic where the robot URDF is published
         output='screen'
     )
 

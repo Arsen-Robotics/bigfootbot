@@ -1,9 +1,9 @@
 ## Ignition / Gazebo guide
-* [Installation and Tutorials](https://gazebosim.org/docs)  
-* [API and Tutorials](https://gazebosim.org/api/gazebo/4.3/tutorials.html)
-* [Gazebo architecture](https://gazebosim.org/docs/garden/architecture)
-* [Server Configuration](https://gazebosim.org/api/gazebo/4.3/server_config.html)
-* [ROS Gazebo Demos](https://github.com/gazebosim/ros_gz/blob/humble/ros_gz_sim_demos/README.md)
+- [Installation and Tutorials](https://gazebosim.org/docs)  
+- [Sim API and Tutorials (Ignition)](https://gazebosim.org/api/sim/6/)
+- [Gazebo architecture](https://gazebosim.org/docs/garden/architecture)
+- [Server Configuration](https://gazebosim.org/api/gazebo/4.3/server_config.html)
+- [ROS Gazebo Demos](https://github.com/gazebosim/ros_gz/blob/humble/ros_gz_sim_demos/README.md)
 
 #### Open Gazebo UI
 - `ign gazebo` (Old naming, Fortress)  

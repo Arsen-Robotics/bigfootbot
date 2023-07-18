@@ -44,6 +44,7 @@ services:
   ##    bfb_network:
 
   # === ROSBRIDGE SERVER ===
+  # used for websockets connection to ROS2 from the browser
   rosbridge:
     build: 
       context: ..
@@ -96,15 +97,15 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
       # Mount launch files to be able to update them inside the container without rebuilding the image
-      - ../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
+      - ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
 
       # Mount folder with URDF files to be able to update URDFs on-the-fly in the running container,
       # without the need to rebuild the image
-      - ../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf
+      - ../../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf
 
       # Mount folder with RViz config files to be able to load and save RViz configs on 
       # the fly in the running container, without the need to rebuild the image
-      - ../bigfootbot_description/rviz:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/rviz
+      - ../../bigfootbot_description/rviz:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/rviz
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -135,8 +136,8 @@ services:
     
     #network_mode: host
     
-    #networks:
-     # bfb_network:
+    networks:
+      bfb_network:
 
     # This section makes service 'bfb_description' move into the namespace of Husarnet.
     # This means you no longer can configure ports and other networking settings here
@@ -152,7 +153,7 @@ services:
     #restart: unless-stopped
     
     build: 
-      context: ..
+      context: ../../
       dockerfile: docker/Dockerfile.bfb_base
 
     # the name of the Docker image to be created from the Dockerfile.
@@ -165,7 +166,7 @@ services:
     volumes:
       # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
       # on-the-fly in the running container
-      - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
+      - ../../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
 
     # Enable GPU access for the container
     deploy:
@@ -234,8 +235,8 @@ services:
       # This will persist your Husarnet Client keys, thus IP of the container
       # will be stable/the same between (re)boots.
       # Feel free to choose any volume storage method of your liking
-      #- ./husarnet-config:/var/lib/husarnet
-      - ~/husarnet-config:/var/lib/husarnet      
+      - ../husarnet-config:/var/lib/husarnet
+      #- ~/husarnet-config:/var/lib/husarnet      
 
     # The cap_add key is used to add Linux capabilities to the containers in the application. 
     # In this case, the cap_add key is used to add the NET_ADMIN capability to the containers.
@@ -270,8 +271,10 @@ services:
     #  - "8081:81"  # for app1
     #  - "8082:82"  # for app2
 
-#networks:
-  #bfb_network:
+networks:
+  bfb_network:
+    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+                   # instead of creating a new one for this project (docker-compos.yml file)
 
   ####################  BIGFOOTBOT REALSENSE ################
   #bfb_realsense:

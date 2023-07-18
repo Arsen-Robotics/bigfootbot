@@ -51,3 +51,14 @@ Alternatively, you can use the provided script in the script directory to apply 
 
 - Make sure to run the above commands with administrative privileges using `sudo`.
 
+## Connect USB devices to WSL2
+
+[Manual](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)
+
+### usbipd-win
+ is an open-source project that allows sharing locally connected USB devices with other machines, including Hyper-V guests and WSL 2. It provides access to USB devices by using network connectivity over TCP port 3240  
+[Manual](https://github.com/dorssel/usbipd-win/wiki/WSL-support)
+
+## Linux commands for working with USB devices
+- `lsusb` - lists USB devices connected to the system
+

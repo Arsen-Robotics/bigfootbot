@@ -28,7 +28,7 @@ services:
     #restart: unless-stopped
     
     build: 
-      context: ..
+      context: ../../
       dockerfile: docker/Dockerfile.gazebo
 
     # The name of the Docker image to be created from the Dockerfile.
@@ -44,7 +44,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
       # Mount launch files to be able to update them inside the container without rebuilding the image
-      - ../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
+      - ../../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -74,10 +74,12 @@ services:
     command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
     #command: "bash"
     
-    #networks:
-    #  bfb_network:
+    networks:
+      bfb_network:
 
     #network_mode: host
 
-#networks:
-#  bfb_network:
+networks:
+  bfb_network:
+    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+                   # instead of creating a new one for this project (docker-compose_gazebo.yml)

@@ -13,9 +13,11 @@
 
 #-----------------------------
 
+ARG BASE_IMAGE
+
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
-# Image built: 05/23/2023
-ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+# Image built: 23.05.2023
+#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
 
 # --- For running on x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated

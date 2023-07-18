@@ -1,0 +1,126 @@
+# --- Docker compose commands ---
+#
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#   `docker compose -f docker-compose_rviz2.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#   `docker compose -f docker-compose_rviz2.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#   `docker compose -f docker-compose_rviz2.yml up --build`
+#
+# To rebuild a certain service:
+#   `docker compose up --build <service_name>`
+#
+# To run a certain service:
+#   `docker compose up <service_name>`
+# --------------------
+
+
+#version: '3.5' # version flag is Depricated in Docker compose V2?
+services:
+  humble_rviz2:
+    #restart: unless-stopped
+    
+    build: 
+      context: ../../
+      dockerfile: docker/Dockerfile.rviz2
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: humble_rviz2:latest
+
+    # The name to be given to the container created from the image.
+    container_name: humble_rviz2_container
+
+    volumes:
+      # Forward X socket to container to enable GUI
+      # Note: if privileged: true, then volumes: is not needed
+      # because the container will have access to the host's X11 server
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    environment:
+      - DISPLAY=$DISPLAY  # To allow the container to access the host's 
+                          # X11 server for GUI applications.
+      #- QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
+
+    # Enable GPU access for the container NB! Only for NVIDIA GPUs
+    #deploy:
+    #  resources:
+    #    reservations:
+    #      devices:
+    #        - driver: nvidia
+    #          capabilities: [gpu]
+
+    #runtime: nvidia
+
+    #privileged: true # To allow the container to access the host's 
+                     # X11 server and GPU for GUI applications.
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    # Overload the default command executed by the container
+    command: "ros2 launch bigfootbot_description view_robot.launch.py \
+              model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro \
+              use_robot_state_pub:=false \
+              use_joint_state_pub_gui:=true \
+              use_rviz:=true \
+              use_sim_time:=false"              
+    #command: bash -c "rviz2 && joint_state_publisher_gui"
+    #command: "bash"
+    
+    networks:
+      bfb_network:
+
+    #network_mode: host
+
+    # This section makes service 'bfb_description' move into the namespace of Husarnet.
+    # This means you no longer can configure ports and other networking settings here
+    # and all of those configs need to be moved to declaration of service 'husarnet'.
+    # This will also wait on Husarnet to actually start before starting your app
+    #network_mode: service:husarnet
+    #depends_on:
+    #  husarnet: { condition: service_healthy }
+
+  # Husarnet VPN
+  husarnet:
+    image: husarnet/husarnet:latest
+    
+    volumes:
+      # This will persist your Husarnet Client keys, thus IP of the container
+      # will be stable/the same between (re)boots.
+      # Feel free to choose any volume storage method of your liking
+      - ../husarnet-config:/var/lib/husarnet
+      #- ~/husarnet-config:/var/lib/husarnet      
+
+    # The cap_add key is used to add Linux capabilities to the containers in the application. 
+    # In this case, the cap_add key is used to add the NET_ADMIN capability to the containers.
+    # Linux capabilities are a way to give a process some privileges without giving it full root access. 
+    # The NET_ADMIN capability allows a process to perform various network-related tasks, such as 
+    # configuring network interfaces and setting up tunnels.
+    # This is required to create new interface for communication over Husarnet
+    cap_add:
+      - NET_ADMIN
+    
+    # The sysctls key in a Docker Compose file is used to set kernel parameters for 
+    # the containers in the application. These parameters are typically used to 
+    # tune the performance of the container or to enable certain features.
+    # Husarnet is using IPv6 for it's overlay network so we need 
+    # to make sure it's not disabled
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+  
+    environment:
+      - HUSARNET_HOSTNAME=lenovo_laptop
+      - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
+      - HUSARNET_DEBUG=0
+
+networks:
+  bfb_network:
+    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+                   # instead of creating a new one for this project (docker-compose_rviz2.yml)

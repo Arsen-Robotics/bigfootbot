@@ -66,5 +66,16 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 
 8. Exit the `bluetoothctl` prompt by entering `exit`.
 
+## Connect USB devices to WSL2
+
+[Manual](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)
+
+### usbipd-win
+ is an open-source project that allows sharing locally connected USB devices with other machines, including Hyper-V guests and WSL 2. It provides access to USB devices by using network connectivity over TCP port 3240  
+[Manual](https://github.com/dorssel/usbipd-win/wiki/WSL-support)
+
+## Linux commands for working with USB devices
+- `lsusb` - lists USB devices connected to the system
+
 
 

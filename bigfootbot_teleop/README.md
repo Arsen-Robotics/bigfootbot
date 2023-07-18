@@ -1,4 +1,4 @@
-# Connecting PS3 Controller to PC via Bluetooth (Linux CLI)
+# Connecting PS3 Controller to PC via Bluetooth and USB (Linux CLI)
 
 This guide provides instructions on how to connect a PlayStation 3 (PS3) controller to your PC using the Linux command-line interface (CLI).
 

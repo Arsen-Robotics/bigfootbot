@@ -5,23 +5,23 @@
 # Create and start containers defined in the compose file
 # NOTE Docker Compose detects changes in your configuration files, 
 # including the Dockerfile, and automatically rebuilds the corresponding images if necessary
-#   `docker compose -f docker-compose.yml up'
+#   `docker compose -f docker-compose_teleop.yml up'
 #
 # Stop and remove containers that were created based on the 
 # configuration specified in the compose file.
-#   `docker compose -f docker-compose.yml down'
+#   `docker compose -f docker-compose_teleop.yml down'
 # 
 # Rebuild all services (all the images are built from scratch)
 # --build option indicates that Docker Compose should rebuild the images, 
 # even if they already exist
-#   `docker compose -f docker-compose.yml up --build`
+#   `docker compose -f docker-compose_teleop.yml up --build`
 # 
 # To rebuild a certain service:
 #   `docker compose up --build <service_name>`
 #
 # To run a certain service:
 #   `docker compose up <service_name>`
-#   i.e `docker compose up bfb_description`
+#   i.e `docker compose -f docker-compose_teleop.yml up bfb_teleop`
 # --------------------
 
 services:

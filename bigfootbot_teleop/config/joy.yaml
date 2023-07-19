@@ -1,4 +1,5 @@
 # --- Parameters file for the package 'joy'
+# https://github.com/ros-drivers/joystick_drivers/tree/ros2/joy
 #
 # 'joy_node' - a node that interfaces a generic joystick to ROS 2. This node publishes a 
 # 'sensor_msgs/msg/Joy' message, which contains the current state of each one of the 

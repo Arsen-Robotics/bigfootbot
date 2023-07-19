@@ -76,6 +76,9 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 
 ## Linux commands for working with USB devices
 - `lsusb` - lists USB devices connected to the system
+- `dmesg` - displays the kernel ring buffer messages
+- `dmesg | grep -i usb` - shows kernel log messages related to USB devices, -i - ignore case
+- `sudo dmesg -c` - clears the kernel message buffer
 
 
 

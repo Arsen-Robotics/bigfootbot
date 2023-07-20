@@ -66,7 +66,13 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 
 8. Exit the `bluetoothctl` prompt by entering `exit`.
 
-## Connect USB devices to WSL2
+## Connect PS3 Controller to Windows
+[How to Wirelessly Connect a PS3 DualShock Controller to Windows](https://www.makeuseof.com/ps3-dualshock-controller-windows-wireless/)
+
+### Tool for management of Windows drivers in the Driver Store
+[DriverStore Explorer](https://github.com/lostindark/DriverStoreExplorer/releases/tag/v0.11.79)
+
+### Connect USB devices to WSL2
 
 [Manual](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)
 
@@ -79,6 +85,7 @@ This guide provides instructions on how to connect a PlayStation 3 (PS3) control
 - `dmesg` - displays the kernel ring buffer messages
 - `dmesg | grep -i usb` - shows kernel log messages related to USB devices, -i - ignore case
 - `sudo dmesg -c` - clears the kernel message buffer
+
 
 
 

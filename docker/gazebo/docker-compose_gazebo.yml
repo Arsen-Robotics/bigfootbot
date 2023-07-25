@@ -29,7 +29,7 @@ services:
     
     build: 
       context: ../../
-      dockerfile: docker/Dockerfile.gazebo
+      dockerfile: docker/gazebo/Dockerfile.gazebo
 
     # The name of the Docker image to be created from the Dockerfile.
     image: humble_gazebo:latest

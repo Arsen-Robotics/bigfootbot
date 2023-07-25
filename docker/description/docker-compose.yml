@@ -75,8 +75,8 @@ services:
     #restart: unless-stopped
     
     build: 
-      context: ..
-      dockerfile: docker/Dockerfile.bfb_description
+      context: ../../
+      dockerfile: docker/description/Dockerfile.bfb_description
 
       # Pass arguments to Dockerfile to use different base images
       args:

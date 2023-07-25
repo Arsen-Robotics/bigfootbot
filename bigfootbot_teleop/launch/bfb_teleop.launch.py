@@ -32,7 +32,8 @@ def generate_launch_description():
         output='screen',
         respawn=True,
         emulate_tty=True,
-        parameters=[os.path.join(get_package_share_directory('bigfootbot_teleop'), 'config', 'teleop_twist_joy_ps3.yaml')]
+        parameters=[os.path.join(get_package_share_directory('bigfootbot_teleop'), 'config', 'teleop_twist_joy_ps3.yaml')],
+        remappings=[('cmd_vel', '/model/barrelbot/cmd_vel')]
     )
 
     # Create launch description and add nodes

@@ -31,14 +31,6 @@
                         </udpv6>
                     </locator>
                 <!-- End repeat -->
-                <!-- Repeat this part for each husernet peer -->
-                    <!--locator>
-                        <udpv6>
-                            <address>lenovolaptop</address> <!-- or <address>husarnet-hostname</address> -->
-                            <!--address>fc94:3ba8:d8c4:fd98:7d14:11f6:14b8:3f89</address--> <!--lenovolaptop-->
-                        </udpv6>
-                    </locator-->
-                <!-- End repeat -->
                 </initialPeersList>
             </builtin>
         </rtps>

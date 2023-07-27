@@ -36,9 +36,10 @@ fi
 
 # Husarnet
 # Set this file as default profile in your .bashrc file, so as to use this configuration every time you boot your system.
+# Note. ROS2 Humble uses Fast DDS as default middleware.
 #echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc
-#echo "export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml" >> ~/.bashrc
-#export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml
+echo "export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml" >> ~/.bashrc
+export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml
 
 # Add path to the robot model for Gazebo simulator
 # NB! update directory name 'ros_ws' if it is changed in the docker file: ARG ROS_CUSTOM_WS

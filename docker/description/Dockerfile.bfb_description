@@ -100,7 +100,10 @@ RUN apt-get update \
 # Clean up the source directory
 #RUN rm -rf ${ROS_WS}/src/xacro
 
-##### Setup entrypoint
+# Copy Fast DDS configuration file for Husarnet network
+COPY docker/fastdds_husarnet.xml /
+
+# Setup entrypoint
 COPY docker/ros_entrypoint.sh /
 
 # [] - is exec form

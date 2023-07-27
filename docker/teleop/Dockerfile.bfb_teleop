@@ -89,7 +89,10 @@ RUN apt-get update \
     && apt-get clean 
 # --- end of 'Build and install ROS2 packages'
 
-##### Setup entrypoint
+# Copy Fast DDS configuration file for Husarnet network
+COPY docker/fastdds_husarnet.xml /
+
+# Setup entrypoint
 COPY docker/ros_entrypoint.sh /
 
 # [] - is exec form

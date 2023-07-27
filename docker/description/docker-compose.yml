@@ -230,6 +230,9 @@ services:
   # Husarnet VPN
   husarnet:
     image: husarnet/husarnet:latest
+
+    # The name to be given to the container created from the image.
+    container_name: description_husarnet_container
     
     volumes:
       # This will persist your Husarnet Client keys, thus IP of the container

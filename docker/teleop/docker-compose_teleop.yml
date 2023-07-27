@@ -64,8 +64,16 @@ services:
 
     #network_mode: host 
     
-    networks:
-      bfb_network:    
+    #networks:
+     # bfb_network:
+
+    # This section makes service 'bfb_description' move into the namespace of Husarnet.
+    # This means you no longer can configure ports and other networking settings here
+    # and all of those configs need to be moved to declaration of service 'husarnet'.
+    # This will also wait on Husarnet to actually start before starting your app
+    network_mode: service:husarnet
+    depends_on:
+      husarnet: { condition: service_healthy }    
   # --- end of 'bfb_teleop' service ---
   
   # Husarnet VPN
@@ -100,7 +108,7 @@ services:
       - net.ipv6.conf.all.disable_ipv6=0
   
     environment:
-      - HUSARNET_HOSTNAME=bigfootbot
+      - HUSARNET_HOSTNAME=mac_teleop
       - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
       - HUSARNET_DEBUG=0
 

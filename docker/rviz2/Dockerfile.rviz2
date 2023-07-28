@@ -68,7 +68,11 @@ RUN apt-get update \
     # publishing joint state values [messages sensor_msgs/JointState to a topic /joint_states] 
     # for a given URDF [reads from a topic /robot_description]):
     ros-${ROS_DISTRO}-joint-state-publisher-gui \
-    ros-${ROS_DISTRO}-rqt \
+    # Install rqt package (is a framework for graphical user interfaces for ROS)
+    ros-${ROS_DISTRO}-rqt \  
+    # Install rqt_graph package (GUI tool for visualizing the ROS computation graph)
+    ros-${ROS_DISTRO}-rqt-graph \ 
+    # Install rviz2 package (GUI tool for visualizing sensor data and state information from ROS)
     ros-${ROS_DISTRO}-rviz2 \
     # -- Build ROS2 workspace
     && cd ${ROS_WS} \

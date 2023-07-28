@@ -19,6 +19,7 @@
 #
 # To run a certain service:
 #   `docker compose up <service_name>`
+#   `docker compose -f docker-compose_rviz2.yml up humble_rviz2`
 # --------------------
 
 
@@ -29,7 +30,7 @@ services:
     
     build: 
       context: ../../
-      dockerfile: docker/Dockerfile.rviz2
+      dockerfile: docker/rviz2/Dockerfile.rviz2
 
     # The name of the Docker image to be created from the Dockerfile.
     image: humble_rviz2:latest

@@ -1,35 +1,42 @@
+# Description: 
+# This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
+# on Nvidia Jetson devices with Nvidia GPU acceleration.
+# Installed ROS2 packages: 
+# - 'bigfootbot_base' is used to control the robot's motors via Roboclaw motor controller.
+#
 # --- Docker commands ---
 # Build docker image:
-#   `docker build -f Dockerfile.bfb_drive -t bfb_drive:latest ..`
+#   `docker build -f Dockerfile.bfb_base -t bfb_base:latest ..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_drive_container bfb_drive:latest`
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_base_container bfb_base:latest`
 #
 # To connect to a running container: 
-#   `docker exec -it bfb_drive_container bash`
+#   `docker exec -it bfb_base_container bash`
 # -------------------------
 
 # --- ROS2 commands ---
 # Launch Roboclaw (motor controller):
-# `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
+#   `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
 #
 # Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
 # This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
 # of a joystick buttons and axes
-# `ros2 launch joy joy-launch.py` 
+#   `ros2 launch joy joy-launch.py` 
 #
 # Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
 # sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
-# `ros2 launch teleop_twist_joy teleop-launch.py`
+#   `ros2 launch teleop_twist_joy teleop-launch.py`
 #  
 #  Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
-# `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+#   `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
 #  
 #  -- ROS2 control commands --
-# `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
+#   `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
 #-----------------------------
 
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Nvidia catalog of accelerated docker contaieners: https://catalog.ngc.nvidia.com/containers
 # Image built: 05/23/2023
 ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
 
@@ -72,7 +79,8 @@ RUN mkdir -p ${ROS_WS}/src
 # --- Build and install ROS2 packages
 COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
 
-# Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git) 
+# Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git
+# latest update of the original repo: 26.06.2022) 
 # ROS2 package "ros2_roboclaw_driver"
 RUN cd ${ROS_WS}/src \
     && git clone https://github.com/jevgenik/ros2_roboclaw_driver.git

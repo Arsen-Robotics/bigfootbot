@@ -154,7 +154,7 @@ services:
     
     build: 
       context: ../../
-      dockerfile: docker/Dockerfile.bfb_base
+      dockerfile: docker/base/Dockerfile.bfb_base
 
     # the name of the Docker image to be created from the Dockerfile.
     image: bfb_base:latest

@@ -39,6 +39,11 @@ ros2 param set /my_node my_string off
 
 To save your current configuration of node’s parameters, enter the command:
 ros2 param dump <node_name>
+===
+
+=== ROS2 control commands ===
+`ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
+===
 
 Get the installation location of package
 ros2 pkg prefix <package name>

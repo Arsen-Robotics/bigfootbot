@@ -5,70 +5,84 @@
 # Create and start containers defined in the compose file
 # NOTE Docker Compose detects changes in your configuration files, 
 # including the Dockerfile, and automatically rebuilds the corresponding images if necessary
-#   `docker compose -f docker-compose.yml up'
+#   `docker compose -f docker-compose_robot.yml up'
 #
 # Stop and remove containers that were created based on the 
 # configuration specified in the compose file.
-#   `docker compose -f docker-compose.yml down'
+#   `docker compose -f docker-compose_robot.yml down'
 # 
 # Rebuild all services (all the images are built from scratch)
 # --build option indicates that Docker Compose should rebuild the images, 
 # even if they already exist
-#   `docker compose -f docker-compose.yml up --build`
+#   `docker compose -f docker-compose_robot.yml up --build`
 # 
 # To rebuild a certain service:
-#   `docker compose up --build <service_name>`
+#   `docker compose -f docker-compose_robot.yml up --build <service_name>`
 #
 # To run a certain service:
 #   `docker compose up <service_name>`
-#   i.e `docker compose up bfb_description`
+#   i.e `docker compose -f docker-compose_robot.yml up bfb_description`
 # --------------------
 
 services:
-  # --- BRINGUP
-  ##bfb_bringup:
-  ##  build: 
-  ##    context: ..
-  ##    dockerfile: docker/Dockerfile.bfb_bringup
-  ##  image: bfb_bringup:latest
-  ##  container_name: bfb_bringup_container
-  ##  volumes:
-  ##    - ../bigfootbot_bringup/launch:/ros2_ws/install/bigfootbot_bringup/share/bigfootbot_bringup/launch     
-  ##  stdin_open: true # docker run -i
-  ##  tty: true        # docker run -t
-
-    #network_mode: host
-    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
-
-  ##  networks:
-  ##    bfb_network:
-
-  # === ROSBRIDGE SERVER ===
-  # used for websockets connection to ROS2 from the browser
-  rosbridge:
+  # === ROBOT BASE (motor controller) ===
+  bfb_base:
+    #restart: unless-stopped
+    
     build: 
-      context: ..
-      dockerfile: docker/Dockerfile.rosbridge
-    image: rosbridge:latest  
-    container_name: rosbridge_container
-    #volumes:
-    #  - ../bigfootbot_bringup/launch:/ros2_ws/install/bigfootbot_bringup/share/bigfootbot_bringup/launch     
+      context: ../../
+      dockerfile: docker/base/Dockerfile.bfb_base
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
+        
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        #- BASE_IMAGE=ros:humble-ros-base
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_base:latest
+
+    # The name to be given to the container created from the image.
+    container_name: bfb_base_container
+    #working_dir: /webcam
+
+    volumes:
+      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
+      # on-the-fly in the running container
+      - ../../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
+
+    # Enable GPU access for the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+    runtime: nvidia
+    
+    # Allows you to explicitly specify device files that should be made 
+    # available within the container. For example, devices: /dev/ttyACM0:/dev/ttyACM0 
+    # would make the /dev/ttyACM0 device file accessible within the container. 
+    # NOTE: parameter 'devices' works fine (unlike privileged:true) with symlinks 
+    # for devices in /dev folder created on the host using udev rules 
+    devices:
+      - /dev/roboclaw:/dev/roboclaw
+    
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
-    ports:
-      - 9090:9090 # Expose port 9090 to allow external connections to rosbridge server
-
     # Overload the default command executed by the container
-    command: ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-    #command: ros2 run rosbridge_server rosbridge_websocket
+    command: "ros2 launch bigfootbot_base bfb_roboclaw.launch.py"
 
     #network_mode: host
     #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
 
     #networks:
       #bfb_network:
-  # ======================
+  # --- end of 'bfb_base' service ---
 
   # === ROBOT DESCRIPTION ===
   bfb_description:
@@ -147,85 +161,6 @@ services:
     depends_on:
       husarnet: { condition: service_healthy }
   # --- end  'bfb_description' service ---
-
-  # === ROBOT BASE (motor controller) ===
-  bfb_base:
-    #restart: unless-stopped
-    
-    build: 
-      context: ../../
-      dockerfile: docker/base/Dockerfile.bfb_base
-
-    # the name of the Docker image to be created from the Dockerfile.
-    image: bfb_base:latest
-
-    # the name to be given to the container created from the image.
-    container_name: bfb_base_container
-    #working_dir: /webcam
-
-    volumes:
-      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
-      # on-the-fly in the running container
-      - ../../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
-
-    # Enable GPU access for the container
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [gpu]
-
-    runtime: nvidia
-    
-    # Allows you to explicitly specify device files that should be made 
-    # available within the container. For example, devices: /dev/ttyACM0:/dev/ttyACM0 
-    # would make the /dev/ttyACM0 device file accessible within the container. 
-    # NOTE: parameter 'devices' works fine (unlike privileged:true) with symlinks 
-    # for devices in /dev folder created on the host using udev rules 
-    devices:
-      - /dev/roboclaw:/dev/roboclaw
-    
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
-
-    #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
-    #network_mode: host
-    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
-
-    #networks:
-      #bfb_network:
-  # --- end of 'bfb_base' service ---
-   
-  # === TELEOPERATION ===
-  bfb_teleop:
-    #restart: unless-stopped
-    
-    build: 
-      context: ..
-      dockerfile: docker/Dockerfile.bfb_teleop
-
-    # The name of the Docker image to be created from the Dockerfile.
-    image: bfb_teleop:latest
-
-    # The name to be given to the container created from the image.
-    container_name: bfb_teleop_container
-
-    volumes:
-      # Enable on-the-fly parameter updates without the need for container restarts.
-      - ../bigfootbot_teleop/config:/ros2_ws/install/bigfootbot_teleop/share/bigfootbot_teleop/config 
-
-    privileged: true
-    
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
-
-    #command: ros2 launch /path/to/new_bfb_teleop_launch_file.launch
-    
-    #networks:
-      #bfb_network:
-    #network_mode: host
-  # --- end of 'bfb_teleop' service ---
   
   # Husarnet VPN
   husarnet:
@@ -259,7 +194,7 @@ services:
       - net.ipv6.conf.all.disable_ipv6=0
   
     environment:
-      - HUSARNET_HOSTNAME=jetson_description
+      - HUSARNET_HOSTNAME=jetson
       - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
       - HUSARNET_DEBUG=0
 
@@ -278,61 +213,5 @@ services:
  # bfb_network:
   #  external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
                    # instead of creating a new one for this project (docker-compos.yml file)
-
-  ####################  BIGFOOTBOT REALSENSE ################
-  #bfb_realsense:
-    ##restart: unless-stopped
-   # build: 
-    #  context: ..
-     # dockerfile: docker/Dockerfile.aarch64.humble.nav2_bigfootbot_realsense
-
-   # image: bigfootbot_realsense
-
-    #container_name: bigfootbot_realsense
-    ##working_dir: /webcam
-
-    ##volumes:
-      ## forward X socket to container to enable GUI 
-     ## - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      
-      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
-      ## on the fly in the running container
-     ## - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
-
-    # Enable GPU access for the container
-    #deploy:
-     # resources:
-      #  reservations:
-       #   devices:
-        #    - driver: nvidia
-         #     capabilities: [gpu]
-
-    #runtime: nvidia
-
-    #environment:
-    #  - DISPLAY
-    #  - QT_X11_NO_MITSHM=1
-    
-    #privileged: true # To allow container to access RealSense camera (USB) on the host
-    ##devices:
-    ##  - /dev:/dev
-    
-    #stdin_open: true # docker run -i
-    #tty: true        # docker run -t
-
-    #network_mode: host
-
-  # Test app (Web server)
-  #test_app:
-   # image: nginx
-    
-    #volumes:
-   #   - ./test_html:/usr/share/nginx/html
-
-   # network_mode: host
-
-    # Published ports are discarded when using host network mode               
-    #ports:
-    #  - "80:80"
     
       

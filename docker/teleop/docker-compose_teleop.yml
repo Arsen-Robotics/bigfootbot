@@ -122,8 +122,8 @@ services:
     #  - "8081:81"  # for app1
     #  - "8082:82"  # for app2
 
-networks:
-  bfb_network:
-    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+#networks:
+#  bfb_network:
+#    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
                    # instead of creating a new one for this project (docker-compose_teleop.yml)
       

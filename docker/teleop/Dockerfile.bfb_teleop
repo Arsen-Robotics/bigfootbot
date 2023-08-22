@@ -1,3 +1,14 @@
+# Description: 
+# This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
+# on Nvidia Jetson devices with Nvidia GPU acceleration (extending the Nvidia accelerated image)
+# or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
+# Installed ROS2 packages: 
+#   - 'bigfootbot_teleop' - contains launch and config files for running joystick teleoperation
+#   - 'joy' - contains joy_node, a node that interfaces a generic joystick to ROS2.
+#   - 'teleop_twist_joy' - contains teleop_node that republishes sensor_msgs/msg/Joy messages
+#                          as scaled geometry_msgs/msg/Twist messages.
+#   - 'sdl2_vendor' - contains SDL2 library (Simple DirectMedia Layer) for joystick driver
+# 
 # --- Docker commands ---
 # Build docker image:
 #   `docker build -f Dockerfile.bfb_teleop -t bfb_teleop:latest ..`

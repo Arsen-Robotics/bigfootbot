@@ -24,12 +24,11 @@ def generate_launch_description():
     # Doing it this way allows you, for example, to include the configuration
     # parameters in a larger yaml file that also provides parameters for
     # other packages. 
-
     with open(configFilePath, 'r') as file:
         configParams = yaml.safe_load(file)['motor_driver_node']['ros__parameters']
 
     # ----- Declare nodes -----   
-
+    
     motor_driver_node = Node(
         package='ros2_roboclaw_driver',
         executable='ros2_roboclaw_driver_node',

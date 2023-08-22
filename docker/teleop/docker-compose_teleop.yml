@@ -25,7 +25,6 @@
 # --------------------
 
 services:
-   
   # === TELEOPERATION ===
   bfb_teleop:
     #restart: unless-stopped

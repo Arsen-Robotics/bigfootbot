@@ -1,0 +1,86 @@
+#version: '3.5' # version flag is Depricated in Docker compose V2?
+
+# --- Docker compose commands ---
+
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#   `docker compose -f docker-compose_base.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#   `docker compose -f docker-compose_base.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#   `docker compose -f docker-compose_base.yml up --build`
+# 
+# To rebuild a certain service:
+#   `docker compose -f docker-compose_base.yml up --build <service_name>`
+#
+# To run a certain service:
+#   `docker compose -f docker-compose_base.yml up <service_name>`
+#   i.e `docker compose -f docker-compose_base.yml up bfb_base`
+# --------------------
+
+services:
+  # === ROBOT BASE (motor controller) ===
+  bfb_base:
+    #restart: unless-stopped
+    
+    build: 
+      context: ../../
+      dockerfile: docker/base/Dockerfile.bfb_base
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
+        
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        #- BASE_IMAGE=ros:humble-ros-base
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_base:latest
+
+    # The name to be given to the container created from the image.
+    container_name: bfb_base_container
+    #working_dir: /webcam
+
+    volumes:
+      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
+      # on-the-fly in the running container
+      - ../../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
+
+    # Enable GPU access for the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+    runtime: nvidia
+    
+    # Allows you to explicitly specify device files that should be made 
+    # available within the container. For example, devices: /dev/ttyACM0:/dev/ttyACM0 
+    # would make the /dev/ttyACM0 device file accessible within the container. 
+    # NOTE: parameter 'devices' works fine (unlike privileged:true) with symlinks 
+    # for devices in /dev folder created on the host using udev rules 
+    devices:
+      - /dev/roboclaw:/dev/roboclaw
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    # Overload the default command executed by the container
+    command: "ros2 launch bigfootbot_base bfb_roboclaw.launch.py"
+
+    #network_mode: host
+    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
+
+    #networks:
+      #bfb_network:
+  # --- end of 'bfb_base' service ---
+      

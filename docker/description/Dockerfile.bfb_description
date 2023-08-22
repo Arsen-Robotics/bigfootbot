@@ -1,5 +1,16 @@
-# --- Docker commands ---
+# Description: 
+# This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
+# on Nvidia Jetson devices with Nvidia GPU acceleration (extending the Nvidia accelerated image)
+# or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
+# Manually installed ROS2 packages (in Dockerfile): 
+#   - 'bigfootbot_description' - contains URDF files for the robot 
+#   - 'xacro' - XML macro language. It is used to generate URDF files from xacro files
+# Also used ROS2 packages (launched in launch files):
+#   - 'robot_state_publisher' - publishes robot URDF to a topic /robot_description and transforms to /tf
+#                               (broadcasts the state of the robot to the tf transform library)
+#   - 'joint_state_publisher_gui' - GUI tool for setting and publishing joint state values
 #
+# --- Docker commands ---
 # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated):
 #   `docker build -f Dockerfile.bfb_description 
 #      --build-arg BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
@@ -29,6 +40,7 @@
 ARG BASE_IMAGE
 
 # For running on ONLY Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Nvidia catalog of accelerated docker contaieners: https://catalog.ngc.nvidia.com/containers
 # Image built: 05/23/2023
 # BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
 
@@ -68,6 +80,9 @@ COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 # Clone the xacro package from GitHub
 # We install xacro from sources because binary version of xacro package was not 
 # available for ROS2 Humble by 09.06.2023
+# Note: if the binary version of xacro package would be available for ROS2 Humble,
+# it would be installed automatically by rosdep install command (dependency is written
+# in package.xml file of the package bigfootbot_description [as: <exec_depend>xacro</exec_depend>])
 RUN cd ${ROS_WS}/src \
     && git clone -b ros2 https://github.com/ros/xacro.git
 

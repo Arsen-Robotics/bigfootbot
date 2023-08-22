@@ -1,8 +1,9 @@
 # Description: 
 # This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
-# on Nvidia Jetson devices with Nvidia GPU acceleration.
+# on Nvidia Jetson devices with Nvidia GPU acceleration (extending the Nvidia accelerated image)
+# or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
 # Installed ROS2 packages: 
-# - 'bigfootbot_base' is used to control the robot's motors via Roboclaw motor controller.
+#   - 'bigfootbot_base' is used to control the robot's motors via Roboclaw motor controller.
 #
 # --- Docker commands ---
 # Build docker image:
@@ -28,17 +29,19 @@
 # sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
 #   `ros2 launch teleop_twist_joy teleop-launch.py`
 #  
-#  Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
+# Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
 #   `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
 #  
-#  -- ROS2 control commands --
+# -- ROS2 control commands --
 #   `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
 #-----------------------------
+
+ARG BASE_IMAGE
 
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
 # Nvidia catalog of accelerated docker contaieners: https://catalog.ngc.nvidia.com/containers
 # Image built: 05/23/2023
-ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
 
 # --- For running on x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated

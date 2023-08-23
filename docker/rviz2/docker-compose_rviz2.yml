@@ -75,8 +75,8 @@ services:
     #command: bash -c "rviz2 && joint_state_publisher_gui"
     #command: "bash"
     
-    networks:
-      bfb_network:
+    #networks:
+    #  bfb_network:
 
     #network_mode: host
 
@@ -84,9 +84,9 @@ services:
     # This means you no longer can configure ports and other networking settings here
     # and all of those configs need to be moved to declaration of service 'husarnet'.
     # This will also wait on Husarnet to actually start before starting your app
-    #network_mode: service:husarnet
-    #depends_on:
-    #  husarnet: { condition: service_healthy }
+    network_mode: service:husarnet
+    depends_on:
+      husarnet: { condition: service_healthy }
 
   # Husarnet VPN
   husarnet:
@@ -121,7 +121,18 @@ services:
       - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
       - HUSARNET_DEBUG=0
 
-networks:
-  bfb_network:
-    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+    #env_file: 
+    #    - ./.env  # create .env file in the same folder as Dockerfile and specify HOSTNAME and JOINCODE there
+
+    # As your apps are now running in Husarnet's container network namespace,
+    # you need to move all the usual networking-related declarations here
+    # If you want to expose your services additionally to hosts from local network (possibly on different ports)
+    #ports:
+    #  - "8765:8765"
+    #  - "8081:81"  # for app1
+    #  - "8082:82"  # for app2
+
+#networks:
+#  bfb_network:
+#    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
                    # instead of creating a new one for this project (docker-compose_rviz2.yml)

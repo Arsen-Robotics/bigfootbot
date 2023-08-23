@@ -93,7 +93,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-##### Setup entrypoint
+# Copy Fast DDS configuration file for Husarnet network
+COPY docker/fastdds_husarnet.xml /
+
+# Setup entrypoint (entrypoint is a script that is run each time the container is started)
 COPY docker/ros_entrypoint.sh /
 
 # [] - is exec form

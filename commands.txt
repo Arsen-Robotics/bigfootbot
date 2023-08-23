@@ -122,6 +122,13 @@ docker-compose down
 docker-compose ps
 docker ps -a
 
+--- Inspect (containers, networks, images, volumes)
+`docker inspect <container name>` - show container info (IP address, etc)
+   docker container inspect 2186a1927d6a | grep compose 
+`docker inspect <network name>` - show network info
+`docker inspect <image name>` - show image info
+`docker inspect <volume name>` - show volume info
+
 === END OF BLOCK 'docker commands' ===
 
 

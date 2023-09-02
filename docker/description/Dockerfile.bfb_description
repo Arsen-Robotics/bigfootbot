@@ -8,7 +8,8 @@
 # Also used ROS2 packages (launched in launch files):
 #   - 'robot_state_publisher' - publishes robot URDF to a topic /robot_description and transforms to /tf
 #                               (broadcasts the state of the robot to the tf transform library)
-#   - 'joint_state_publisher_gui' - GUI tool for setting and publishing joint state values
+#   - 'joint_state_publisher_gui' - GUI tool for setting and publishing joint state values 
+#                                   (messages sensor_msgs/JointState to a topic /joint_states)
 #
 # --- Docker commands ---
 # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated):

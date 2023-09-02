@@ -4,7 +4,8 @@
 # or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
 # Installed ROS2 packages: 
 #   - 'bigfootbot_teleop' - contains launch and config files for running joystick teleoperation
-#   - 'joy' - contains joy_node, a node that interfaces a generic joystick to ROS2.
+#   - 'joy' - contains joy_node, a node that interfaces a generic joystick to ROS2 and
+#             publishes a "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
 #   - 'teleop_twist_joy' - contains teleop_node that republishes sensor_msgs/msg/Joy messages
 #                          as scaled geometry_msgs/msg/Twist messages.
 #   - 'sdl2_vendor' - contains SDL2 library (Simple DirectMedia Layer) for joystick driver

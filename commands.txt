@@ -5,6 +5,9 @@
  `killall chrome` -  terminate all running instances of the Google Chrome browser on your Linux system
  `killall -9 process_name` - This signal is commonly known as a "forceful" or "hard" kill signal because it immediately 
                              terminates the processes without allowing them to perform any cleanup tasks or graceful shutdown procedures.
+ `miniterm` - simple terminal program for the serial port (installed as part of pyserial package `sudo apt install python3-serial`)
+              can be used to send commands to the serial port (e.g. send to Arduino [Arduino is used as a motor controller])
+              `miniterm /dev/ttyACM0 115200` - open serial port with baudrate 115200
   --- Networking
    -- Scan hosts in the network --
     `nmap -sn 192.168.5.0/24` - performs a ping scan to find live hosts in the range 192.168.5.0

@@ -118,6 +118,7 @@ COPY docker/ros_entrypoint.sh /
 # exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
 # So shell process with PID 1 is replaced by the process of running program in exec mode
+# ENTRYPOINT means that the container will run the executable file ros_entrypoint.sh when it starts
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
 CMD ["ros2", "launch", "bigfootbot_base", "bfb_roboclaw.launch.py"]

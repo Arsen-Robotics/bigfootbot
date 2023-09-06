@@ -8,6 +8,57 @@
  `miniterm` - simple terminal program for the serial port (installed as part of pyserial package `sudo apt install python3-serial`)
               can be used to send commands to the serial port (e.g. send to Arduino [Arduino is used as a motor controller])
               `miniterm /dev/ttyACM0 115200` - open serial port with baudrate 115200
+  
+  --- Journal is a system service for collecting and storing log data (it is a part of systemd) ---
+  `journalctl` - query the systemd journal (systemd is a system and service manager for Linux operating systems, that is 
+                 responsible for starting and stopping services and daemons, mounting and unmounting file systems, 
+                 maintaining the system clock, and other system management tasks)
+  `journalctl -fe` - show the latest journal entries and continuously print new entries as they are appended to the journal
+  `journalctl -f` - show only new entries as they are appended to the journal
+  `journalctl -b` - show messages from the current boot
+  `journalctl -u <service_name>` - show logs of service (to get list of services use `systemctl list-units --type=service`)
+                                 E.g. `journalctl -b -u docker.service` - show logs of docker service from the current boot
+              
+
+  --- Systemctl is a systemd utility that is responsible for Controlling the systemd system and service manager ---
+                Service manager is a background process that manages the life cycle of services in the system
+  `systemctl list-units`- lists all currently loaded systemd units, which includes both active and inactive units
+  `systemctl list-units --type=service` - show list of services that are currently loaded
+  `systemctl list-unit-files` - lists all available systemd unit files on your system. Unit files define services, targets, 
+                                sockets, timers, and other systemd units that can be activated.
+    units are represented by unit files, which are stored in the /usr/lib/systemd/system/ and /etc/systemd/system/ directories.
+    they are merely configuration files that describe the unit and define its behavior 
+    (e.g. /etc/systemd/system/docker.service, .socket, .target, etc)                              
+  `systemctl status <service_name>` - show status of service
+  `systemctl enable <service_name>` - enable service to start automatically at boot
+  `systemctl disable <service_name>` - disable service to start automatically at boot
+  `systemctl start <service_name>` - start service
+  `systemctl stop <service_name>` - stop service
+  `systemctl get-default` - show default target (default target is a special systemd unit that is loaded by default when 
+                            the system boots. It is similar to runlevel in the init system)
+                            Target is a special kind of unit that does not do anything itself but instead acts as a
+                            collection of other units. It is used to group units together and to simplify the boot process.
+  `systemctl set-default <target_name>` - set default target (e.g. `systemctl set-default multi-user.target` 
+                                                              - set default target to multi-user.target)
+  `systemctl list-units --type=target` - show list of targets (shown only active targets)
+  `systemctl list-dependencies <target_name>` - show list of units that are dependencies of target 
+                                                (e.g. `systemctl list-dependencies multi-user.target`)
+
+  --- RPi ---
+  `vcgencmd` is a command-line utility used on Raspberry Pi devices that runs the VideoCore GPU on the Raspberry Pi.
+             VideoCore is a low-power mobile multimedia processor originally developed for the Raspberry Pi project.
+             It allows you to query various hardware-related information, such as firmware revision, temperature.
+  `vcgencmd commands` - show all available commands
+  `vcgencmd measure_temp` - show CPU temperature
+  `vcgencmd get_throttled` - show under-voltage and over-temperature flags (if 0x0 - everything is ok, if 0x50000 - under-voltage, 
+                             if 0x50005 - under-voltage and over-temperature,
+                             if 0x50001 - under-voltage and currently throttled, if 0x50006 - under-voltage, over-temperature and currently throttled)
+                             (throttled means that CPU frequency is reduced because of under-voltage or over-temperature)         
+
+  To set RPi to boot to console (without GUI)
+  `sudo systemctl set-default multi-user.target` - set default target to multi-user.target (multi-user.target is a target that 
+                                                   provides a console login and is the default target for non-graphical Raspberry Pi OS images)
+
   --- Networking
    -- Scan hosts in the network --
     `nmap -sn 192.168.5.0/24` - performs a ping scan to find live hosts in the range 192.168.5.0
@@ -38,47 +89,57 @@
     - `/etc/netplan/` - config files (.yaml) are located in this directory
     - `netplan apply` - apply changes
 
-=== TF2 commands ===
---- Generate pdf file with TF transform tree
-ros2 run tf2_tools view_frames.py
+=== ROS2 commands ===
+  --- TF2 commands ---
+  Generate pdf file with TF transform tree
+  `ros2 run tf2_tools view_frames.py`
 
----  tf_echo reports the transform between any two frames broadcast over ROS
-ros2 run tf2_ros tf2_echo <parent frame> <child frame>
+  `tf_echo` reports the transform between any two frames broadcast over ROS
+  `ros2 run tf2_ros tf2_echo <parent frame> <child frame>`
 
-=== ROS2 topic commands ===
-ros2 topic echo /wheel/odometry
-`ros2 topic echo /my_topic --no-arr` --no-addr - don't print array fields of messages
+  --- ROS2 topic commands ---
+  `ros2 topic echo /wheel/odometry`
+  `ros2 topic echo /my_topic --no-arr` --no-addr - don't print array fields of messages
 
-Retrieve information about a topic
-`ros2 topic info /tf --verbose`
+  Retrieve information about a topic
+  `ros2 topic info /tf --verbose`
 
-# Name remapping
-ros2 run rplidar_ros rplidar_node --ros-args -r __ns:=scanner2
-`-r __ns:=scanner2` this changes the namespace of the node rplidar_node to 'scanner2' (/scanner/rplidar_node) 
-`-r __node:=<new node name>` this renames the node to 'new_node_name'.
-Namespace allows you to run multiple instances of the same node with separate parameter spaces.
+  Name remapping
+  `ros2 run rplidar_ros rplidar_node --ros-args -r __ns:=scanner2`
+  `-r __ns:=scanner2` this changes the namespace of the node rplidar_node to 'scanner2' (/scanner/rplidar_node) 
+  `-r __node:=<new node name>` this renames the node to 'new_node_name'.
+  Namespace allows you to run multiple instances of the same node with separate parameter spaces.
 
-=== ROS2 params ===
-To see the parameters belonging to your nodes
-ros2 param list
+  --- ROS2 params ---
+  To see the parameters belonging to your nodes
+  `ros2 param list`
 
-To display the type and current value of a parameter
-ros2 param get <node_name> <parameter_name>
+  To display the type and current value of a parameter
+  `ros2 param get <node_name> <parameter_name>`
 
-This command will set the value of a particular parameter on a particular node. 
-ros2 param set <node_name> <parameter_name> <parameter_value>
-ros2 param set /my_node my_string off
+  This command will set the value of a particular parameter on a particular node. 
+  `ros2 param set <node_name> <parameter_name> <parameter_value>`
+  `ros2 param set /my_node my_string off`
 
-To save your current configuration of node’s parameters, enter the command:
-ros2 param dump <node_name>
-===
+  To save your current configuration of node’s parameters, enter the command:
+  `ros2 param dump <node_name>`
 
-=== ROS2 control commands ===
-`ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
-===
+  --- ROS2 control commands ---
+  `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
 
-Get the installation location of package
-ros2 pkg prefix <package name>
+  --- Package commands ---
+  Get the installation location of package
+  `ros2 pkg prefix <package name>`
+
+  --- RQT commands ---
+  RQT is a Qt-based framework for GUI development for ROS. 
+  Qt is a cross-platform application framework that is widely used for developing application software with a 
+  graphical user interface (GUI)
+  rqt is a meta package that depends on all available e.g rqt_graph, rqt_image_view, etc
+  `ros2 run rqt_graph rqt_graph` - show graph of nodes and topics (rqt_graph is a part of rqt_graph package)
+                                   rqt_graph is a dynamic GUI plugin for visualizing the ROS computation graph.
+                                   (dynamic plugin is a plugin that can be loaded and unloaded at runtime)
+  `ros2 run rqt_image_view rqt_image_view` - show image from camera (rqt_image_view is a part of rqt_image_view package)
 
 
 === Gazebo ===

@@ -1,4 +1,6 @@
  === Linux commands ====
+ `tree` - list contents of directories in a tree-like format (install with `sudo apt install tree`)
+ `tree -L 1` - show only first level of directories
  `pstree` - display a tree diagram of running processes
  `pstree <PID>` - This will show the process tree starting from the specified PID
 

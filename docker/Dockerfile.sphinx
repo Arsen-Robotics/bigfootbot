@@ -1,0 +1,35 @@
+# This Dockerfile sets up a Python environment and installs Sphinx, a documentation generator, 
+# along with other necessary packages. It creates source and target directories, sets the 
+# working directory to the source directory, and defines the entrypoint for running Sphinx to 
+# generate documentation in HTML format.
+
+
+# How to use:
+# `docker build -f Dockerfile.sphinx -t sphinx_doc_generator:latest .`
+# `docker run -it --rm -v "$(pwd)/docs:/app/source" -v "$(pwd)/generated_docs:/app/html" sphinx_doc_generator
+# /docs - source directory containing Sphinx configuration file (conf.py) and reStructuredText files
+# /generated_docs - target directory for generated documentation in HTML format
+
+# Use a Python base image
+FROM python:3.9
+
+# Set environment variables
+ENV SOURCE_DIR /app/source
+ENV TARGET_DIR /app/html
+
+# Install necessary packages
+RUN pip install Sphinx sphinxcontrib-phpdomain myst-parser sphinx_rtd_theme mdit-py-plugins
+
+# Create the source and target directories
+RUN mkdir -p $SOURCE_DIR $TARGET_DIR
+
+# Copy the Sphinx configuration file (conf.py) into the source directory
+#COPY conf.py $SOURCE_DIR
+
+# Set the working directory to the source directory
+WORKDIR $SOURCE_DIR
+
+CMD ["bash"]
+
+# Define the entrypoint for running Sphinx to generate documentation
+#ENTRYPOINT ["sphinx-build", "-b", "html", ".", "/app/html"]

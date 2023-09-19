@@ -127,7 +127,9 @@
   `ros2 param dump <node_name>`
 
   --- ROS2 control commands ---
-  `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
+  `ros2 control list_controllers` - list loaded controllers, their type and status
+  `ros2 control list_hardware_components` - list available hardware components
+  `ros2 control list_hardware_interfaces` - list available command and state interfaces
 
   --- Package commands ---
   Get the installation location of package

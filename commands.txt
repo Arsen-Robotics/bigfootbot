@@ -1,9 +1,30 @@
  === Linux commands ====
  `tree` - list contents of directories in a tree-like format (install with `sudo apt install tree`)
  `tree -L 1` - show only first level of directories
+ `ps aux` - show all running processes (a - show processes of all users, u - show processes of current user, 
+                                        x - show processes not attached to a terminal)
+ `top` - display Linux processes (top -  display Linux processes in real time)
+        `top -p <PID>` - display Linux process with specified PID
+        `top -u <username>` - display Linux processes of specified user                                        
  `pstree` - display a tree diagram of running processes
  `pstree <PID>` - This will show the process tree starting from the specified PID
+ `tmux` - terminal multiplexer, allows you to run multiple terminal sessions inside a single 
+                                terminal window or remote terminal session (install with `sudo apt install tmux`)
+  `tmux ls` - list all tmux sessions
+  `tmux attach -t <session_name>` - attach to tmux session with specified name
+  `tmux kill-session -t <session_name>` - kill tmux session with specified name
+  `tmux new -s <session_name>` - create new tmux session with specified name
+  `tmux rename-session -t <old_session_name> <new_session_name>` - rename tmux session
+  `tmux detach` - detach from tmux session (keep session running in background) or simply `CTRL-B d`
+  `tmux windows` - list all windows in tmux session
+  `tmux new-window` - create new window in tmux session, or simply `CTRL-B c`
+  `CTRL-B %` - split tmux window vertically
+  `CTRL-B "` - split tmux window horizontally
+  `CTRL-B <arrow key>` - switch between tmux windows
+  `CTRL-B : list-command` - list all tmux commands
 
+ `kill <PID>` - terminate process with specified PID
+ `killal` - send a signal to all processes running any of the specified commands
  `killall chrome` -  terminate all running instances of the Google Chrome browser on your Linux system
  `killall -9 process_name` - This signal is commonly known as a "forceful" or "hard" kill signal because it immediately 
                              terminates the processes without allowing them to perform any cleanup tasks or graceful shutdown procedures.
@@ -15,6 +36,10 @@
           `wget -O <filename> <url>` - download file from url and save it as filename
           or simply `wget <url>` - download file from url and save it with original name
   
+ `tee` - read from standard input and write to standard output and files (install with `sudo apt install tee`)
+         `echo "Hello World" | tee hello.txt` - write "Hello World" to hello.txt and print it to stdout
+         `echo "Hello World" | tee -a hello.txt` - append "Hello World" to hello.txt and print it to stdout
+
   --- Journal is a system service for collecting and storing log data (it is a part of systemd) ---
   `journalctl` - query the systemd journal (systemd is a system and service manager for Linux operating systems, that is 
                  responsible for starting and stopping services and daemons, mounting and unmounting file systems, 
@@ -175,6 +200,10 @@ docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --en
 (--privileged flag gives all capabilities to the container, and it also lifts all the limitations enforced by the device cgroup controller. 
 (--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" read-write mode (i.e. the container can write as well as read files on the host))
 In other words, the container can then do almost everything that the host can do)
+
+To capture docker build logs to a file
+ `docker build -f Dockerfile.bfb_camera_d435i -t bfb_camera_d435i:latest ../.. 2>&1 | tee build.log`
+ 2>&1 redirects stderr to stdout, and then | tee build.log pipes stdout to tee, which writes it to build.log and also displays it on the screen.
 
 --- end of block 'run docker containers wit GUI ---
 

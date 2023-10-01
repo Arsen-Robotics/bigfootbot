@@ -5,3 +5,5 @@ docker/husarnet-config
 # that can be executed directly by the interpreter, without the need to recompile the source 
 # code every time the script is run
 *.pyc
+
+*.log

@@ -10,6 +10,10 @@
  `miniterm` - simple terminal program for the serial port (installed as part of pyserial package `sudo apt install python3-serial`)
               can be used to send commands to the serial port (e.g. send to Arduino [Arduino is used as a motor controller])
               `miniterm /dev/ttyACM0 115200` - open serial port with baudrate 115200
+
+ `wget` - command-line utility for downloading files from the web (install with `sudo apt install wget`)
+          `wget -O <filename> <url>` - download file from url and save it as filename
+          or simply `wget <url>` - download file from url and save it with original name
   
   --- Journal is a system service for collecting and storing log data (it is a part of systemd) ---
   `journalctl` - query the systemd journal (systemd is a system and service manager for Linux operating systems, that is 

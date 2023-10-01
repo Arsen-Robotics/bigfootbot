@@ -12,7 +12,7 @@
 # 
 # --- Docker commands ---
 # Build docker image:
-#   `docker build -f Dockerfile.bfb_teleop -t bfb_teleop:latest ..`
+#   `docker build -f Dockerfile.bfb_teleop -t bfb_teleop:latest ../..`
 #
 # Run docker container:
 #   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_teleop_container bfb_teleop:latest`
@@ -91,8 +91,7 @@ RUN apt-get update \
       --ignore-src \
       --from-path src \ 
       --rosdistro ${ROS_DISTRO} \
-    #  --skip-keys "bigfootbot_teleop bigfootbot_description" \
-    # NB! colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
+    #  --skip-keys "bigfootbot_teleop bigfootbot_description" \    
     ##&& colcon build \
     ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     && colcon build --symlink-install \

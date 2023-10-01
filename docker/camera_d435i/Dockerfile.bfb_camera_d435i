@@ -7,16 +7,16 @@
 #
 # --- Docker commands ---
 # Build docker image:
-#   `docker build -f Dockerfile.bfb_camera -t bfb_camera:latest ..`
+#   `docker build -f Dockerfile.bfb_camera_d435i -t bfb_camera_d435i:latest ../..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_base_container bfb_base:latest`
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_camera_D435i_container bfb_camera_D435i:latest`
 #
 # To connect to a running container: 
-#   `docker exec -it bfb_base_container bash`
+#   `docker exec -it bfb_camera_D435i_container bash`
 # -------------------------
 
-# --- ROS2 commands ---
+# --- ROS2 commands ---   TODO!!!!!!!!!!!!!!!!!!!!!!!
 # Launch Roboclaw (motor controller):
 #   `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
 #
@@ -41,7 +41,7 @@ ARG BASE_IMAGE
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
 # Nvidia catalog of accelerated docker contaieners: https://catalog.ngc.nvidia.com/containers
 # Image built: 05/23/2023
-#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
 
 # --- For running on x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated
@@ -70,91 +70,73 @@ ENV SHELL=/bin/bash
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"] 
 
-# Build RealSense SDK (LibRealSense) from sources. 
+# --- Build RealSense SDK (LibRealSense) from sources.
 # LibrealSense is a cross-platform library for capturing data from the Intel® RealSense™ cameras. 
 # The library provides access to camera controls and sensor data, including depth, color, and infrared streams.
 # Build and install scripts for Intel's librealsense for the NVIDIA Jetson Developer Kits
-# are downloaded from https://github.com/jetsonhacks/installRealSenseSDK
+# are downloaded from https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/tree/main/docker/scripts
+# which in turn a based on scripts from https://github.com/jetsonhacks/installRealSenseSDK
 COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
 COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
 
 RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
-# NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release (by 06.03.2023 4.51.1)
-# of the ROS2 Wrapper for RealSense supported only LibRealSense v2.51.1 
-RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.51.1 
-##### end of block 'build and install RealSense SDK'
+# NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release 
+# (by 01.10.2023 is 4.54.1) of the realsense-ros (ROS2 Wrapper for RealSense) supports only LibRealSense v2.54.1 
+RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.54.1
+# --- end of block 'Build RealSense SDK (LibRealSense) from sources'
 
 
+# --- Build and install ROS2 packages 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Install additional packages needed for ROS2 dependencies
-RUN apt-get update && apt-get install -y \
-    libboost-all-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-# Create ROS2 working directory
+# Create ROS2 working and source directories
 RUN mkdir -p ${ROS_WS}/src
 
-# --- Build and install ROS2 packages
-COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
+# Build and install ROS2 Wrapper (realsense-ros) for RealSense
+# Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
+RUN cd ${ROS_WS}/src/ \
+    && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development    
 
-# Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git
-# latest update of the original repo: 26.06.2022) 
-# ROS2 package "ros2_roboclaw_driver"
-RUN cd ${ROS_WS}/src \
-    && git clone https://github.com/jevgenik/ros2_roboclaw_driver.git
-
+# Install ROS dependencies (ROS packages on which depend packages that located in the src directory)
+# -y, --default-yes - Tell the package manager to default to y or fail when installing
+# -r - Continue installing despite errors
+# --ignore-src - Install only the packages in the 'rosdep database' and ignore all source-based packages
+# --from-path - Install all the dependencies of the packages in the specified path
+# --rosdistro - The ROS distribution to check for dependencies
+# --skip-keys - The specified rosdep keys will be ignored, i.e. not resolved and not installed
+# --symlink-install - if you change code in your source code, it will take effect, 
+#   you don't have to compile it again (ony with python, not c++)
+#   or e.g., the yaml configuration file in the workspace without having to rebuild the workspace.
+# --event-handlers console_direct+ - shows console output while building (can otherwise be found in the log directory)
 RUN apt-get update \
     && cd ${ROS_WS} \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
-    && rosdep update \
+    && rosdep update \     
     && rosdep install -y \
       --ignore-src \
       --from-path src \ 
       --rosdistro ${ROS_DISTRO} \
-    #  --skip-keys "bigfootbot_teleop bigfootbot_description" \
-    # NB! colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
+      --skip-keys librealsense2 \
+    # librealsense2 is skipped because it is already installed from sources (see above)    
     ##&& colcon build \
-    ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    ##Build with debug info: && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    # TODO test this statement: colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
     && colcon build --symlink-install \
     #&& rm -rf src logs build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean 
-# --- end of 'Build and install ROS2 packages'
+    #&& rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \    
+    # TODO! add --symlink-install to colcon build ?
+# --- end of block 'Build and install ROS2 Wrapper for RealSense'
 
-# Install GDB and GDB server
-#RUN apt-get update \
-#    && apt-get install -y gdb \
-#      gdbserverr
 
-##### Setup entrypoint
+# Setup entrypoint
 COPY docker/ros_entrypoint.sh /
 
 # [] - is exec form
 # exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
 # So shell process with PID 1 is replaced by the process of running program in exec mode
-# ENTRYPOINT means that the container will run the executable file ros_entrypoint.sh when it starts
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
-CMD ["ros2", "launch", "bigfootbot_base", "bfb_roboclaw.launch.py"]
-#CMD ["bash"]
+#CMD ["ros2", "launch", "bigfootbot_teleop", "bfb_teleop.launch.py"]
+CMD ["bash"]

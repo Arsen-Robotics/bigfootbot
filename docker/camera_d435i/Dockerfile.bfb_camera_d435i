@@ -91,7 +91,7 @@ RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librea
 # Create ROS2 working and source directories
 RUN mkdir -p ${ROS_WS}/src
 
-# Build and install ROS2 Wrapper (realsense-ros) for RealSense
+# -- Build and install ROS2 Wrapper (realsense-ros) for RealSense
 # Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
 RUN cd ${ROS_WS}/src/ \
     && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development    
@@ -126,7 +126,9 @@ RUN apt-get update \
     && apt-get clean 
     #&& rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \    
     # TODO! add --symlink-install to colcon build ?
-# --- end of block 'Build and install ROS2 Wrapper for RealSense'
+# -- end of block 'Build and install ROS2 Wrapper for RealSense'
+
+# --- end of block 'Build and install ROS2 packages'
 
 
 # Setup entrypoint

@@ -18,10 +18,11 @@
   `tmux detach` - detach from tmux session (keep session running in background) or simply `CTRL-B d`
   `tmux windows` - list all windows in tmux session
   `tmux new-window` - create new window in tmux session, or simply `CTRL-B c`
-  `CTRL-B %` - split tmux window vertically
-  `CTRL-B "` - split tmux window horizontally
-  `CTRL-B <arrow key>` - switch between tmux windows
-  `CTRL-B : list-command` - list all tmux commands
+  `Ctrl-b %` - split tmux window vertically
+  `Ctrl-b "` - split tmux window horizontally
+  `Ctrl-b <arrow key>` - switch between tmux windows
+  `Ctrl-b : list-command` - list all tmux commands
+  `Ctrl-b : [` - enter copy mode (use arrow keys to navigate, press `v` to select text, press `y` to copy selected text)
 
  `kill <PID>` - terminate process with specified PID
  `killal` - send a signal to all processes running any of the specified commands

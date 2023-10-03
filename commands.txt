@@ -17,7 +17,40 @@
   `Ctrl-b : list-command` - list all tmux commands
   `Ctrl-b : [` - enter copy mode (use arrow keys to navigate, press `v` to select text, press `y` to copy selected text)
 
- -- Process management 
+-- TigerVNC and TightVNC --
+TigerVNC adds encryption for all supported operating systems and not just Linux. Conversely, TightVNC has features that 
+TigerVNC doesn't have, such as file transfers
+`sudo apt install tigervnc-standalone-server` - install TigerVNC
+`sudo apt install tightvncserver` - install TightVNC
+`vncserver` - start VNC server
+`vncserver -kill :<display_number>` - stop VNC server
+`vncserver -list` - list all running VNC servers
+
+Lightweight Desktop to use with VNC server: Xfce4
+`sudo apt install xfce4 xfce4-goodies` - install Xfce4
+--- end of block 'TigerVNC and TightVNC' ---
+
+-- Display server and window managers --
+Display server is a program that manages graphical display output and input.
+X windows system is a windowing system for bitmap displays, common on Unix-like operating systems.
+"X11" refers to a version pf the X protocol. Xorg is an open source implementation of X.
+Wayland is a comminication protocol that specifies the communication between a display server and its clients.
+Wayland is a replacement for the X windows system.
+To check which display server is running use `echo $XDG_SESSION_TYPE` (if output is x11 - Xorg is running, 
+if output is wayland - Wayland is running)
+Window manager is a program that draws the frames around windows and allows the user to move, resize and close them.
+Window manager is a part of the desktop environment.
+`xeyes` - show a pair of eyes that will follow the mouse pointer around the screen - this is a part of X11 utilities
+
+-- Apt package manager --
+`apt search <package_name>` - search for package
+`apt list --installed` - list all installed packages
+`apt remove <package_name>` - remove package
+`apt purge <package_name>` - remove package and its configuration files
+`apt autoremove` - remove packages that were automatically installed to satisfy dependencies 
+                   for other packages and are now no longer needed
+
+ -- Process management --
  `ps aux` - show all running processes (a - show processes of all users, u - show processes of current user, 
                                         x - show processes not attached to a terminal)
  `top` - display Linux processes (top -  display Linux processes in real time)

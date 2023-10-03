@@ -24,11 +24,25 @@
   `Ctrl-b : list-command` - list all tmux commands
   `Ctrl-b : [` - enter copy mode (use arrow keys to navigate, press `v` to select text, press `y` to copy selected text)
 
- `kill <PID>` - terminate process with specified PID
+ -- Process management 
+ `kill <PID>` - terminate process with specified PID (by default sends SIGTERM (15) signal to the process)
  `killal` - send a signal to all processes running any of the specified commands
  `killall chrome` -  terminate all running instances of the Google Chrome browser on your Linux system
  `killall -9 process_name` - This signal is commonly known as a "forceful" or "hard" kill signal because it immediately 
                              terminates the processes without allowing them to perform any cleanup tasks or graceful shutdown procedures.
+ `Ctrl + Z` - bash job control. To suspend a foreground process running in a terminal. Stops the process and returns you 
+              to the current shell. You can now type `fg` to continue process, or type `bg` to continue the process in the background
+              Ctrl+Z is a useful way to temporarily halt a process without terminating it, allowing you to continue using the terminal 
+              for other tasks and then later bring the suspended process back when needed.
+              - If you have a process running in the foreground in your terminal, such as a long-running command or program, 
+              pressing Ctrl+Z will suspend that process.
+              - You will see a message indicating that the process has been stopped, along with a job number, typically 
+              something like [1]+ Stopped command
+              - The suspended process is now in the background, and you can use the `bg` command to resume it in the background 
+              or the `fg` command to bring it back to the foreground.
+ `Ctrl + C` - terminate a running process (SIGINT [Signal Interrupt - Signal Number 2] signal is sent to the process)
+              (SIGTERM [command kill sends TERM by default] is the preferred way as the process has the chance to terminate gracefully)
+
  `miniterm` - simple terminal program for the serial port (installed as part of pyserial package `sudo apt install python3-serial`)
               can be used to send commands to the serial port (e.g. send to Arduino [Arduino is used as a motor controller])
               `miniterm /dev/ttyACM0 115200` - open serial port with baudrate 115200
@@ -40,6 +54,14 @@
  `tee` - read from standard input and write to standard output and files (install with `sudo apt install tee`)
          `echo "Hello World" | tee hello.txt` - write "Hello World" to hello.txt and print it to stdout
          `echo "Hello World" | tee -a hello.txt` - append "Hello World" to hello.txt and print it to stdout
+
+  --Shortcuts in Linux Ubuntu Gui
+  `Ctrl + H` - show hidden files
+  `Ctrl + L` - go to address bar
+  `Ctrl + Shift + C` - copy path of selected file in terminal
+  `Ctrl + Shift + V` - paste path of selected file in terminal
+  `Ctrl + Z` - stops the process and returns you to the current shell. You can now type fg to 
+               continue process, or type bg to continue the process in the background
 
   --- Journal is a system service for collecting and storing log data (it is a part of systemd) ---
   `journalctl` - query the systemd journal (systemd is a system and service manager for Linux operating systems, that is 

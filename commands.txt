@@ -1,4 +1,7 @@
  === Linux commands ====
+ `lsb_release -a` - show Linux distribution information
+ `cat /etc/os-release` - show Linux distribution information)
+ `stat` - display file or file system status (e.g. `stat /dev/ttyACM0` - show status of ttyACM0)
  `tree` - list contents of directories in a tree-like format (install with `sudo apt install tree`)
  `tree -L 1` - show only first level of directories 
  `tmux` - terminal multiplexer, allows you to run multiple terminal sessions inside a single 
@@ -17,31 +20,6 @@
   `Ctrl-b : list-command` - list all tmux commands
   `Ctrl-b : [` - enter copy mode (use arrow keys to navigate, press `v` to select text, press `y` to copy selected text)
 
--- TigerVNC and TightVNC --
-TigerVNC adds encryption for all supported operating systems and not just Linux. Conversely, TightVNC has features that 
-TigerVNC doesn't have, such as file transfers
-`sudo apt install tigervnc-standalone-server` - install TigerVNC
-`sudo apt install tightvncserver` - install TightVNC
-`vncserver` - start VNC server
-`vncserver -kill :<display_number>` - stop VNC server
-`vncserver -list` - list all running VNC servers
-
-Lightweight Desktop to use with VNC server: Xfce4
-`sudo apt install xfce4 xfce4-goodies` - install Xfce4
---- end of block 'TigerVNC and TightVNC' ---
-
--- Display server and window managers --
-Display server is a program that manages graphical display output and input.
-X windows system is a windowing system for bitmap displays, common on Unix-like operating systems.
-"X11" refers to a version pf the X protocol. Xorg is an open source implementation of X.
-Wayland is a comminication protocol that specifies the communication between a display server and its clients.
-Wayland is a replacement for the X windows system.
-To check which display server is running use `echo $XDG_SESSION_TYPE` (if output is x11 - Xorg is running, 
-if output is wayland - Wayland is running)
-Window manager is a program that draws the frames around windows and allows the user to move, resize and close them.
-Window manager is a part of the desktop environment.
-`xeyes` - show a pair of eyes that will follow the mouse pointer around the screen - this is a part of X11 utilities
-
 -- Software management --
 Apt - Advanced Package Tool (apt is a command-line utility for installing, updating, removing, and otherwise managing 
                             deb packages on Ubuntu, Debian, and related Linux distributions)
@@ -49,8 +27,11 @@ Apt - Advanced Package Tool (apt is a command-line utility for installing, updat
             considered the user's "back-end" to other tools using the APT library)
 apt is a newer command-line tool that provides the same functionality as apt-get, and possibly more.
 `apt update` - update list of available packages
-`apt search <package_name>` - search for package
+`apt search <package_name>` - search for package in repositories
 `apt list --installed` - list all installed packages
+`apt insall --no-install-recommends <package_name>` - install package without recommended packages and only packages 
+                                                      required to satisfy dependencies for the specified package 
+                                                      (useful in docker images to reduce image size)
 `apt remove <package_name>` - remove package
 `apt purge <package_name>` - remove package and its configuration files
 `apt autoremove` - remove packages that were automatically installed to satisfy dependencies 
@@ -58,7 +39,7 @@ apt is a newer command-line tool that provides the same functionality as apt-get
 `dpkg` - install, remove, and inspect deb packages (dpkg is a low-level tool for installing, removing, and inspecting deb packages)
 `dpkg -i <package_name>` - install package (e.g. `dpkg -i google-chrome-stable_current_amd64.deb`)
 
- -- Process management --
+-- Process management --
  `ps aux` - show all running processes (a - show processes of all users, u - show processes of current user, 
                                         x - show processes not attached to a terminal)
  `top` - display Linux processes (top -  display Linux processes in real time)
@@ -124,10 +105,18 @@ apt is a newer command-line tool that provides the same functionality as apt-get
   `journalctl -f` - show only new entries as they are appended to the journal
   `journalctl -b` - show messages from the current boot
   `journalctl -u <service_name>` - show logs of service (to get list of services use `systemctl list-units --type=service`)
-                                 E.g. `journalctl -b -u docker.service` - show logs of docker service from the current boot
-              
+                                 E.g. `journalctl -b -u docker.service` - show logs of docker service from the current boot            
 
-  --- Systemctl is a systemd utility that is responsible for Controlling the systemd system and service manager ---
+Systemd is a replacement for init. It is intended to provide a better framework for expressing services' dependencies,
+allowing for faster boot times through parallelization. It replaces the init system inherited from UNIX System V and Berkeley 
+Software Distribution (BSD)
+Init and Systemd are both init daemons but it is better to use the latter since it is commonly used in recent Linux Distros. 
+Init uses service whereas Systemd uses systemctl to manage Linux services
+The /sbin/init is a symbolic link to the actual init process. You can follow the symbolic link and see real process. 
+I am using the stat command and you can see that /sbin/init is linked to /lib/systemd/systemd in Ubuntu. 
+This is an indication that systemd is in use
+
+--- Systemctl is a systemd utility that is responsible for Controlling the systemd system and service manager ---
       Service manager is a background process that manages the life cycle of services in the system
   `systemctl list-units`- lists all currently loaded in memory systemd units, which includes both active and inactive units
   `systemctl list-units --type=service` - show list of services that are currently loaded
@@ -196,120 +185,6 @@ apt is a newer command-line tool that provides the same functionality as apt-get
     - `/etc/netplan/` - config files (.yaml) are located in this directory
     - `netplan apply` - apply changes
 
-=== ROS2 commands ===
-  --- TF2 commands ---
-  Generate pdf file with TF transform tree
-  `ros2 run tf2_tools view_frames.py`
-
-  `tf_echo` reports the transform between any two frames broadcast over ROS
-  `ros2 run tf2_ros tf2_echo <parent frame> <child frame>`
-
-  --- ROS2 topic commands ---
-  `ros2 topic echo /wheel/odometry`
-  `ros2 topic echo /my_topic --no-arr` --no-addr - don't print array fields of messages
-
-  Retrieve information about a topic
-  `ros2 topic info /tf --verbose`
-
-  Name remapping
-  `ros2 run rplidar_ros rplidar_node --ros-args -r __ns:=scanner2`
-  `-r __ns:=scanner2` this changes the namespace of the node rplidar_node to 'scanner2' (/scanner/rplidar_node) 
-  `-r __node:=<new node name>` this renames the node to 'new_node_name'.
-  Namespace allows you to run multiple instances of the same node with separate parameter spaces.
-
-  --- ROS2 params ---
-  To see the parameters belonging to your nodes
-  `ros2 param list`
-
-  To display the type and current value of a parameter
-  `ros2 param get <node_name> <parameter_name>`
-
-  This command will set the value of a particular parameter on a particular node. 
-  `ros2 param set <node_name> <parameter_name> <parameter_value>`
-  `ros2 param set /my_node my_string off`
-
-  To save your current configuration of node’s parameters, enter the command:
-  `ros2 param dump <node_name>`
-
-  --- ROS2 control commands ---
-  `ros2 control list_controllers` - list loaded controllers, their type and status
-  `ros2 control list_hardware_components` - list available hardware components
-  `ros2 control list_hardware_interfaces` - list available command and state interfaces
-
-  --- Package commands ---
-  Get the installation location of package
-  `ros2 pkg prefix <package name>`
-
-  --- RQT commands ---
-  RQT is a Qt-based framework for GUI development for ROS. 
-  Qt is a cross-platform application framework that is widely used for developing application software with a 
-  graphical user interface (GUI)
-  rqt is a meta package that depends on all available e.g rqt_graph, rqt_image_view, etc
-  `ros2 run rqt_graph rqt_graph` - show graph of nodes and topics (rqt_graph is a part of rqt_graph package)
-                                   rqt_graph is a dynamic GUI plugin for visualizing the ROS computation graph.
-                                   (dynamic plugin is a plugin that can be loaded and unloaded at runtime)
-  `ros2 run rqt_image_view rqt_image_view` - show image from camera (rqt_image_view is a part of rqt_image_view package)
-
-
-=== Gazebo ===
---- Add path to robot model (this line maybe added to ~/.bashrc or docker images entrypoint
---- [ros_entrypoint.sh])
-export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/models/
-
-
-==== Docker commmands ===
-
---- Buid image
-docker build -f Dockerfile.aarch64.humble.nav2.realsense -t humble_realsense:latest --build-arg BASE_IMAGE="nvidia_x86_64_humble_nv2" ..
-
---- Run new terminal in the running container
-docker exec -it <container-name/ID> bash
-
---- Run docker containers with GUI ---
-xhost +local:root 
-OR
-xhost +
-
-docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" aarch64_humble_realsense:latest
-(--rm Automatically remove the container when it exits)
-(--gpus # flag when you start a container to access GPU resources. Specify how many GPUs to use (all - use all GPUs))
-(--privileged flag gives all capabilities to the container, and it also lifts all the limitations enforced by the device cgroup controller. 
-(--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" read-write mode (i.e. the container can write as well as read files on the host))
-In other words, the container can then do almost everything that the host can do)
-
-To capture docker build logs to a file
- `docker build -f Dockerfile.bfb_camera_d435i -t bfb_camera_d435i:latest ../.. 2>&1 | tee build.log`
- 2>&1 redirects stderr to stdout, and then | tee build.log pipes stdout to tee, which writes it to build.log and also displays it on the screen.
-
---- end of block 'run docker containers wit GUI ---
-
---- Create and start containers
-docker compose -f docker-compose_lenovo.yml up # Version2
-
-docker-compose up
-docker-compose up --build (Build images before starting containers.)
-
---- Start the stopped containers, can't create new ones
-docker-compose start
-
---- Stop and remove containers, networks, images, and volumes
-docker-compose down
-
---- List containers
-docker-compose ps
-docker ps -a
-
---- Inspect (containers, networks, images, volumes)
-`docker inspect <container name>` - show container info (IP address, etc)
-   docker container inspect 2186a1927d6a | grep compose 
-`docker inspect <network name>` - show network info
-`docker inspect <image name>` - show image info
-`docker inspect <volume name>` - show volume info
-
-=== END OF BLOCK 'docker commands' ===
-
-
-
 === WSL2 ===
 -- Attach USB devices
 --- From an administrator command prompt on Windows, run this command. 
@@ -319,34 +194,3 @@ usbipd wsl list
 --- Select the bus ID of the device you’d like to attach to WSL and run this command. 
 --- You’ll be prompted by WSL for a password to run a sudo command.
 usbipd wsl attach --busid <busid>
-
-
-=== Git commands ===
-`git remote -v` - show remote repositories
-`git branch -v` - show local branches
-`git merge <branch_name>` - merge branch_name into current branch (commits history will be saved)
-                            simply put "Please add my changes to the branch I'm currently on."
-`git rebase <branch_name>` - rebase current branch on top of branch_name (commits history will be rewritten by new commits from branch_name)
-                             simply put "Please add my changes on top of what everybody else has already done."
-
-  Note. Use rebase only for local branches. Do not rebase branches others are working on. Rebase changes 
-  the commit history, and others will not know about it.
-
-For example if you have a branch called new-feature and you want to merge it into main, you would do the following:
-`git checkout main`
-`git merge new-feature` // merge new-feature into main
-// or
-`git checkout new-feature`
-`git rebase main` // rebase new-feature on top of main (commits history of new-feature will be rewritten by new commits from main)
-
--- If you're merging a new feature into the main branch, 
-you first want to switch to the main branch and then merge into it:
-
-`git checkout new-branch` (e.g. new-feature)
-# ...develop some code...
-
-`git add –A`
-`git commit –m "Some commit message"`
-`git checkout main`
-Switched to branch 'main'
-`git merge new-branch` (e.g. new-feature)

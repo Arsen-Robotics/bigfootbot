@@ -1,6 +1,8 @@
  === Linux commands ====
  `lsb_release -a` - show Linux distribution information
  `cat /etc/os-release` - show Linux distribution information)
+ `tail -f /var/log/syslog` - show last 10 lines of syslog and continuously print new lines as they are appended to syslog
+ `tail -15 /var/log/syslog` - show last 15 lines of syslog
  `stat` - display file or file system status (e.g. `stat /dev/ttyACM0` - show status of ttyACM0)
  `tree` - list contents of directories in a tree-like format (install with `sudo apt install tree`)
  `tree -L 1` - show only first level of directories 

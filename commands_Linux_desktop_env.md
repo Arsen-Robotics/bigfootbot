@@ -1,9 +1,12 @@
 ### Desktop environment
-- Display server is a program that manages graphical display output and input.  
-- X windows system is a windowing system for bitmap displays, common on Unix-like operating systems.  
-- "X11" refers to a version pf the X protocol. Xorg is an open source implementation of X.  
+- X windows system is a windowing system for bitmap displays, common on Unix-like operating systems. 
+- "X11" refers to a version pf the X protocol. Xorg is an open source implementation of X.
+- Display server or window server is a program whose primary task is to coordinate the input and output  
+  of its clients to and from the rest of the operating system, the hardware, and each other.  
 - Wayland is a comminication protocol that specifies the communication between a display server and its clients.  
   Wayland is a replacement for the X windows system.  
+  Display servers using the Wayland protocol are called compositors because they also act  
+  as compositing window managers.
 - To check which display server is running use `echo $XDG_SESSION_TYPE` (if output is x11 - Xorg is running,   
   if output is wayland - Wayland is running)  
 - Display manager (e.g. GDM, LightDM) is a program that starts the display server, launches the desktop, and manages   

@@ -1,19 +1,20 @@
  === Linux commands ====
- `lsb_release -a` - show Linux distribution information
- `cat /etc/os-release` - show Linux distribution information)
- `tail -f /var/log/syslog` - show last 10 lines of syslog and continuously print new lines as they are appended to syslog
- `tail -15 /var/log/syslog` - show last 15 lines of syslog
- `stat` - display file or file system status (e.g. `stat /dev/ttyACM0` - show status of ttyACM0)
- `tree` - list contents of directories in a tree-like format (install with `sudo apt install tree`)
- `tree -L 1` - show only first level of directories 
- `tmux` - terminal multiplexer, allows you to run multiple terminal sessions inside a single 
-                                terminal window or remote terminal session (install with `sudo apt install tmux`)
-  `tmux ls` - list all tmux sessions
-  `tmux attach -t <session_name>` - attach to tmux session with specified name
-  `tmux kill-session -t <session_name>` - kill tmux session with specified name
-  `tmux new -s <session_name>` - create new tmux session with specified name
-  `tmux rename-session -t <old_session_name> <new_session_name>` - rename tmux session
-  `tmux detach` - detach from tmux session (keep session running in background) or simply `CTRL-B d`
+ `grep` - print lines matching a pattern (e.g. `grep "Hello" hello.txt` - print lines containing "Hello" in hello.txt)
+ `lsb_release -a` - show Linux distribution information  
+ `cat /etc/os-release` - show Linux distribution information)  
+ `tail -f /var/log/syslog` - show last 10 lines of syslog and continuously print new lines as they are appended to syslog  
+ `tail -15 /var/log/syslog` - show last 15 lines of syslog  
+ `stat` - display file or file system status (e.g. `stat /dev/ttyACM0` - show status of ttyACM0)  
+ `tree` - list contents of directories in a tree-like format (install with `sudo apt install tree`)  
+ `tree -L 1` - show only first level of directories  
+ `tmux` - terminal multiplexer, allows you to run multiple terminal sessions inside a single   
+          terminal window or remote terminal session (install with `sudo apt install tmux`)  
+  `tmux ls` - list all tmux sessions  
+  `tmux attach -t <session_name>` - attach to tmux session with specified name  
+  `tmux kill-session -t <session_name>` - kill tmux session with specified name  
+  `tmux new -s <session_name>` - create new tmux session with specified name  
+  `tmux rename-session -t <old_session_name> <new_session_name>` - rename tmux session  
+  `tmux detach` - detach from tmux session (keep session running in background) or simply `CTRL-B d`  
   `tmux windows` - list all windows in tmux session
   `tmux new-window` - create new window in tmux session, or simply `CTRL-B c`
   `Ctrl-b %` - split tmux window vertically
@@ -22,6 +23,20 @@
   `Ctrl-b : list-command` - list all tmux commands
   `Ctrl-b : [` - enter copy mode (use arrow keys to navigate, press `v` to select text, press `y` to copy selected text)
 
+#### Sed is a stream editor for filtering and transforming text (install with `sudo apt install sed`)
+- `sed 's/old/new/g' <filename>` - replace all occurrences of old with new in file s - substitute, g - global
+- To delete a line with start and end pattern use `sed '/start_pattern/,/end_pattern/d' <filename>`
+
+#### Vim is is a highly configurable text editor built to make creating and changing any kind of text very efficient
+- `vim <filename>` - open file in vim or create new file if it doesn't exist
+- `:q` - quit
+- `:w` - save
+- `:wq` - save and quit
+- `:q!` - quit without saving
+- `:help` - show help
+- To select text in vim press `v` and use arrow keys to select text
+- To copy selected text press `y`
+
 -- Software management --
 Apt - Advanced Package Tool (apt is a command-line utility for installing, updating, removing, and otherwise managing 
                             deb packages on Ubuntu, Debian, and related Linux distributions)
@@ -29,6 +44,7 @@ Apt - Advanced Package Tool (apt is a command-line utility for installing, updat
             considered the user's "back-end" to other tools using the APT library)
 apt is a newer command-line tool that provides the same functionality as apt-get, and possibly more.
 `apt update` - update list of available packages
+`apt upgrade` - upgrade all installed packages
 `apt search <package_name>` - search for package in repositories
 `apt list --installed` - list all installed packages
 `apt insall --no-install-recommends <package_name>` - install package without recommended packages and only packages 
@@ -38,6 +54,9 @@ apt is a newer command-line tool that provides the same functionality as apt-get
 `apt purge <package_name>` - remove package and its configuration files
 `apt autoremove` - remove packages that were automatically installed to satisfy dependencies 
                    for other packages and are now no longer needed
+`apt-key add <key_file>` - add key_file to apt trusted keys (Key is a file containing a PGP key in ASCII armor format is needed  
+                           to authenticate the package repository. The apt-key add command is used to add the key)  
+`apt-key list` - list apt trusted keys
 `dpkg` - install, remove, and inspect deb packages (dpkg is a low-level tool for installing, removing, and inspecting deb packages)
 `dpkg -i <package_name>` - install package (e.g. `dpkg -i google-chrome-stable_current_amd64.deb`)
 

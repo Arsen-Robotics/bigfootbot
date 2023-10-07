@@ -3,6 +3,9 @@
 --- Buid image
 docker build -f Dockerfile.aarch64.humble.nav2.realsense -t humble_realsense:latest --build-arg BASE_IMAGE="nvidia_x86_64_humble_nv2" ..
 
+Rebuild docker image:
+`docker build --no-cache -t humble_realsense:latest ..`
+
 --- Run new terminal in the running container
 docker exec -it <container-name/ID> bash
 

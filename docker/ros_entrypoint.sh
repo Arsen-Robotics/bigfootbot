@@ -52,7 +52,7 @@ export FASTRTPS_DEFAULT_PROFILES_FILE=/fastdds_husarnet.xml
 # -----
 
 # If you have an image with an entrypoint pointing to entrypoint.sh, and you run 
-# your container as docker run my_image server start, that will translate 
-# to running entrypoint.sh server start in the container. 
+# your container as `docker run my_image server start``, that will translate 
+# to running `entrypoint.sh server start` in the container. 
 # At the exec line entrypoint.sh, the shell running as pid 1 will replace itself with the command server start.
 exec "$@"

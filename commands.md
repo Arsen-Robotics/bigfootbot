@@ -34,8 +34,16 @@
 - `:wq` - save and quit
 - `:q!` - quit without saving
 - `:help` - show help
+- `i` - insert mode. Means that you can type text. Press `Esc` to exit insert mode
+- `d` - delete line
 - To select text in vim press `v` and use arrow keys to select text
 - To copy selected text press `y`
+- To insert copied text press `p`
+- To undo press `u`
+- To redo press `Ctrl + r`
+- To search for text in vim press `/` and type text to search for (e.g. `/Hello`)
+- To insert row press `o` (inserts row below) or `O` (inserts row above)
+- To delete row press `dd`
 
 -- Software management --
 Apt - Advanced Package Tool (apt is a command-line utility for installing, updating, removing, and otherwise managing 

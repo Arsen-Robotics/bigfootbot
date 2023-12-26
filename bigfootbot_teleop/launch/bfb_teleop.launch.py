@@ -33,7 +33,7 @@ def generate_launch_description():
         respawn=True,
         emulate_tty=True,
         parameters=[os.path.join(get_package_share_directory('bigfootbot_teleop'), 'config', 'teleop_twist_joy_ps3.yaml')],
-        remappings=[('cmd_vel', '/model/barrelbot/cmd_vel')] # node publishing to the cmd_vel topic will actually be publishing 
+        #remappings=[('cmd_vel', '/model/barrelbot/cmd_vel')] # node publishing to the cmd_vel topic will actually be publishing 
                                                              # to the /model/barrelbot/cmd_vel topic
     )
 

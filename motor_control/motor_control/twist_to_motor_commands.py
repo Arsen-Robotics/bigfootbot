@@ -10,6 +10,7 @@ class TwistToMotorCommandsNode(Node):
     def __init__(self):
         super().__init__('twist_to_motor_commands_node')
         self.serial_port = serial.Serial('/dev/cr6a-arduino-mega', baudrate=9600, timeout=1)
+
         self.mode = 'm'
         self.left_motor_command = 0
         self.right_motor_command = 0
@@ -23,7 +24,7 @@ class TwistToMotorCommandsNode(Node):
             Twist,
             'cmd_vel',
             self.command_callback,
-            10)
+            10) # 10 is the queue size (how many messages to store in memory)
 
     def command_callback(self, msg):
         linear_speed = msg.linear.x
@@ -83,10 +84,13 @@ class TwistToMotorCommandsNode(Node):
         #time.sleep(0.1)  # Optional: add a small delay to ensure proper communication
 
     def destroy_node(self):
-        # Cleanup: Close the serial port
-        self.serial_port.close()
+        # Close the serial port when the node is shutting down
+        # Add code here to close the serial port
+        if self.serial_port.is_open:
+            self.serial_port.close()
+            self.get_logger().info('Serial port closed')
+
         super().destroy_node()
-        print("Serial port closed.")
 
 def main():
     rclpy.init()

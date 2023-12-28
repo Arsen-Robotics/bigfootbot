@@ -82,6 +82,12 @@ class TwistToMotorCommandsNode(Node):
         self.serial_port.write(data.encode())
         #time.sleep(0.1)  # Optional: add a small delay to ensure proper communication
 
+    def destroy_node(self):
+        # Cleanup: Close the serial port
+        self.serial_port.close()
+        super().destroy_node()
+        print("Serial port closed.")
+
 def main():
     rclpy.init()
     twist_to_motor_commands_node = TwistToMotorCommandsNode()

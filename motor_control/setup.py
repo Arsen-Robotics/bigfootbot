@@ -21,7 +21,6 @@ setup(
     entry_points={
         'console_scripts': [
             'twist_to_motor_commands_node = motor_control.twist_to_motor_commands:main',
-            'debug_serial_node = motor_control.debug_serial:main',
         ],
     },
 )

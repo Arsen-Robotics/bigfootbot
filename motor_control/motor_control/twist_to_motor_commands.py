@@ -34,22 +34,22 @@ class TwistToMotorCommandsNode(Node):
         left_wheel_linear_speed = linear_speed - (self.wheel_base / 2.0) * angular_speed
         right_wheel_linear_speed = linear_speed + (self.wheel_base / 2.0) * angular_speed
 
-        self.get_logger().info(f"Linear speed L: {left_wheel_linear_speed}")
-        self.get_logger().info(f"Linear speed R: {right_wheel_linear_speed}")
+        #self.get_logger().info(f"Linear speed L: {left_wheel_linear_speed}")
+        #self.get_logger().info(f"Linear speed R: {right_wheel_linear_speed}")
 
         # Calculate the left and right motor speeds in revolutions per minute (RPM)
         left_motor_speed_rpm = left_wheel_linear_speed / (math.pi * self.wheel_diameter) * 60
         right_motor_speed_rpm = right_wheel_linear_speed / (math.pi * self.wheel_diameter) * 60
 
-        self.get_logger().info(f"RPM L: {left_motor_speed_rpm}")
-        self.get_logger().info(f"RPM R: {right_motor_speed_rpm}")
+        #self.get_logger().info(f"RPM L: {left_motor_speed_rpm}")
+        #self.get_logger().info(f"RPM R: {right_motor_speed_rpm}")
 
         # Convert RPM to motor commands (-255 to +255)
-        self.left_motor_command = int(left_motor_speed_rpm / self.max_rpm * 255)
-        self.right_motor_command = int(right_motor_speed_rpm / self.max_rpm * 255)
+        #self.left_motor_command = int(left_motor_speed_rpm / self.max_rpm * 255)
+        #self.right_motor_command = int(right_motor_speed_rpm / self.max_rpm * 255)
 
-        self.get_logger().info(f"Left Motor Command Convert: {self.left_motor_command}")
-        self.get_logger().info(f"Right Motor Command Convert: {self.right_motor_command}")
+        #self.get_logger().info(f"Left Motor Command Convert: {self.left_motor_command}")
+        #self.get_logger().info(f"Right Motor Command Convert: {self.right_motor_command}")
 
         if self.left_motor_command != self.right_motor_command:
             if self.left_motor_command > 255 or self.right_motor_command > 255:

@@ -11,6 +11,8 @@ class TwistToMotorCommandsNode(Node):
         super().__init__('twist_to_motor_commands_node')
         self.serial_port = serial.Serial('/dev/cr6a-arduino-mega', baudrate=9600, timeout=1)
 
+        time.sleep(2)
+
         self.mode = 'm'
         self.left_motor_command = 0
         self.right_motor_command = 0
@@ -45,8 +47,8 @@ class TwistToMotorCommandsNode(Node):
         #self.get_logger().info(f"RPM R: {right_motor_speed_rpm}")
 
         # Convert RPM to motor commands (-255 to +255)
-        #self.left_motor_command = int(left_motor_speed_rpm / self.max_rpm * 255)
-        #self.right_motor_command = int(right_motor_speed_rpm / self.max_rpm * 255)
+        self.left_motor_command = int(left_motor_speed_rpm / self.max_rpm * 255)
+        self.right_motor_command = int(right_motor_speed_rpm / self.max_rpm * 255)
 
         #self.get_logger().info(f"Left Motor Command Convert: {self.left_motor_command}")
         #self.get_logger().info(f"Right Motor Command Convert: {self.right_motor_command}")
@@ -66,8 +68,8 @@ class TwistToMotorCommandsNode(Node):
         self.left_motor_command = max(min(self.left_motor_command, 255), -255)
         self.right_motor_command = max(min(self.right_motor_command, 255), -255)
 
-        self.get_logger().info(f"Left Motor Command V Range: {self.left_motor_command}")
-        self.get_logger().info(f"Right Motor Command V Range: {self.right_motor_command}")
+        #self.get_logger().info(f"Left Motor Command V Range: {self.left_motor_command}")
+        #self.get_logger().info(f"Right Motor Command V Range: {self.right_motor_command}")
          
         if self.left_motor_command == 0 and self.right_motor_command == 0:
             self.mode = 's' # Electric brake mode

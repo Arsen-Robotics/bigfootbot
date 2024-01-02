@@ -8,10 +8,12 @@ class JoyToTwistNode(Node):
     def __init__(self):
         super().__init__('joy_to_twist_node')
 
-        time.sleep(2)
-
+        self.linear_axis = 1
+        self.angular_axis = 3
         self.linear_scale = 1.59
         self.angular_scale = 7.0
+
+        time.sleep(2)
 
         self.subscription = self.create_subscription(
             Joy,
@@ -27,8 +29,8 @@ class JoyToTwistNode(Node):
     def command_callback(self, msg):
         twist_msg = Twist()
 
-        twist_msg.linear.x = self.linear_scale * msg.axes[1]
-        twist_msg.angular.z = self.angular_scale * msg.axes[3]
+        twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
+        twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
         self.publisher.publish(twist_msg)
 

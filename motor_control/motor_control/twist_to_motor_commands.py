@@ -9,18 +9,17 @@ import math
 class TwistToMotorCommandsNode(Node):
     def __init__(self):
         super().__init__('twist_to_motor_commands_node')
-        self.serial_port = serial.Serial('/dev/cr6a-arduino-mega', baudrate=9600, timeout=1)
 
+        self.wheel_base = 0.335 # Distance between left and right wheel in meters (0.31 for ARS-CAR)
+        self.wheel_diameter = 0.1 # Wheel diameter in meters (0.06 for ARS-CAR)
+        self.max_rpm = 303 # Motor's maximum RPM (445 for ARS-CAR)
+
+        self.serial_port = serial.Serial('/dev/cr6a-arduino-mega', baudrate=9600, timeout=1)
         time.sleep(2)
 
         self.mode = 'm'
         self.left_motor_command = 0
         self.right_motor_command = 0
-
-        self.wheel_base = 0.335 # Distance between left and right wheel in meters (0.31 for ARS-CAR)
-        self.wheel_diameter = 0.1 # Wheel diameter in meters (0.06 for ARS-CAR)
-
-        self.max_rpm = 303 # Motor's maximum RPM (445 for ARS-CAR)
 
         self.subscription = self.create_subscription(
             Twist,

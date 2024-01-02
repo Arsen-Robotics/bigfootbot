@@ -63,6 +63,16 @@ class TwistToMotorCommandsNode(Node):
 
                 elif self.right_motor_command > self.left_motor_command:
                     self.left_motor_command = self.left_motor_command - difference
+
+            if self.left_motor_command < -255 or self.right_motor_command < -255:
+                difference = \
+                min(self.left_motor_command, self.right_motor_command) + 255
+
+                if self.left_motor_command > self.right_motor_command:
+                    self.right_motor_command = self.right_motor_command + difference
+
+                if self.right_motor_command > self.left_motor_command:
+                    self.left_motor_command = self.left_motor_command + difference
             
         # Ensure the motor commands are within the valid range (-255 to +255)
         self.left_motor_command = max(min(self.left_motor_command, 255), -255)

@@ -14,7 +14,8 @@ class TwistToMotorCommandsNode(Node):
         self.wheel_diameter = 0.1 # Wheel diameter in meters (0.06 for ARS-CAR)
         self.max_rpm = 303 # Motor's maximum RPM (445 for ARS-CAR)
 
-        self.serial_port = serial.Serial('/dev/cr6a-arduino-mega', baudrate=9600, timeout=1)
+        #self.motor_control_serial_port = serial.Serial('/dev/cr6a-arduino-mega', baudrate=9600, timeout=1)
+        self.ultrasonic_sensor_serial_port = serial.Serial('/dev/cr6a-arduino-uno', baudrate=9600, timeout=1)
         time.sleep(2)
 
         self.mode = 'm'
@@ -49,8 +50,8 @@ class TwistToMotorCommandsNode(Node):
         self.left_motor_command = int(left_motor_speed_rpm / self.max_rpm * 255)
         self.right_motor_command = int(right_motor_speed_rpm / self.max_rpm * 255)
 
-        self.get_logger().info(f"Left Motor Command Convert: {self.left_motor_command}")
-        self.get_logger().info(f"Right Motor Command Convert: {self.right_motor_command}")
+        #self.get_logger().info(f"Left Motor Command Convert: {self.left_motor_command}")
+        #self.get_logger().info(f"Right Motor Command Convert: {self.right_motor_command}")
 
         if self.left_motor_command != self.right_motor_command:
             if self.left_motor_command > 255 or self.right_motor_command > 255:
@@ -91,17 +92,28 @@ class TwistToMotorCommandsNode(Node):
         # "<mode> <left motor speed> <right motor speed> \r" (e.g. "m 100 100\r")
         data = f"{self.mode} {-self.left_motor_command} {self.right_motor_command}\r"
 
-        self.send_command_to_serial(data)
+        #self.send_motor_command_to_serial(data)
 
-    def send_command_to_serial(self, data):
-        self.serial_port.write(data.encode())
+        self.get_logger().info(f"Distance to obstacle: {self.get_ultrasonic_sensor_distance()}")
+
+    def send_motor_command_to_serial(self, data):
+        self.motor_control_serial_port.write(data.encode())
         #time.sleep(0.1)  # Optional: add a small delay to ensure proper communication
+
+    def get_ultrasonic_sensor_distance(self):
+        time.sleep(0.1)
+        distance = self.ultrasonic_sensor_serial_port.readline().decode()
+        return distance
 
     def destroy_node(self):
         # Close the serial port when the node is shutting down
         # Add code here to close the serial port
-        if self.serial_port.is_open:
-            self.serial_port.close()
+        if self.motor_control_serial_port.is_open:
+            self.motor_control_serial_port.close()
+            self.get_logger().info('Serial port closed')
+
+        if self.ultrasonic_sensor_serial_port.is_open:
+            self.ultrasonic_sensor_serial_port.close()
             self.get_logger().info('Serial port closed')
 
         super().destroy_node()

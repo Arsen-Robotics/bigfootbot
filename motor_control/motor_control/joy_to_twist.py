@@ -8,6 +8,7 @@ class JoyToTwistNode(Node):
     def __init__(self):
         super().__init__('joy_to_twist_node')
 
+        self.enable_button = 4 # L1 shoulder button
         self.linear_axis = 1
         self.angular_axis = 3
         self.linear_scale = 1.59
@@ -27,12 +28,13 @@ class JoyToTwistNode(Node):
             10)
 
     def command_callback(self, msg):
-        twist_msg = Twist()
+        if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
+            twist_msg = Twist()
 
-        twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
-        twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+            twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
+            twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-        self.publisher.publish(twist_msg)
+            self.publisher.publish(twist_msg)
 
 def main():
     rclpy.init()

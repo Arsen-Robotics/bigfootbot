@@ -49,8 +49,8 @@ class TwistToMotorCommandsNode(Node):
         self.left_motor_command = int(left_motor_speed_rpm / self.max_rpm * 255)
         self.right_motor_command = int(right_motor_speed_rpm / self.max_rpm * 255)
 
-        #self.get_logger().info(f"Left Motor Command Convert: {self.left_motor_command}")
-        #self.get_logger().info(f"Right Motor Command Convert: {self.right_motor_command}")
+        self.get_logger().info(f"Left Motor Command Convert: {self.left_motor_command}")
+        self.get_logger().info(f"Right Motor Command Convert: {self.right_motor_command}")
 
         if self.left_motor_command != self.right_motor_command:
             if self.left_motor_command > 255 or self.right_motor_command > 255:
@@ -68,10 +68,13 @@ class TwistToMotorCommandsNode(Node):
                 min(self.left_motor_command, self.right_motor_command) + 255
 
                 if self.left_motor_command > self.right_motor_command:
-                    self.right_motor_command = self.right_motor_command + difference
+                    self.left_motor_command = self.left_motor_command - difference
 
                 if self.right_motor_command > self.left_motor_command:
-                    self.left_motor_command = self.left_motor_command + difference
+                    self.right_motor_command = self.right_motor_command - difference
+
+        #self.get_logger().info(f"Left After correction: {self.left_motor_command}")
+        #self.get_logger().info(f"Right After correction: {self.right_motor_command}")
             
         # Ensure the motor commands are within the valid range (-255 to +255)
         self.left_motor_command = max(min(self.left_motor_command, 255), -255)

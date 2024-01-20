@@ -1,1 +1,0 @@
-ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="2a03", ATTRS{idProduct}=="0043", SYMLINK+="cr6a-arduino-uno"

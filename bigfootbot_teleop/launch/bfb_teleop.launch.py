@@ -26,7 +26,7 @@ def generate_launch_description():
     # Declare 'teleop_node' from 'teleop_twist_joy package'
     # Node that republishes sensor_msgs/msg/Joy messages 
     # as scaled geometry_msgs/msg/Twist messages
-    teleop_node = Node(
+    '''teleop_node = Node(
         package='teleop_twist_joy',
         executable='teleop_node',
         output='screen',
@@ -35,11 +35,11 @@ def generate_launch_description():
         parameters=[os.path.join(get_package_share_directory('bigfootbot_teleop'), 'config', 'teleop_twist_joy_ps3.yaml')],
         #remappings=[('cmd_vel', '/model/barrelbot/cmd_vel')] # node publishing to the cmd_vel topic will actually be publishing 
                                                              # to the /model/barrelbot/cmd_vel topic
-    )
+    )'''
 
     # Create launch description and add nodes
     ld = LaunchDescription()
     ld.add_action(joy_node)
-    ld.add_action(teleop_node)
+    #ld.add_action(teleop_node)
     
     return ld

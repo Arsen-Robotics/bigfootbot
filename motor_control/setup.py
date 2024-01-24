@@ -21,7 +21,9 @@ setup(
     entry_points={
         'console_scripts': [
             'twist_to_motor_commands_node = motor_control.twist_to_motor_commands:main',
-            'joy_to_twist_node = motor_control.joy_to_twist:main'
+            'joy_to_twist_node = motor_control.joy_to_twist:main',
+            'relay_control_server = motor_control.relay_control_server:main',
+            'relay_control_client = motor_control.relay_control_client:main',
         ],
     },
 )

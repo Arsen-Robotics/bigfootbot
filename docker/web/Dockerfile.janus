@@ -55,7 +55,7 @@ RUN cd /usr/src && wget https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz &
     ./configure --prefix=/usr --enable-openssl && \
     make shared_library && sudo make install
 
-# Install usrsctp
+# Install usrsctp (if data channels are needed)
 # is a userland SCTP (Stream Control Transmission Protocol). 
 # WebRTC uses SCTP as the transport protocol for data channels.
 # SCTP is a transport layer protocol (Layer 4 of the OSI model).

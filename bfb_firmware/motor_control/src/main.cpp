@@ -83,14 +83,14 @@ void relaysOn() {
   digitalWrite(RELAY_1, LOW);
   digitalWrite(RELAY_2, LOW);
 
-  Serial.write(49); // 1
+  Serial.write(50); // 2
 }
 
 void relaysOff() {
   digitalWrite(RELAY_1, HIGH);
   digitalWrite(RELAY_2, HIGH);
 
-  Serial.write(48); // 0
+  Serial.write(49); // 1
 }
 
 void motorLRot(boolean clockWise, int speed) {
@@ -134,7 +134,9 @@ void setup() {
 
   pinMode(RELAY_1, OUTPUT);
   pinMode(RELAY_2, OUTPUT);
-  relaysOff();
+  
+  digitalWrite(RELAY_1, HIGH);
+  digitalWrite(RELAY_2, HIGH);
 
   pinMode(RPWM_1, OUTPUT);
   pinMode(LPWM_1, OUTPUT);
@@ -206,10 +208,10 @@ int runCommand() {
       break;
 
     case 'r': // Relays control
-      if (arg1 == 1) {
+      if (arg1 == 2) {
         relaysOn();
       }
-      else if (arg1 == 0) {
+      if (arg1 == 1) {
         relaysOff();
       }
       break;

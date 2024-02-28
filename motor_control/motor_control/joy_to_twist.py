@@ -11,10 +11,8 @@ class JoyToTwistNode(Node):
         self.enable_button = 4 # L1 shoulder button
         self.linear_axis = 1
         self.angular_axis = 3
-        self.linear_scale = 1.59
-        self.angular_scale = 7.0
-
-        time.sleep(2)
+        self.linear_scale = 3.067
+        self.angular_scale = 9.437
 
         self.subscription = self.create_subscription(
             Joy,

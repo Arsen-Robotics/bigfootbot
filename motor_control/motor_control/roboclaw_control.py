@@ -1,7 +1,10 @@
+# Official RoboClaw Python library installation:
+# Download the library: http://downloads.basicmicro.com/code/roboclaw_python.zip
+# Unzip the library, move roboclaw_python folder to ~/.local/lib/python3.10/site-packages
+
 import rclpy
 from rclpy.node import Node
-import serial
-from roboclaw import Roboclaw
+from roboclaw_python.roboclaw_3 import Roboclaw
 from geometry_msgs.msg import Twist
 import math
 import time
@@ -15,8 +18,9 @@ class RoboclawControlNode(Node):
         self.max_rpm = 177.5
         self.max_motor_command = 126
 
-        serial_obj = serial.Serial('/dev/roboclaw', 38400) # default baudrate is 38400
-        self.rclaw = Roboclaw(serial_obj)
+        self.rclaw = Roboclaw("/dev/roboclaw", 9600)
+        self.address = 0x80
+        self.rclaw.Open()
 
         time.sleep(2)
 
@@ -32,17 +36,19 @@ class RoboclawControlNode(Node):
         # left_motor_command and right_motor_command [-127, 127]
         left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
+        self.get_logger().info(f"{left_motor_command} {right_motor_command}")
+
         if left_motor_command < 0:
-            self.rclaw.backward_m1(abs(left_motor_command))
+            self.rclaw.BackwardM1(self.address, abs(left_motor_command))
 
         if right_motor_command < 0:
-            self.rclaw.backward_m2(abs(left_motor_command))
+            self.rclaw.BackwardM2(self.address, abs(right_motor_command))
 
         if left_motor_command >= 0:
-            self.rclaw.forward_m1(left_motor_command)
+            self.rclaw.ForwardM1(self.address, left_motor_command)
 
         if right_motor_command >= 0:
-            self.rclaw.forward_m2(right_motor_command)
+            self.rclaw.ForwardM2(self.address, right_motor_command)
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):
@@ -88,8 +94,6 @@ class RoboclawControlNode(Node):
         # Ensure the motor commands are within the valid range (-127 to +127)
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)
         right_motor_command = max(min(right_motor_command, self.max_motor_command), -self.max_motor_command)
-
-        self.get_logger().info(f"{left_motor_command} {right_motor_command} {left_motor_speed_rpm} {right_motor_speed_rpm}")
 
         return left_motor_command, right_motor_command
     

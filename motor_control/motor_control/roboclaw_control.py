@@ -8,6 +8,7 @@ from roboclaw_python.roboclaw_3 import Roboclaw
 from geometry_msgs.msg import Twist
 import math
 import time
+from std_msgs.msg import Float32
 
 class RoboclawControlNode(Node):
     def __init__(self):
@@ -30,13 +31,30 @@ class RoboclawControlNode(Node):
             'cmd_vel',
             self.command_callback,
             10) # 10 is the queue size (how many messages to store in memory)
-        
+
+        self.current1_publisher = self.create_publisher(Float32, 'roboclaw_current1', 10)
+        self.current2_publisher = self.create_publisher(Float32, 'roboclaw_current2', 10)
+
+        self.timer = self.create_timer(0.4, self.publish_currents)
+
+    def publish_currents(self):
+        currents = self.rclaw.ReadCurrents(self.address)
+        current1_val = currents[1] / 100
+        current2_val = currents[2] / 100
+
+        current1 = Float32()
+        current1.data = current1_val
+
+        current2 = Float32()
+        current2.data = current2_val
+
+        self.current1_publisher.publish(current1)
+        self.current2_publisher.publish(current2)
+
     def command_callback(self, msg):
         # Unpack the tuple returned by twist_to_motor_commands function into two variables
         # left_motor_command and right_motor_command [-127, 127]
         left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
-
-        self.get_logger().info(f"{left_motor_command} {right_motor_command}")
 
         if left_motor_command < 0:
             self.rclaw.BackwardM1(self.address, abs(left_motor_command))

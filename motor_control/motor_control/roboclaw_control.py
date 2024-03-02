@@ -8,7 +8,7 @@ from roboclaw_python.roboclaw_3 import Roboclaw
 from geometry_msgs.msg import Twist
 import math
 import time
-from std_msgs.msg import Float32
+from bfb_interfaces.msg import RoboclawState
 
 class RoboclawControlNode(Node):
     def __init__(self):
@@ -19,7 +19,7 @@ class RoboclawControlNode(Node):
         self.max_rpm = 177.5
         self.max_motor_command = 126
 
-        self.rclaw = Roboclaw("/dev/roboclaw", 9600)
+        self.rclaw = Roboclaw("/dev/roboclaw", 38400)
         self.address = 0x80
         self.rclaw.Open()
 
@@ -32,24 +32,35 @@ class RoboclawControlNode(Node):
             self.command_callback,
             10) # 10 is the queue size (how many messages to store in memory)
 
-        self.current1_publisher = self.create_publisher(Float32, 'roboclaw_current1', 10)
-        self.current2_publisher = self.create_publisher(Float32, 'roboclaw_current2', 10)
+        self.roboclaw_state_publisher = self.create_publisher(RoboclawState, 'roboclaw_state', 10)
 
-        self.timer = self.create_timer(0.4, self.publish_currents)
+        self.timer = self.create_timer(0.2, self.publish_roboclaw_state)
 
-    def publish_currents(self):
+    def publish_roboclaw_state(self):
+        roboclaw_state = RoboclawState()
+
+        # Currents
         currents = self.rclaw.ReadCurrents(self.address)
+
         current1_val = currents[1] / 100
         current2_val = currents[2] / 100
 
-        current1 = Float32()
-        current1.data = current1_val
+        roboclaw_state.current_1 = current1_val
+        roboclaw_state.current_2 = current2_val
 
-        current2 = Float32()
-        current2.data = current2_val
+        # Main battery voltage
+        main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
+        roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
 
-        self.current1_publisher.publish(current1)
-        self.current2_publisher.publish(current2)
+        # Temperature
+        temp1_val = self.rclaw.ReadTemp(self.address)
+        temp2_val = self.rclaw.ReadTemp2(self.address)
+
+        roboclaw_state.temp1 = temp1_val[1] / 10
+        roboclaw_state.temp2 = temp2_val[1] / 10
+
+        # Publish roboclaw state
+        self.roboclaw_state_publisher.publish(roboclaw_state)
 
     def command_callback(self, msg):
         # Unpack the tuple returned by twist_to_motor_commands function into two variables

@@ -6,6 +6,8 @@ import time
 
 class RelayControlServer(Node):
     def __init__(self):
+        self.debug = ''
+
         super().__init__('relay_control_server')
         self.server = self.create_service(RelayControl, 'relay_control', self.relay_control_callback)
 
@@ -20,23 +22,25 @@ class RelayControlServer(Node):
         if success:
             response.confirmation = f"Relay turned {request.state}"
         else:
-            response.confirmation = "Failed to control relay"
+            response.confirmation = f"{self.debug}"
 
         return response
 
     def send_command_to_serial(self, state):
         if state == "on":
-            self.serial_port.write(f"r 1\r".encode())
+            self.serial_port.write(f"r 2\r".encode())
         elif state == "off":
-            self.serial_port.write(f"r 0\r".encode())
+            self.serial_port.write(f"r 1\r".encode())
         
         time.sleep(0.1)
         char = self.serial_port.read(1).decode() # Read one character from the serial port
 
-        if char == '0' and state == "off":
+        if char == '1' and state == "off":
             return True
-        elif char == '1' and state == "on":
+        elif char == '2' and state == "on":
             return True
+        
+        self.debug = f"char: {char}, state: {state}"
 
 def main(args=None):
     rclpy.init(args=args)

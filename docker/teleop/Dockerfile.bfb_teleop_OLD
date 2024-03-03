@@ -1,0 +1,117 @@
+# Description: 
+# This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
+# on Nvidia Jetson devices with Nvidia GPU acceleration (extending the Nvidia accelerated image)
+# or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
+#
+# Installed ROS2 packages: 
+#   - 'bigfootbot_teleop' - contains launch and config files for running joystick teleoperation
+#   - 'joy' - contains joy_node, a node that interfaces a generic joystick to ROS2 and
+#             publishes a "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
+#   - 'teleop_twist_joy' - contains teleop_node that republishes sensor_msgs/msg/Joy messages
+#                          as scaled geometry_msgs/msg/Twist messages.
+#   - 'sdl2_vendor' - contains SDL2 library (Simple DirectMedia Layer) for joystick driver
+# 
+# --- Docker commands ---
+# Build docker image:
+#   `docker build -f Dockerfile.bfb_teleop -t bfb_teleop:latest ../..`
+#
+# Run docker container:
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_teleop_container bfb_teleop:latest`
+#
+# To connect to a running container: 
+#   `docker exec -it bfb_teleop_container bash`
+# -------------------------
+
+# --- ROS2 launch commands ---
+
+#-----------------------------
+
+ARG BASE_IMAGE
+
+# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Image built: 23.05.2023
+#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+
+# --- For running on x86/amd64 and arm64/aarch64
+# NB! Not Nvidia GPU accelerated
+# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
+# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
+# ARG BASE_IMAGE="ros:humble-ros-base"
+# --------
+
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ROS2 workspace
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"] 
+
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+# --- Build and install ROS2 packages
+COPY bigfootbot_teleop ${ROS_WS}/src/bigfootbot_teleop
+
+# Clone sources of joystick driver (ROS2 package "joy")
+# NB! Repository forked from https://github.com/ros-drivers/joystick_drivers.git
+# Repository ros-drivers/joystick_drivers contains many packages,
+# we use package "joy" only:
+# joy_node, a node that interfaces a generic joystick to ROS 2. This node publishes a 
+# "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
+# NB! package "joy" depends on the package "joystick_drivers/sdl2_vendor"
+# NB! Use branch ros2
+RUN cd ${ROS_WS}/src \
+    && git clone -b ros2 https://github.com/jevgenik/joystick_drivers.git \
+    && cp -r joystick_drivers/joy . \
+    && cp -r joystick_drivers/sdl2_vendor . \
+    && rm -rf ./joystick_drivers/
+
+# Clone sources of ROS2 package 'teleop_twist_joy'
+# 'teleop_node' that republishes sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages.
+RUN cd ${ROS_WS}/src \
+    && git clone -b humble https://github.com/ros2/teleop_twist_joy.git
+
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    #  --skip-keys "bigfootbot_teleop bigfootbot_description" \    
+    ##&& colcon build \
+    ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    && colcon build --symlink-install \
+    #&& rm -rf src logs build \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean 
+# --- end of 'Build and install ROS2 packages'
+
+# Copy Fast DDS configuration file for Husarnet network
+COPY docker/fastdds_husarnet.xml /
+
+# Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+CMD ["ros2", "launch", "bigfootbot_teleop", "bfb_teleop.launch.py"]
+#CMD ["bash"]

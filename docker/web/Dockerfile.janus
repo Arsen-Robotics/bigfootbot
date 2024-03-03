@@ -6,6 +6,7 @@
 
 FROM ubuntu:22.04
 
+# Install dependencies
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     sudo \
     wget \
@@ -28,25 +29,43 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     automake \
     v4l-utils
 
+# Install build systems
+# Meson is a build system
+# Ninja is a small build system with a focus on speed
 RUN pip3 install \
     meson \
     ninja
 
+# Install libnice
+# is a library that implements the Interactive Connectivity Establishment (ICE) 
+# ICE is a technique used in computer networking to find the best path between two computers.
+# ICE is useful for applications that want to establish peer-to-peer UDP data streams. It automates the process 
+# of traversing NATs and provides security against some attacks.
 RUN cd /usr/src && git clone https://gitlab.freedesktop.org/libnice/libnice && \
     cd libnice && meson --prefix=/usr build && ninja -C build && sudo ninja -C build install
 
+# Install libsrtp
+# is a library that provides implementation of the Secure Real-time Transport Protocol (SRTP), the Universal
+# Security Transform (UST), and a supporting cryptographic kernel. It is available from Cisco Systems.
+# SRTP is used to provide encryption, message authentication and integrity, and replay attack protection to the RTP data in WebRTC.
+# RTP and SRTP are application layer protocols (Layer 7 of the OSI model).
 RUN cd /usr/src && wget https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && \
     tar xfv v2.2.0.tar.gz && \
     cd libsrtp-2.2.0 && \
     ./configure --prefix=/usr --enable-openssl && \
     make shared_library && sudo make install
 
+# Install usrsctp (if data channels are needed)
+# is a userland SCTP (Stream Control Transmission Protocol). 
+# WebRTC uses SCTP as the transport protocol for data channels.
+# SCTP is a transport layer protocol (Layer 4 of the OSI model).
 RUN cd /usr/src && git clone https://github.com/sctplab/usrsctp && \
     cd usrsctp && \
     ./bootstrap && \
     ./configure --prefix=/usr --disable-programs --disable-inet --disable-inet6 && \
     make && sudo make install
 
+# Install Janus
 RUN cd /usr/src && git clone https://github.com/meetecho/janus-gateway.git && cd janus-gateway && \
     sh autogen.sh && \
     ./configure --prefix=/opt/janus && \

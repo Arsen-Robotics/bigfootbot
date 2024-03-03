@@ -54,7 +54,10 @@ FROM ${BASE_IMAGE}
 
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
+# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
+# The reason is that the environment variable persists after the build
+# ARG is only available during the build of the image
 
 # ROS2 workspace
 ENV ROS_WS=/ros2_ws

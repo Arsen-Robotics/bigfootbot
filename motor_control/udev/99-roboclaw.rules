@@ -1,1 +1,1 @@
-ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="1d6b", ATTRS{idProduct}=="0002", MODE="0666", SYMLINK+="roboclaw"
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2404", MODE="0666", SYMLINK+="roboclaw"

@@ -1,8 +1,12 @@
+# Install udev rule for RoboClaw on the host:
+# Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
+# Run udevadm control --reload-rules && udevadm trigger
+
 ARG BASE_IMAGE
 
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
 # Image built: 23.05.2023
-#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035"
 
 # --- For running on x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated
@@ -10,6 +14,8 @@ ARG BASE_IMAGE
 # ROS2 version: communication libraries, message packages, command line tools. No GUI tools
 # ARG BASE_IMAGE="ros:humble-ros-base"
 # --------
+
+ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035"
 
 FROM ${BASE_IMAGE}
 
@@ -20,7 +26,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 # The reason is that the environment variable persists after the build
 # ARG is only available during the build of the image
 
-# ROS2 workspace
 ENV ROS_WS=/ros2_ws
 
 # If you only need to set the SHELL environment variable for other purposes, such as in a 
@@ -37,13 +42,10 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# Build and install packages
+# -------- Build and install packages --------
 COPY motor_control ${ROS_WS}/src/motor_control
+COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
-# Add udev rule for RoboClaw
-RUN cp ${ROS_WS}/src/motor_control/udev/99-roboclaw.rules /etc/udev/rules.d
-
-# Install pyserial for serial communication
 RUN pip install pyserial
 
 # Install official RoboClaw python library
@@ -52,11 +54,11 @@ RUN cd / && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
     && cp -r roboclaw_python /usr/local/lib/python3.8/dist-packages \
     && cd / && rm -rf roboclaw_python.zip roboclaw_python
 
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
-    && apt-get update \
+# Install dependencies
+RUN apt-get update \
+    && apt-get install ros-${ROS_DISTRO}-foxglove-bridge \
     && cd ${ROS_WS} \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
-    && git clone https://github.com/foxglove/ros-foxglove-bridge.git src/ros-foxglove-bridge \
     && rosdep update \
     && rosdep install -y \
       --ignore-src \

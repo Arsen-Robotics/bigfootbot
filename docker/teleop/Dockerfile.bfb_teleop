@@ -15,8 +15,6 @@ ARG BASE_IMAGE
 # ARG BASE_IMAGE="ros:humble-ros-base"
 # --------
 
-ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035"
-
 FROM ${BASE_IMAGE}
 
 # Zero interaction while installing or upgrading the system via apt. 

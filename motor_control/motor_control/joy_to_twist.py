@@ -26,13 +26,17 @@ class JoyToTwistNode(Node):
             10)
 
     def command_callback(self, msg):
-        if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
-            twist_msg = Twist()
+        try:
+            if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
+                twist_msg = Twist()
 
-            twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
-            twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+                twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
+                twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-            self.publisher.publish(twist_msg)
+                self.publisher.publish(twist_msg)
+        except IndexError:
+            self.get_logger().error("Index Error exception")
+
 
 def main():
     rclpy.init()

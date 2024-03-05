@@ -38,11 +38,6 @@
 
 ARG BASE_IMAGE
 
-# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
-# Nvidia catalog of accelerated docker contaieners: https://catalog.ngc.nvidia.com/containers
-# Image built: 05/23/2023
-ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
-
 # --- For running on x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated
 # NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
@@ -54,7 +49,7 @@ FROM ${BASE_IMAGE}
 
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 # ROS2 workspace
 ENV ROS_WS=/ros2_ws

@@ -21,9 +21,7 @@ class RoboclawControlNode(Node):
 
         self.rclaw = Roboclaw("/dev/roboclaw", 38400)
         self.address = 0x80
-        self.rclaw.Open()
-
-        time.sleep(2)
+        self.rclaw_connected = False
 
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
@@ -36,7 +34,24 @@ class RoboclawControlNode(Node):
 
         self.timer = self.create_timer(0.2, self.publish_roboclaw_state)
 
+    # This funtion checks if the Roboclaw is connected and tries to connect if it's not
+    def connect_to_roboclaw(self):
+        # If the Roboclaw is not connected, try to connect
+        if not self.rclaw.Open():
+            self.rclaw_connected = False
+            self.get_logger().error("Failed to open Roboclaw, retrying...")
+            return False
+        
+        # Attempt to connect to Roboclaw and set the connected flag to 1 if successful
+        if self.rclaw_connected == 0 and self.rclaw.Open():
+            self.rclaw_connected = True
+            self.get_logger().info("Roboclaw connected")
+
     def publish_roboclaw_state(self):
+        # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
+        if not self.connect_to_roboclaw():
+            return
+
         roboclaw_state = RoboclawState()
 
         # Currents
@@ -63,9 +78,10 @@ class RoboclawControlNode(Node):
         self.roboclaw_state_publisher.publish(roboclaw_state)
 
     def command_callback(self, msg):
-        if self.rclaw is None:
-            self.get_logger().error('Roboclaw not found')
+        # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
+        if not self.connect_to_roboclaw():
             return
+        
         # Unpack the tuple returned by twist_to_motor_commands function into two variables
         # left_motor_command and right_motor_command [-127, 127]
         left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)

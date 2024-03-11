@@ -63,6 +63,9 @@ class RoboclawControlNode(Node):
         self.roboclaw_state_publisher.publish(roboclaw_state)
 
     def command_callback(self, msg):
+        if self.rclaw is None:
+            self.get_logger().error('Roboclaw not found')
+            return
         # Unpack the tuple returned by twist_to_motor_commands function into two variables
         # left_motor_command and right_motor_command [-127, 127]
         left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)

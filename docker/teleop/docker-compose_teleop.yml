@@ -1,4 +1,4 @@
-# --- READ ME ---
+# --- README ---
 # Install udev rule for RoboClaw on the host:
 # Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
 # Run udevadm control --reload-rules && udevadm trigger
@@ -58,4 +58,5 @@ services:
     ports:
       - '8765:8765'
 
-    command: ros2 launch motor_control motor_control_launch.py
+    #command: ros2 launch motor_control motor_control_launch.py
+    command: bash

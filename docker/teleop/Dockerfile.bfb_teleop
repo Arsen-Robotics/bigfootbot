@@ -47,10 +47,13 @@ COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 RUN pip install pyserial
 
 # Install official RoboClaw python library
-RUN cd / && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
-    && unzip roboclaw_python.zip && cd roboclaw_python \
+RUN cd / \
+    && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
+    && unzip roboclaw_python.zip \
+    && cd roboclaw_python \
     && cp -r roboclaw_python /usr/local/lib/python3.8/dist-packages \
-    && cd / && rm -rf roboclaw_python.zip roboclaw_python
+    && cd / \
+    && rm -rf roboclaw_python.zip roboclaw_python
 
 # Install dependencies
 RUN apt-get update \

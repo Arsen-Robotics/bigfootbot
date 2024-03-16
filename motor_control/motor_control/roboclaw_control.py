@@ -51,11 +51,10 @@ class RoboclawControlNode(Node):
         return self.rclaw_connected
 
     def publish_roboclaw_state(self):
-        # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
-        #if not self.connect_to_roboclaw():
-        #    return
-        
         try:
+            # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
+            if not self.connect_to_roboclaw():
+                return
 
             roboclaw_state = RoboclawState()
 
@@ -83,15 +82,14 @@ class RoboclawControlNode(Node):
             self.roboclaw_state_publisher.publish(roboclaw_state)
 
         except Exception as e:
-            self.get_logger().error(f"{e}")
+            self.get_logger().error(f"Exception: {e}")
 
     def command_callback(self, msg):
-        # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
-        #if not self.connect_to_roboclaw():
-        #    return
-        
         try:
-        
+            # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
+            if not self.connect_to_roboclaw():
+                return
+            
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
@@ -109,8 +107,7 @@ class RoboclawControlNode(Node):
                 self.rclaw.ForwardM2(self.address, right_motor_command)
 
         except Exception as e:
-            self.get_logger().error(f"{e}")
-
+            self.get_logger().error(f"Exception: {e}")
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):

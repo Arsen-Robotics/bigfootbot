@@ -21,9 +21,9 @@ class RoboclawControlNode(Node):
 
         self.rclaw = Roboclaw("/dev/roboclaw", 38400)
         self.address = 0x80
-        self.rclaw.Open()
+        self.rclaw_connected = False
 
-        time.sleep(2)
+        self.rclaw.Open()
 
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
@@ -36,48 +36,78 @@ class RoboclawControlNode(Node):
 
         self.timer = self.create_timer(0.2, self.publish_roboclaw_state)
 
+    # This funtion checks if the Roboclaw is connected and tries to connect if it's not
+    def connect_to_roboclaw(self):
+        # If the Roboclaw is not connected, try to connect
+        if not self.rclaw.Open():
+            self.get_logger().error("Failed to open Roboclaw, retrying...")
+            self.rclaw_connected = False
+        
+        # Attempt to connect to Roboclaw and set the connected flag to 1 if successful
+        if self.rclaw_connected == False and self.rclaw.Open():
+            self.get_logger().info("Roboclaw connected")
+            self.rclaw_connected = True
+
+        return self.rclaw_connected
+
     def publish_roboclaw_state(self):
-        roboclaw_state = RoboclawState()
+        try:
+            # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
+            if not self.connect_to_roboclaw():
+                return
 
-        # Currents
-        currents = self.rclaw.ReadCurrents(self.address)
+            roboclaw_state = RoboclawState()
 
-        current1_val = currents[1] / 100
-        current2_val = currents[2] / 100
+            # Currents
+            currents = self.rclaw.ReadCurrents(self.address)
 
-        roboclaw_state.current_1 = current1_val
-        roboclaw_state.current_2 = current2_val
+            current1_val = currents[1] / 100
+            current2_val = currents[2] / 100
 
-        # Main battery voltage
-        main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
-        roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
+            roboclaw_state.current_1 = current1_val
+            roboclaw_state.current_2 = current2_val
 
-        # Temperature
-        temp1_val = self.rclaw.ReadTemp(self.address)
-        temp2_val = self.rclaw.ReadTemp2(self.address)
+            # Main battery voltage
+            main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
+            roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
 
-        roboclaw_state.temp1 = temp1_val[1] / 10
-        roboclaw_state.temp2 = temp2_val[1] / 10
+            # Temperature
+            temp1_val = self.rclaw.ReadTemp(self.address)
+            temp2_val = self.rclaw.ReadTemp2(self.address)
 
-        # Publish roboclaw state
-        self.roboclaw_state_publisher.publish(roboclaw_state)
+            roboclaw_state.temp1 = temp1_val[1] / 10
+            roboclaw_state.temp2 = temp2_val[1] / 10
+
+            # Publish roboclaw state
+            self.roboclaw_state_publisher.publish(roboclaw_state)
+
+        except Exception as e:
+            self.get_logger().error(f"Exception: {e}")
 
     def command_callback(self, msg):
-        # Unpack the tuple returned by twist_to_motor_commands function into two variables
-        # left_motor_command and right_motor_command [-127, 127]
-        left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
+        try:
+            # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
+            if not self.connect_to_roboclaw():
+                return
+            
+            # Unpack the tuple returned by twist_to_motor_commands function into two variables
+            # left_motor_command and right_motor_command [-127, 127]
+            left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
-        if left_motor_command < 0:
-            self.rclaw.BackwardM1(self.address, abs(left_motor_command))
+            if left_motor_command < 0:
+                self.rclaw.BackwardM1(self.address, abs(left_motor_command))
 
-        if right_motor_command < 0:
-            self.rclaw.BackwardM2(self.address, abs(right_motor_command))
+            if right_motor_command < 0:
+                self.rclaw.BackwardM2(self.address, abs(right_motor_command))
 
-        if left_motor_command >= 0:
-            self.rclaw.ForwardM1(self.address, left_motor_command)
+            if left_motor_command >= 0:
+                self.rclaw.ForwardM1(self.address, left_motor_command)
 
-        if right_motor_command >= 0:
-            self.rclaw.ForwardM2(self.address, right_motor_command)
+            if right_motor_command >= 0:
+                self.rclaw.ForwardM2(self.address, right_motor_command)
+
+        except Exception as e:
+            self.get_logger().error(f"Exception: {e}")
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):

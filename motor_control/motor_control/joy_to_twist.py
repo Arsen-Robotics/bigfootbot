@@ -34,9 +34,8 @@ class JoyToTwistNode(Node):
                 twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
                 self.publisher.publish(twist_msg)
-        except IndexError:
-            self.get_logger().error("Index Error exception")
-
+        except Exception as e:
+            self.get_logger().error(f"Exception: {e}")
 
 def main():
     rclpy.init()

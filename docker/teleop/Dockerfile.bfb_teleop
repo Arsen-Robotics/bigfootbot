@@ -56,7 +56,6 @@ RUN cd / \
     && cd / \
     && rm -rf roboclaw_python.zip roboclaw_python
 
-# Install Foxglove bridge
 # Install dependencies for all packages in the workspace
 RUN apt-get update \
     && cd ${ROS_WS} \

@@ -36,7 +36,7 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# Install dependencies
+# Install Foxglove bridge and build it
 RUN apt-get update \
     && cd ${ROS_WS} \
     && git clone https://github.com/foxglove/ros-foxglove-bridge.git src/ros-foxglove-bridge \

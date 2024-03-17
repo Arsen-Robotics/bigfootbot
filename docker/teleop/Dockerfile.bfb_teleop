@@ -44,6 +44,7 @@ RUN mkdir -p ${ROS_WS}/src
 COPY motor_control ${ROS_WS}/src/motor_control
 COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
+# Install Python pyserial library
 RUN pip install pyserial
 
 # Install official RoboClaw python library
@@ -52,7 +53,8 @@ RUN cd / && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
     && cp -r roboclaw_python /usr/local/lib/python3.8/dist-packages \
     && cd / && rm -rf roboclaw_python.zip roboclaw_python
 
-# Install dependencies
+# Install Foxglove bridge
+# Install dependencies for all packages in the workspace
 RUN apt-get update \
     && apt-get install ros-${ROS_DISTRO}-foxglove-bridge \
     && cd ${ROS_WS} \

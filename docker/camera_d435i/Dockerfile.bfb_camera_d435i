@@ -76,7 +76,7 @@ COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
 
 RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
 # NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release 
-# (by 01.10.2023 is 4.54.1) of the realsense-ros (ROS2 Wrapper for RealSense) supports only LibRealSense v2.54.1 
+# (as of 11.03.2024 is 4.54.1) of the realsense-ros (ROS2 Wrapper for RealSense) supports only LibRealSense v2.54.1 
 RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.54.1
 # --- end of block 'Build RealSense SDK (LibRealSense) from sources'
 
@@ -136,6 +136,13 @@ RUN apt-get update \
 
 # --- end of block 'Build and install ROS2 packages'
 
+# Intall Foxglove bridge
+# NB! TODO! This is a temporary solution. Foxglove bridge should be installed as separate docker compose service
+# to be accessable to other containers running other ROS 2 packages
+RUN apt-get update \
+    && apt-get install ros-${ROS_DISTRO}-foxglove-bridge \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean 
 
 # Setup entrypoint
 COPY docker/ros_entrypoint.sh /

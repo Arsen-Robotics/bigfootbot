@@ -1,7 +1,3 @@
-# Install udev rule for RoboClaw on the host:
-# Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
-# Run udevadm control --reload-rules && udevadm trigger
-
 ARG BASE_IMAGE
 
 # For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
@@ -40,31 +36,17 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# -------- Build and install packages --------
-COPY motor_control ${ROS_WS}/src/motor_control
-COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
-
-RUN pip install pyserial
-
-# Install official RoboClaw python library
-RUN cd / \
-    && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
-    && unzip roboclaw_python.zip \
-    && cd roboclaw_python \
-    && cp -r roboclaw_python /usr/local/lib/python3.8/dist-packages \
-    && cd / \
-    && rm -rf roboclaw_python.zip roboclaw_python
-
 # Install dependencies
 RUN apt-get update \
     && cd ${ROS_WS} \
+    && git clone https://github.com/foxglove/ros-foxglove-bridge.git src/ros-foxglove-bridge \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
-    && rosdep install -y \
-      --ignore-src \
-      --from-path src \ 
-      --rosdistro ${ROS_DISTRO} \
-    && colcon build \
+    && rosdep install \
+    --ignore-src \
+    --default-yes \
+    --from-path src \
+    && colcon build --event-handlers console_direct+ --symlink-install \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -76,5 +58,3 @@ COPY docker/ros_entrypoint.sh /
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
-
-#CMD ["ros2", "launch", "motor_control", "motor_control_launch.py"]

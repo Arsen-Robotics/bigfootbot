@@ -79,3 +79,4 @@ COPY docker/ros_entrypoint.sh /
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
 #CMD ["ros2", "launch", "motor_control", "motor_control_launch.py"]
+CMD ["bash"]

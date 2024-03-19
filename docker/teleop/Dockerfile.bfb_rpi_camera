@@ -1,9 +1,5 @@
 ARG BASE_IMAGE
 
-# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
-# Image built: 23.05.2023
-#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035"
-
 # --- For running on x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated
 # NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
@@ -16,10 +12,8 @@ FROM ${BASE_IMAGE}
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
 ARG DEBIAN_FRONTEND=noninteractive
-# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
-# The reason is that the environment variable persists after the build
-# ARG is only available during the build of the image
 
+# ROS2 workspace
 ENV ROS_WS=/ros2_ws
 
 # If you only need to set the SHELL environment variable for other purposes, such as in a 
@@ -36,19 +30,20 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
-
-# Install Foxglove bridge and build it
 RUN apt-get update \
     && cd ${ROS_WS} \
-    && git clone https://github.com/foxglove/ros-foxglove-bridge.git src/ros-foxglove-bridge \
+    && apt install -y \
+    libraspberrypi-bin \
+    v4l-utils \
+    ros-${ROS_DISTRO}-v4l2-camera \
+    ros-${ROS_DISTRO}-image-transport-plugins \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
     && rosdep install -y \
-    --ignore-src \
-    --default-yes \
-    --from-path src \
-    && colcon build --event-handlers console_direct+ --symlink-install \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    && colcon build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

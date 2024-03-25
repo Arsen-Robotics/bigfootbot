@@ -63,7 +63,7 @@ ENV SHELL=/bin/bash
 # Sets the default shell for running subsequent commands in the Dockerfile
 # (the default shell on Linux is ["/bin/sh", "-c"])
 # -c: This option specifies that the next argument is the command to execute.
-SHELL ["/bin/bash", "-c"] 
+SHELL ["/bin/bash", "-c"]
 
 # --- Build RealSense SDK (LibRealSense) from sources.
 # LibrealSense is a cross-platform library for capturing data from the Intel® RealSense™ cameras. 

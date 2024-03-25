@@ -1,7 +1,9 @@
 # --- README ---
-# Install udev rule for RoboClaw on the host:
-# Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
-# Run udevadm control --reload-rules && udevadm trigger
+# RPi now uses new camera driver, which is not supported by V4L2 node
+# To fix this, you should use legacy driver
+# On the host, open /boot/firmware/config.txt
+# Comment out 'camera_auto_detect=1'
+# Add 'start_x=1'
 
 # --- Docker compose commands ---
 
@@ -28,24 +30,24 @@
 # --------------------
 
 services:
-  bfb_teleop:
+  bfb_rpi_camera:
     build:
       context: ../..
-      dockerfile: docker/teleop/Dockerfile.bfb_teleop
+      dockerfile: docker/rpi_camera/Dockerfile.bfb_rpi_camera
 
       # Pass arguments to Dockerfile to use different base images
       args:
         # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
-        #- BASE_IMAGE=ros:humble-ros-base
+        - BASE_IMAGE=ros:humble-ros-base
         
         # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
-        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
-      
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+
     # The name of the Docker image to be created from the Dockerfile
-    image: bfb_teleop:latest
+    image: bfb_rpi_camera:latest
 
     # The name to be given to the container created from the image
-    container_name: bfb_teleop_container
+    container_name: bfb_rpi_camera_container
 
     # Map all devices from host to container
     volumes:
@@ -53,35 +55,7 @@ services:
 
     privileged: true
 
-    stdin_open: true # docker run -i
-    tty: true        # docker run -t
-
     network_mode: "host"
-
-    command: ros2 launch motor_control motor_control_launch.py
-
-  bfb_foxglove_bridge:
-    build:
-      context: ../..
-      dockerfile: docker/teleop/Dockerfile.bfb_foxglove_bridge
-
-      # Pass arguments to Dockerfile to use different base images
-      args:
-        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
-        #- BASE_IMAGE=ros:humble-ros-base
-        
-        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
-        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
-
-    # The name of the Docker image to be created from the Dockerfile
-    image: bfb_foxglove_bridge:latest
-
-    # The name to be given to the container created from the image
-    container_name: bfb_foxglove_bridge_container
 
     stdin_open: true # docker run -i
     tty: true        # docker run -t
-
-    network_mode: "host"
-
-    command: ros2 launch foxglove_bridge foxglove_bridge_launch.xml

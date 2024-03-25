@@ -1,16 +1,4 @@
 ARG BASE_IMAGE
-
-# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
-# Image built: 23.05.2023
-#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035"
-
-# --- For running on x86/amd64 and arm64/aarch64
-# NB! Not Nvidia GPU accelerated
-# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
-# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
-# ARG BASE_IMAGE="ros:humble-ros-base"
-# --------
-
 FROM ${BASE_IMAGE}
 
 # Zero interaction while installing or upgrading the system via apt. 
@@ -36,12 +24,16 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
+# Copy script that will get frames from rpi camera and publish via rtp
+# COPY docker/picamera/bfb_picamera.py /bfb_picamera.py
 
-# Install Foxglove bridge and build it
 RUN apt-get update \
     && cd ${ROS_WS} \
-    && git clone https://github.com/foxglove/ros-foxglove-bridge.git src/ros-foxglove-bridge \
+    && apt-get install -y \
+    ffmpeg \
+    python3-pip \
+    && pip3 install \
+    picamera \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
     && rosdep install -y \

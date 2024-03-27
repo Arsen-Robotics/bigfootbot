@@ -36,7 +36,6 @@ RUN apt-get update \
     libraspberrypi-bin \
     v4l-utils \
     ros-${ROS_DISTRO}-v4l2-camera \
-    ros-${ROS_DISTRO}-image-transport-plugins \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
     && rosdep install -y \

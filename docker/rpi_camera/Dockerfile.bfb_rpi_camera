@@ -32,8 +32,11 @@ RUN apt-get update \
     && apt-get install -y \
     ffmpeg \
     python3-pip \
-    && pip3 install \
-    picamera \
+    pip install \
+    # Downgrading setuptools is only needed for newer versions of Python,
+    # In this case only for ros:humble-ros-base image, not needed for nvcr
+    setuptools==58.2.0 \
+    opencv-python \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
     && rosdep install -y \

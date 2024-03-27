@@ -29,22 +29,22 @@ class RpiCameraNode(Node):
                 '-f', 'rawvideo',
                 '-vcodec', 'rawvideo',
                 '-pix_fmt', 'bgr24',
-                '-s', "{}x{}".format(width, height),
-                '-r', str(fps),
+                '-s', "{}x{}".format(self.width, self.height),
+                '-r', str(self.fps),
                 '-i', '-',
                 '-c:v', 'libx264',
                 '-pix_fmt', 'yuv420p',
                 '-preset', 'ultrafast',
                 '-f', 'rtp',
-                rtmp_url]
+                self.rtmp_url]
 
         # Using subprocess and pipe to fetch frame data
-        self.p = subprocess.Popen(command, stdin=subprocess.PIPE)
+        self.p = subprocess.Popen(self.command, stdin=subprocess.PIPE)
 
         self.frame_count = 0
         self.frame = None
 
-    def output_callback(data):
+    def output_callback(self, msg):
         global frame, frame_count, _frame, width, height, p
 
         if frame is not None:
@@ -52,7 +52,7 @@ class RpiCameraNode(Node):
             self.frame = cv2.cvtColor(cv2.resize(frame, (640,480)), cv2.COLOR_RGB2BGR)
             self.p.stdin.write(self.frame.tobytes())
             
-        self.frame = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
+        self.frame = np.frombuffer(msg.msg, dtype=np.uint8).reshape(msg.height, msg.width, -1)
         self.frame_count += 1
 
 def main(args=None):

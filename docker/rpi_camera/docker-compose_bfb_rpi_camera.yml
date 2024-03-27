@@ -23,7 +23,7 @@
 # --------------------
 
 services:
-  picamera:
+  bfb_rpi_camera:
     build:
       context: ../..
       dockerfile: docker/rpi_camera/Dockerfile.bfb_rpi_camera

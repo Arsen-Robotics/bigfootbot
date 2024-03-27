@@ -19,7 +19,7 @@ class RpiCameraNode(Node):
 
         self.subscription = self.create_subscription(
             SensorImage,
-            '/camera/image_raw',
+            '/image_raw',
             self.output_callback,
             10)
 
@@ -45,14 +45,12 @@ class RpiCameraNode(Node):
         self.frame = None
 
     def output_callback(self, msg):
-        global frame, frame_count, _frame, width, height, p
+        if self.frame is not None:
 
-        if frame is not None:
-
-            self.frame = cv2.cvtColor(cv2.resize(frame, (640,480)), cv2.COLOR_RGB2BGR)
+            self.frame = cv2.cvtColor(cv2.resize(self.frame, (640,480)), cv2.COLOR_RGB2BGR)
             self.p.stdin.write(self.frame.tobytes())
             
-        self.frame = np.frombuffer(msg.msg, dtype=np.uint8).reshape(msg.height, msg.width, -1)
+        self.frame = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
         self.frame_count += 1
 
 def main(args=None):

@@ -30,10 +30,10 @@
 # --------------------
 
 services:
-  bfb_rpi_camera:
+  bfb_rpi_camera_v4l2:
     build:
       context: ../..
-      dockerfile: docker/rpi_camera/Dockerfile.bfb_rpi_camera
+      dockerfile: docker/rpi_camera_v4l2/Dockerfile.bfb_rpi_camera_v4l2
 
       # Pass arguments to Dockerfile to use different base images
       args:
@@ -44,10 +44,10 @@ services:
         #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
 
     # The name of the Docker image to be created from the Dockerfile
-    image: bfb_rpi_camera:latest
+    image: bfb_rpi_camera_v4l2:latest
 
     # The name to be given to the container created from the image
-    container_name: bfb_rpi_camera_container
+    container_name: bfb_rpi_camera_v4l2_container
 
     # Map all devices from host to container
     volumes:

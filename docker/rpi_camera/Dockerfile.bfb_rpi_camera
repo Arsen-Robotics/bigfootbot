@@ -32,7 +32,7 @@ RUN apt-get update \
     && apt-get install -y \
     ffmpeg \
     python3-pip \
-    pip install \
+    && pip install \
     # Downgrading setuptools is only needed for newer versions of Python,
     # In this case only for ros:humble-ros-base image, not needed for nvcr
     setuptools==58.2.0 \

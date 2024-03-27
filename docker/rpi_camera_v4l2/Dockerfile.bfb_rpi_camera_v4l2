@@ -1,13 +1,19 @@
 ARG BASE_IMAGE
+
+# --- For running on x86/amd64 and arm64/aarch64
+# NB! Not Nvidia GPU accelerated
+# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
+# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
+# ARG BASE_IMAGE="ros:humble-ros-base"
+# --------
+
 FROM ${BASE_IMAGE}
 
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
 ARG DEBIAN_FRONTEND=noninteractive
-# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
-# The reason is that the environment variable persists after the build
-# ARG is only available during the build of the image
 
+# ROS2 workspace
 ENV ROS_WS=/ros2_ws
 
 # If you only need to set the SHELL environment variable for other purposes, such as in a 
@@ -24,23 +30,19 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# Copy script that will get frames from rpi camera and publish via rtp
-# COPY docker/picamera/bfb_picamera.py /bfb_picamera.py
-
 RUN apt-get update \
     && cd ${ROS_WS} \
-    && apt-get install -y \
-    ffmpeg \
-    python3-pip \
-    && pip3 install \
-    picamera \
+    && apt install -y \
+    libraspberrypi-bin \
+    v4l-utils \
+    ros-${ROS_DISTRO}-v4l2-camera \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
     && rosdep install -y \
-    --ignore-src \
-    --default-yes \
-    --from-path src \
-    && colcon build --event-handlers console_direct+ --symlink-install \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    && colcon build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

@@ -11,13 +11,16 @@
 # configuration specified in the compose file.
 #   `docker compose -f docker-compose_camera_d435i.yml down'
 # 
-# Rebuild all services (all the images are built from scratch)
-# --build option indicates that Docker Compose should rebuild the images, 
-# even if they already exist
-#   `docker compose -f docker-compose_camera_d435i.yml up --build`
-# 
+# Rebuild all services
+# --build - build images before starting containers
+#   `docker compose -f docker-compose_camera_d435i.yml up --build
+#
 # To rebuild a certain service:
 #   `docker compose up --build <service_name>`
+#
+# Build the image from scratch
+# --no-cache option indicates that Docker Compose should not use the cache when building the images
+#   `docker compose -f docker-compose_camera_d435i.yml build --no-cache`
 #
 # To run a certain service:
 #   `docker compose up <service_name>`
@@ -48,9 +51,9 @@ services:
     # The name to be given to the container created from the image.
     container_name: bfb_camera_d435i_container
 
-    #volumes:     
+    volumes:     
       # Mount launch files to be able to update them inside the container without rebuilding the image
-      #- ../../bigfootbot_teleop/launch:/ros2_ws/install/bigfootbot_teleop/share/bigfootbot_teleop/launch
+      - ../../bfb_realsense_camera:/ros2_ws/src/bfb_realsense_camera      
 
       # Enable on-the-fly parameter updates without the need for container restarts.
       #- ../../bigfootbot_teleop/config:/ros2_ws/install/bigfootbot_teleop/share/bigfootbot_teleop/config 

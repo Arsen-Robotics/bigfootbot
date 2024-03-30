@@ -91,6 +91,9 @@ RUN apt-get update \
 # Create ROS2 working and source directories
 RUN mkdir -p ${ROS_WS}/src
 
+# Copy the bfb_realsense_camera package to the ROS 2 workspace
+COPY bfb_realsense_camera ${ROS_WS}/src/bfb_realsense_camera
+
 # -- Build and install ROS2 Wrapper (realsense-ros) for RealSense
 # Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
 #RUN cd ${ROS_WS}/src/ \
@@ -118,6 +121,14 @@ RUN mkdir -p ${ROS_WS}/src
 # --event-handlers console_direct+ - shows console output while building (can otherwise be found in the log directory)
 RUN apt-get update \
     && cd ${ROS_WS} \
+    && apt-get install -y \
+    ffmpeg \
+    python3-pip \
+    && pip install \
+    # Downgrading setuptools is only needed for newer versions of Python,
+    # In this case only for ros:humble-ros-base image, not needed for nvcr
+    setuptools==58.2.0 \
+    #opencv-python \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \     
     && rosdep install -y \

@@ -12,7 +12,7 @@ class RpiCameraNode(Node):
     def __init__(self):
         super().__init__('rpi_camera_node')
 
-        self.rtmp_url = "rtp://192.168.5.226:1234/stream"
+        self.srt_url = "srt://192.168.5.226:1234/stream"
         self.width = 640
         self.height = 480
         self.fps = 30
@@ -35,23 +35,16 @@ class RpiCameraNode(Node):
                 '-c:v', 'libx264',
                 '-pix_fmt', 'yuv420p',
                 '-preset', 'ultrafast',
-                '-f', 'rtp',
-                self.rtmp_url]
+                '-f', 'mpegts',
+                self.srt_url]
 
         # Using subprocess and pipe to fetch frame data
         self.p = subprocess.Popen(self.command, stdin=subprocess.PIPE)
 
-        self.frame_count = 0
-        self.frame = None
-
     def output_callback(self, msg):
-        if self.frame is not None:
-
-            self.frame = cv2.cvtColor(cv2.resize(self.frame, (640,480)), cv2.COLOR_RGB2BGR)
-            self.p.stdin.write(self.frame.tobytes())
-            
-        self.frame = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
-        self.frame_count += 1
+        frame = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
+        frame = cv2.cvtColor(cv2.resize(frame, (self.width, self.height)), cv2.COLOR_RGB2BGR)
+        self.p.stdin.write(frame.tobytes())
 
 def main(args=None):
     rclpy.init(args=args)

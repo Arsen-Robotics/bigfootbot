@@ -27,16 +27,16 @@ class RealsenseCameraNode(Node):
         self.command = [
             'ffmpeg',
             '-y', # overwrite output files without asking
-            '-f', 'rawvideo', # specifies the input format as raw video (no container)
+            '-f', 'rawvideo', # specifies the input format as raw video, indicating that there is no container format around the video data.
             '-vcodec', 'rawvideo', # specifies the video codec for input as raw video
             '-pix_fmt', 'bgr24', # pixel format of input image/frame. Pixel format refers to how 
                                  # the color information of each pixel in an image is represented
             '-s', "{}x{}".format(self.width, self.height), # resolution of the input frame. If not specified, it will be the size of
-                                                            # the input frame, if specified, it will be resized to the specified resolution
+                                                           # the input frame, if specified, it will be resized to the specified resolution
             '-r', str(self.fps), # frame rate of the input video. If not specified, it will be the frame rate of the input video
-                                    # if specified, it will be the specified frame rate
+                                 # if specified, it will be the specified frame rate
             '-i', '-', # input source. '-' means it will take input from standard input (stdin) typically through a pipe or redirection 
-                        # from another command or process.
+                       # from another command or process.
             '-c:v', 'libx264', # -c:v means 'codec:video' Sets the video codec for output as H.264 (using libx264). libx264 
                                # is a software library that provides an H.264/MPEG-4 AVC encoder
             '-pix_fmt', 'yuv420p', # sets the pixel format for output to YUV 4:2:0. YUV 4:2:0 is a planar format where the Y (luminance)

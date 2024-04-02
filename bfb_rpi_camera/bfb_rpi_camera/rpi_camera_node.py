@@ -12,7 +12,7 @@ class RpiCameraNode(Node):
     def __init__(self):
         super().__init__('rpi_camera_node')
 
-        self.srt_url = "srt://192.168.5.226:1234/stream"
+        self.srt_url = "udp://192.168.5.226:1234/stream"
         self.width = 640
         self.height = 480
         self.fps = 30

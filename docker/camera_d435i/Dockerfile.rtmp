@@ -1,0 +1,26 @@
+# docker run -it --rm -p 1935:1935 --device=/dev/video0:/dev/video0 --name video-stream-container video-stream
+# docker build -t nginx_rtmp -f Dockerfile.rtmp .
+# docker run -d --rm -p 1935:1935 -p 80:80 --name nginx_rtmp_container nginx_rtmp - run in detached mode
+# docker run -it -e "TERM=xterm-256color" --rm -p 1935:1935 -p 80:80 --name nginx_rtmp_container nginx_rtmp - run in interactive mode
+
+# Use Ubuntu as the base image
+FROM ubuntu:latest
+
+# Avoid prompts from apt during installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install NGINX and the RTMP module
+RUN apt-get update && \
+    apt-get install -y nginx libnginx-mod-rtmp ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy nginx.conf with RTMP module configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose the RTMP port and the standard HTTP port
+EXPOSE 1935 80
+
+# Use the NGINX command to start NGINX. "-g daemon off;" ensures NGINX stays in the foreground.
+# -g means global directives (directives that can be set in the global context)
+#CMD ["nginx", "-g", "daemon off;"]
+CMD ["bash"]

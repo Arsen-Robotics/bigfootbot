@@ -26,7 +26,8 @@ class RealsenseCameraNode(Node):
         # Command and params for ffmpeg
         self.command = [
             'ffmpeg',
-            '-y', # overwrite output files without asking
+            #'-y', # overwrite output files without asking
+            #'-re', # read input at native frame rate. Mainly used to simulate a grab device.
             '-f', 'rawvideo', # specifies the input format as raw video, indicating that there is no container format around the video data.
             '-vcodec', 'rawvideo', # specifies the video codec for input as raw video
             '-pix_fmt', 'bgr24', # pixel format of input image/frame. Pixel format refers to how 

@@ -15,7 +15,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy nginx.conf with RTMP module configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+#COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose the RTMP port and the standard HTTP port
 EXPOSE 1935 80

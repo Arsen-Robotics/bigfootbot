@@ -58,7 +58,7 @@ class RealsenseCameraNode(Node):
             'tune', 'zerolatency', # tune the encoding parameters for zero latency. This is useful for real-time applications where
                                    # latency is important. Zero latency means that the video will be encoded as quickly as possible, but the
                                    # output file will be larger. The default tune is film.
-            #'-b', '900k', # -b means 'bitrate'. Set the target video bitrate to 900k.
+            #'-b', '900k', # -b means 'bitrate'. Set the target video bitrate to 900 kbps.
             '-f', 'mpegts', # -f means 'format'. Force output file format. mpegts (MPGEG-TS) is the MPEG Transport Stream format.
                             # It is container that contains encoded video and audio streams. It is used for streaming video over the internet.
             self.srt_url] # output URL

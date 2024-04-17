@@ -5,7 +5,10 @@
 # docker run -it -e "TERM=xterm-256color" --rm -p 1935:1935 --name nginx_rtmp_container nginx_rtmp - run in interactive mode
 
 # Use Ubuntu as the base image
-FROM ubuntu:latest
+#FROM ubuntu:latest
+
+# Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+FROM nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
 
 # Avoid prompts from apt during installation
 ARG DEBIAN_FRONTEND=noninteractive

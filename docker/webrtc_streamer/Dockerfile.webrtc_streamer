@@ -1,0 +1,19 @@
+# docker build -t webrtc_streamer -f Dockerfile.webrtc_streamer .
+# docker run -it -e "TERM=xterm-256color" --rm -p 8080:8080 --name webrtc_streamer_container webrtc_streamer
+
+# Use Ubuntu as the base image
+FROM ubuntu:latest
+
+# Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+# FROM nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+
+# Avoid prompts from apt during installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN curl http://www.linux-projects.org/listing/uv4l_repo/lpkey.asc | sudo apt-key add -
+RUN echo "deb https://www.linux-projects.org/listing/uv4l_repo/raspbian/stretch stretch main" | sudo tee /etc/apt/sources.list.d/uv4l.list
+RUN apt-get update && apt-get upgrade
+RUN sudo apt-get install uv4l-webrtc
+
+CMD ["uv4l", "--external-driver", "--device-name=video0"]
+# CMD ["bash"]

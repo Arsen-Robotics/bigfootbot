@@ -56,7 +56,7 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
-    network_mode: "host"
+    #network_mode: "host"
 
     command: ros2 launch motor_control motor_control_launch.py
 
@@ -82,6 +82,9 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
-    network_mode: "host"
+    #network_mode: "host"
+
+    ports:
+      - "8765:8765"
 
     command: ros2 launch foxglove_bridge foxglove_bridge_launch.xml

@@ -7,8 +7,7 @@ class GpsNode(Node):
     def __init__(self):
         super().__init__('gps_node')
 
-        # Open serial connection
-        self.serial = serial.Serial('/dev/gps-module', 9600)
+        self.gps_module_connected = False
 
         # Create publisher that will publish GPS fixes as NavSatFix message
         self.publisher = self.create_publisher(
@@ -19,28 +18,48 @@ class GpsNode(Node):
         # Timer will call publish_gps_fix function every 0.5 sec
         # Function reads data from GPS module and publishes GPS fixes to ROS2 topic
         self.timer = self.create_timer(0.5, self.publish_gps_fix)
+
+    def connect_to_gps_module(self):
+        try:
+            self.serial = serial.Serial('/dev/gps-module', 9600)
+
+        except Exception as e:
+            if isinstance(e, FileNotFoundError): # Doesn't work yet
+                self.gps_module_connected = False
+                self.get_logger().error("Failed to open GPS module, retrying...")
+
+        else:
+            self.gps_module_connected = True
+            self.get_logger().info("GPS module connected")
+
+        return self.gps_module_connected
         
     def publish_gps_fix(self):
-        self.serial.flushInput()
+        try:
+            if not self.connect_to_gps_module():
+                return
 
-        # Read lines from serial until line that starts with $GPGGA (GPS fix) is reached
-        while True:
-            line = self.serial.readline().decode('utf-8')
-            if line.startswith('$GPGGA'):
-                break
-        
-        # Parse GPGGA string
-        nmea_lat, lat_direction, nmea_lon, lon_direction = self.parse_gpgga(line)
+            # Read lines from serial until line that starts with $GPGGA (GPS fix) is reached
+            while True:
+                line = self.serial.readline().decode('utf-8')
+                if line.startswith('$GPGGA'):
+                    break
+            
+            # Parse GPGGA string
+            nmea_lat, lat_direction, nmea_lon, lon_direction = self.parse_gpgga(line)
 
-        # Convert coordinates in NMEA format to decimals
-        decimal_lat, decimal_lon = self.nmea_to_decimal(nmea_lat, lat_direction, nmea_lon, lon_direction)
+            # Convert coordinates in NMEA format to decimals
+            decimal_lat, decimal_lon = self.nmea_to_decimal(nmea_lat, lat_direction, nmea_lon, lon_direction)
 
-        # Publish decimal latitude and longitude to ROS2 topic
-        fix = NavSatFix()
-        fix.latitude = decimal_lat
-        fix.longitude = decimal_lon
+            # Publish decimal latitude and longitude to ROS2 topic
+            fix = NavSatFix()
+            fix.latitude = decimal_lat
+            fix.longitude = decimal_lon
 
-        self.publisher.publish(fix)
+            self.publisher.publish(fix)
+
+        except Exception as e:
+            self.get_logger().error(f"Exception: {e}")
 
     def parse_gpgga(self, line):
         # Split the GPGGA string into its components

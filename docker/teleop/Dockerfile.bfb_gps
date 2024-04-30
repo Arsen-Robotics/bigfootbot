@@ -1,5 +1,5 @@
-# Install udev rule for RoboClaw on the host:
-# Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
+# Install udev rule for GPS module on the host:
+# Copy bfb_gps/udev/99-gps-module.rules to /etc/udev/rules.d
 # Run udevadm control --reload-rules && udevadm trigger
 
 ARG BASE_IMAGE
@@ -29,20 +29,10 @@ SHELL ["/bin/bash", "-c"]
 RUN mkdir -p ${ROS_WS}/src
 
 # -------- Build and install packages --------
-COPY motor_control ${ROS_WS}/src/motor_control
-COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
+COPY bfb_gps ${ROS_WS}/src/bfb_gps
 
 # Install Python pyserial library
 RUN pip install pyserial
-
-# Install official RoboClaw python library
-RUN cd / \
-    && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
-    && unzip roboclaw_python.zip \
-    && cd roboclaw_python \
-    && cp -r roboclaw_python /usr/local/lib/python3.8/dist-packages \
-    && cd / \
-    && rm -rf roboclaw_python.zip roboclaw_python
 
 # Install dependencies for all packages in the workspace
 RUN apt-get update \

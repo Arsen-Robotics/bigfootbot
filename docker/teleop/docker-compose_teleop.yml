@@ -1,6 +1,7 @@
 # --- README ---
-# Install udev rule for RoboClaw on the host:
+# Install udev rules for RoboClaw and GPS module on the host:
 # Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
+# Copy bfb_gps/udev/99-gps-module.rules to /etc/udev/rules.d
 # Run udevadm control --reload-rules && udevadm trigger
 
 # --- Docker compose commands ---

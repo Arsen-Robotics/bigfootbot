@@ -8,6 +8,7 @@ class GpsNode(Node):
         super().__init__('gps_node')
 
         self.gps_module_connected = False
+        self.gps_module_receiving_gps_data = False
 
         # Create publisher that will publish GPS fixes as NavSatFix message
         self.publisher = self.create_publisher(
@@ -20,22 +21,27 @@ class GpsNode(Node):
         self.timer = self.create_timer(0.5, self.publish_gps_fix)
 
     def connect_to_gps_module(self):
+        # Try to open serial connection to GPS module
         try:
             self.serial = serial.Serial('/dev/gps-module', 9600)
 
-        except Exception as e:
-            if isinstance(e, FileNotFoundError): # Doesn't work yet
+        # If the connection fails, but flag is still True, set to False and log a message
+        except:
+            if self.gps_module_connected == True:
                 self.gps_module_connected = False
                 self.get_logger().error("Failed to open GPS module, retrying...")
 
+        # If the GPS module is connected, but flag is still False, set to True and log a message
         else:
-            self.gps_module_connected = True
-            self.get_logger().info("GPS module connected")
+            if self.gps_module_connected == False:
+                self.gps_module_connected = True
+                self.get_logger().info("GPS module connected")
 
         return self.gps_module_connected
         
     def publish_gps_fix(self):
         try:
+            # If the GPS module is not connected, exit the function to avoid errors when calling GPS module
             if not self.connect_to_gps_module():
                 return
 
@@ -57,6 +63,16 @@ class GpsNode(Node):
             fix.longitude = decimal_lon
 
             self.publisher.publish(fix)
+
+            self.gps_module_receiving_gps_data = True
+
+        except serial.SerialException:
+            self.get_logger().error("Failed to open GPS module, retrying...")
+
+        except ValueError:
+            if self.gps_module_receiving_gps_data == True:
+                self.gps_module_receiving_gps_data = False
+                self.get_logger().error("Failed to parse GPS data. Most likely GPS is not sending data because it hasn't acquired GPS signal yet.")
 
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")

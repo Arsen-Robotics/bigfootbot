@@ -38,12 +38,12 @@ class RoboclawControlNode(Node):
 
     # This funtion checks if the Roboclaw is connected and tries to connect if it's not
     def connect_to_roboclaw(self):
-        # If the Roboclaw is not connected, try to connect
-        if not self.rclaw.Open():
+        # If the connection fails, but flag is still True, set to False and log a message
+        if not self.rclaw.Open() and self.rclaw_connected == True:
             self.get_logger().error("Failed to open Roboclaw, retrying...")
             self.rclaw_connected = False
         
-        # Attempt to connect to Roboclaw and set the connected flag to 1 if successful
+        # If the Roboclaw is connected, but flag is still False, set to True and log a message
         if self.rclaw_connected == False and self.rclaw.Open():
             self.get_logger().info("Roboclaw connected")
             self.rclaw_connected = True

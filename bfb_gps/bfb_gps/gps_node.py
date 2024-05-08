@@ -68,10 +68,11 @@ class GpsNode(Node):
             self.gps_module_connected = False
             self.get_logger().error("Failed to open GPS module, retrying...")
 
-        except ValueError:
+        except ValueError as e:
             if self.gps_module_receiving_gps_data == True or self.gps_module_receiving_gps_data == None:
                 self.gps_module_receiving_gps_data = False
-                self.get_logger().error("No GPS data received from module. Waiting...")
+                #self.get_logger().error("No GPS data received from module. Waiting...")
+            self.get_logger().error(f"ValueError: {e}")
 
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")

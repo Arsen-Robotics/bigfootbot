@@ -7,23 +7,28 @@ from rclpy.node import Node
 from roboclaw_python.roboclaw_3 import Roboclaw
 from geometry_msgs.msg import Twist
 import math
-import time
 from bfb_interfaces.msg import RoboclawState
 
 class RoboclawControlNode(Node):
     def __init__(self):
         super().__init__('roboclaw_control_node')
 
-        self.wheel_base = 0.65 # Distance between left and right wheel in meters
+        self.wheel_track = 0.65 # Distance between left and right wheel in meters
         self.wheel_diameter = 0.33 # Wheel diameter in meters
         self.max_rpm = 177.5
         self.max_motor_command = 126
 
-        self.rclaw = Roboclaw("/dev/roboclaw", 38400)
-        self.address = 0x80
-        self.rclaw_connected = False
+        self.comport = "/dev/roboclaw"
+        self.baudrate = 38400
 
-        self.rclaw.Open()
+        self.rclaw = Roboclaw(self.comport, self.baudrate)
+
+        # Address is set in Basicmicro Motion Studio to determine which Roboclaw to talk to,
+        # if multiple Roboclaws are connected to the same serial port
+        self.address = 0x80
+
+        # Initially this flag is set to None, because it is not known if the Roboclaw is connected or not
+        self.rclaw_connected = None
 
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
@@ -32,21 +37,27 @@ class RoboclawControlNode(Node):
             self.command_callback,
             10) # 10 is the queue size (how many messages to store in memory)
 
+        # Create a publisher that will publish Roboclaw state as RoboclawState message
         self.roboclaw_state_publisher = self.create_publisher(RoboclawState, 'roboclaw_state', 10)
 
+        # Timer will call publish_roboclaw_state function every 0.2 sec
         self.timer = self.create_timer(0.2, self.publish_roboclaw_state)
 
-    # This funtion checks if the Roboclaw is connected and tries to connect if it's not
+    # This function tries to open a serial connection to the Roboclaw
+    # If the connection succeeds or fails, it prints a message to the console
+    # The flag self.rclaw_connected is only for the reason
+    # that the message is printed only once when the connection is established or lost
+    # The function returns the value of self.rclaw_connected
     def connect_to_roboclaw(self):
-        # If the connection fails, but flag is still True, set to False and log a message
-        if not self.rclaw.Open() and self.rclaw_connected == True:
-            self.get_logger().error("Failed to open Roboclaw, retrying...")
-            self.rclaw_connected = False
-        
-        # If the Roboclaw is connected, but flag is still False, set to True and log a message
-        if self.rclaw_connected == False and self.rclaw.Open():
-            self.get_logger().info("Roboclaw connected")
-            self.rclaw_connected = True
+        if self.rclaw.Open():
+            if self.rclaw_connected == False or self.rclaw_connected == None:
+                self.rclaw_connected = True
+                self.get_logger().info("Roboclaw connected")
+
+        else:
+            if self.rclaw_connected == True or self.rclaw_connected == None:
+                self.rclaw_connected = False
+                self.get_logger().error("Failed to open Roboclaw, retrying...")
 
         return self.rclaw_connected
 
@@ -81,6 +92,15 @@ class RoboclawControlNode(Node):
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)
 
+        # Even though the connection is checked in the connect_to_roboclaw function,
+        # the connection can be lost while program is communicating with Roboclaw,
+        # so OSError exception (usually because of Input/Output error) is caught here
+        except OSError:
+            self.rclaw_connected = False
+            self.get_logger().error("Failed to open Roboclaw, retrying...")
+        
+        # All known exceptions are caught, but if some unknown exception occurs,
+        # it is caught here and printed to the console
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")
 
@@ -94,6 +114,7 @@ class RoboclawControlNode(Node):
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
+            # Send motor commands to Roboclaw
             if left_motor_command < 0:
                 self.rclaw.BackwardM1(self.address, abs(left_motor_command))
 
@@ -106,6 +127,15 @@ class RoboclawControlNode(Node):
             if right_motor_command >= 0:
                 self.rclaw.ForwardM2(self.address, right_motor_command)
 
+        # Even though the connection is checked in the connect_to_roboclaw function,
+        # the connection can be lost while program is communicating with Roboclaw,
+        # so OSError exception (usually because of Input/Output error) is caught here
+        except OSError:
+            self.rclaw_connected = False
+            self.get_logger().error("Failed to open Roboclaw, retrying...")
+        
+        # All known exceptions are caught, but if some unknown exception occurs,
+        # it is caught here and printed to the console
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")
 
@@ -116,8 +146,8 @@ class RoboclawControlNode(Node):
         angular_speed = msg.angular.z
 
         # Calculate the linear speed (in m/s) of each wheel
-        left_wheel_linear_speed = linear_speed - (self.wheel_base / 2.0) * angular_speed
-        right_wheel_linear_speed = linear_speed + (self.wheel_base / 2.0) * angular_speed
+        left_wheel_linear_speed = linear_speed - (self.wheel_track / 2.0) * angular_speed
+        right_wheel_linear_speed = linear_speed + (self.wheel_track / 2.0) * angular_speed
 
         # Calculate the left and right motor speeds in revolutions per minute (RPM)
         left_motor_speed_rpm = left_wheel_linear_speed / (math.pi * self.wheel_diameter) * 60

@@ -7,8 +7,13 @@ class GpsNode(Node):
     def __init__(self):
         super().__init__('gps_node')
 
-        self.gps_module_connected = False
-        self.gps_module_receiving_gps_data = False
+        self.comport = "/dev/gps-module"
+        self.baudrate = 9600
+
+        # Initially these flags are set to None, because it is not known if the GPS module is connected or not
+        # and if it is receiving GPS data or not
+        self.gps_module_connected = None
+        self.gps_module_receiving_gps_data = None
 
         # Create publisher that will publish GPS fixes as NavSatFix message
         self.publisher = self.create_publisher(
@@ -20,20 +25,22 @@ class GpsNode(Node):
         # Function reads data from GPS module and publishes GPS fixes to ROS2 topic
         self.timer = self.create_timer(0.5, self.publish_gps_fix)
 
+    # This function tries to open a serial connection to the GPS module
+    # If the connection succeeds or fails, it prints a message to the console
+    # The flags self.gps_module_connected and self.gps_module_receiving_data are only for the reason
+    # that the message is printed only once when the connection is established or lost
+    # The function returns the value of self.gps_module_connected
     def connect_to_gps_module(self):
-        # Try to open serial connection to GPS module
         try:
-            self.serial = serial.Serial('/dev/gps-module', 9600)
+            self.serial = serial.Serial(self.comport, self.baudrate)
 
-        # If the connection fails, but flag is still True, set to False and log a message
         except:
-            if self.gps_module_connected == True:
+            if self.gps_module_connected == True or self.gps_module_connected == None:
                 self.gps_module_connected = False
                 self.get_logger().error("Failed to open GPS module, retrying...")
 
-        # If the GPS module is connected, but flag is still False, set to True and log a message
         else:
-            if self.gps_module_connected == False:
+            if self.gps_module_connected == False or self.gps_module_connected == None:
                 self.gps_module_connected = True
                 self.get_logger().info("GPS module connected")
 
@@ -64,18 +71,30 @@ class GpsNode(Node):
 
             self.publisher.publish(fix)
 
-            self.gps_module_receiving_gps_data = True
-
+        # Even though the connection is checked in the connect_to_gps_module function,
+        # the connection can be lost while program is communicating with the GPS module,
+        # so SerialException is caught here
         except serial.SerialException:
+            self.gps_module_connected = False
             self.get_logger().error("Failed to open GPS module, retrying...")
 
+        # This exception is thrown when the GPS module is not sending any GPS fix data,
+        # because most likely the module is not receiving GPS signal
         except ValueError:
-            if self.gps_module_receiving_gps_data == True:
+            if self.gps_module_receiving_gps_data == True or self.gps_module_receiving_gps_data == None:
                 self.gps_module_receiving_gps_data = False
-                self.get_logger().error("Failed to parse GPS data. Most likely GPS is not sending data because it hasn't acquired GPS signal yet.")
+                self.get_logger().error("No GPS data received from module. Waiting...")
 
+        # All known exceptions are caught, but if some unknown exception occurs,
+        # it is caught here and printed to the console
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")
+
+        # If no exception is thrown, it means that the GPS module is receiving GPS data
+        else:
+            if self.gps_module_receiving_gps_data == False or self.gps_module_receiving_gps_data == None:
+                self.gps_module_receiving_gps_data = True
+                self.get_logger().info("Started receiving GPS data")
 
     def parse_gpgga(self, line):
         # Split the GPGGA string into its components

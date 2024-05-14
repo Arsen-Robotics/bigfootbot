@@ -8,10 +8,10 @@ class JoyToTwistNode(Node):
         super().__init__('joy_to_twist_node')
 
         self.enable_button = 4
-        self.reverse_button = 23 # Only for Logitech quadrant, because a button is used for slow reverse
+        self.reverse_button = 20 # Only for Logitech quadrant, because a button is used for slow reverse
 
-        self.linear_axis = 3 # 1 for ps3 controller, 3 for logitech yoke
-        self.angular_axis = 1 # 2 for ps3 controller, 1 for logitech yoke
+        self.linear_axis = 2 # 1 for ps3 controller, 3 for logitech yoke
+        self.angular_axis = 0 # 2 for ps3 controller, 1 for logitech yoke
 
         self.linear_scale = 3.067
         self.angular_scale = 9.437

@@ -1,7 +1,7 @@
 # --- Example Video Chat App demonstrating WebRTC using Node.js ---
 #
-# Tutorial:
-# https://tsh.io/blog/how-to-write-video-chat-app-using-webrtc-and-nodejs/
+# Tutorial: https://tsh.io/blog/how-to-write-video-chat-app-using-webrtc-and-nodejs/
+# GitHub: https://github.com/Miczeq22/simple-chat-app/tree/master
 
 # -- Build docker image
 # docker build -f Dockerfile.webrtc -t webrtc:latest .

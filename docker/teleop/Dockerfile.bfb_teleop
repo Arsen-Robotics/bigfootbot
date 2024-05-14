@@ -66,5 +66,4 @@ COPY docker/ros_entrypoint.sh /
 # So shell process with PID 1 is replaced by the process of running program in exec mode
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
-#CMD ["ros2", "launch", "motor_control", "motor_control_launch.py"]
 CMD ["bash"]

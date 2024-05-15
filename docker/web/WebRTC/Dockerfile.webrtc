@@ -8,7 +8,6 @@
 
 # -- Run docker container
 # docker run --rm -it -p 3000:3000 -v ./app:/app --name webrtc_container webrtc:latest
-# docker run --rm -it -p 5000:5000 -v ./app:/app --name webrtc_container webrtc:latest 
 
 # -- Npm commands
 # npm run dev - Start the application in development mode (it runs script "dev" from package.json)

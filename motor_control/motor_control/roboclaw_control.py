@@ -43,6 +43,8 @@ class RoboclawControlNode(Node):
         # Timer will call publish_roboclaw_state function every 0.2 sec
         self.timer = self.create_timer(0.2, self.publish_roboclaw_state)
 
+        # self.test_timer = self.create_timer(0.05, self.command_callback)
+
     # This function tries to open a serial connection to the Roboclaw
     # If the connection succeeds or fails, it prints a message to the console
     # The flag self.rclaw_connected is only for the reason
@@ -113,6 +115,10 @@ class RoboclawControlNode(Node):
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
+
+            # left_motor_command = 30
+            # right_motor_command = 30
+
 
             # Send motor commands to Roboclaw
             if left_motor_command < 0:

@@ -16,26 +16,6 @@
 #   `docker exec -it bfb_camera_D435i_container bash`
 # -------------------------
 
-# --- ROS2 commands ---   TODO!!!!!!!!!!!!!!!!!!!!!!!
-# Launch Roboclaw (motor controller):
-#   `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
-#
-# Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
-# This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
-# of a joystick buttons and axes
-#   `ros2 launch joy joy-launch.py` 
-#
-# Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
-# sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
-#   `ros2 launch teleop_twist_joy teleop-launch.py`
-#  
-# Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
-#   `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
-#  
-# -- ROS2 control commands --
-#   `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
-#-----------------------------
-
 ARG BASE_IMAGE
 
 # --- For running on x86/amd64 and arm64/aarch64

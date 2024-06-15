@@ -12,6 +12,9 @@ bigfootbot/
 │   │       ├── Dockerfile.bfb_webrtc
 │   │
 │   ├── ros_entrypoint.sh
+│
+└── README.md
+
 
 ## docker/
 In this folder, you can find the Dockerfiles for the different components of the robot.

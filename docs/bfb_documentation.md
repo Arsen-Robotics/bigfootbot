@@ -24,4 +24,4 @@ The container will contain:
 
 
 ## ros_entrypoint.sh 
-this file is added to every Dockerfile to set up the environment and initialize the ROS workspace.
+this file is added to every Dockerfile. Script ensures and that the ROS workspace is properly sourced before executing any ROS commands

@@ -1,0 +1,32 @@
+# --- Example Video Chat App demonstrating WebRTC using Node.js ---
+#
+# Tutorial: https://tsh.io/blog/how-to-write-video-chat-app-using-webrtc-and-nodejs/
+# GitHub: https://github.com/Miczeq22/simple-chat-app/tree/master
+
+# -- Build docker image
+# docker build -f Dockerfile.webrtc -t webrtc:latest .
+
+# -- Run docker container
+# docker run --rm -it -p 3000:3000 -v ./app:/app --name webrtc_container webrtc:latest
+
+# -- Npm commands
+# npm run dev - Start the application in development mode (it runs script "dev" from package.json)
+
+# Use official node image
+FROM node:latest
+
+# Set the working directory
+WORKDIR /app
+
+# Copy app files 
+#COPY app /app
+
+# Install the dependencies
+#RUN npm install
+
+# Expose the port your app runs on (3000 is the default port for create-react-app)
+#EXPOSE 3000 
+
+# Start the application
+#CMD ["node", "server.js"]
+CMD ["bash"]

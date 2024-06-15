@@ -27,6 +27,8 @@ The container will contain:
 ## ros_entrypoint.sh 
 this file is added to every Dockerfile as ENTRYPOINT. Script is responsible for setting up the ROS environment.
 
-
-### webrtc/
+### web/
+#### webrtc/
 This folder contains the Dockerfiles for the WebRTC component.
+
+- [Dockerfile.bfb_webrtc](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/WebRTC/Dockerfile.webrtc)

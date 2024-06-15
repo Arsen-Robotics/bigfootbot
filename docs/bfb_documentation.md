@@ -13,9 +13,18 @@ bigfootbot/
 │   │
 │   ├── web/
 │   │   └── webrtc/
-│   │       ├── Dockerfile.bfb_webrtc
+│   │       ├── app/
+│   │           ├── public/
+│   │           │   ├── img/
+│   │           │   ├── scripts/
+│   │           │   ├── index.html
+│   │           │   └── style.css
+│   │           ├── src/
+│   │           │   ├── server.ts
+│   │           │   └── index.ts
+│   │           └── Dockerfile.bfb_webrtc
 │   │
-│   ├── ros_entrypoint.sh
+│   └── ros_entrypoint.sh
 │
 └── README.md
 ```

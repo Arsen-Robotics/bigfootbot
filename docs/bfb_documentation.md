@@ -14,10 +14,14 @@ To start the camera component, run the following command:
 docker-compose -f docker-compose_camera_d435i.yml up
 ```
 
-Container *bfb_camera_d435i_container* will be started.
+Container *bfb_camera_d435i_container* will be created and started.
 
 The container will contain:
 - Linux Ubuntu 22.04
 - ROS 2 Humble
 - Intel RealSense SDK 2.0
 - Intel RealSense ROS Wrapper. [GitHub realsense-ros](https://github.com/IntelRealSense/realsense-ros)
+
+
+## ros_entrypoint.sh 
+script is added to every Dockerfile to start the ROS 2 node.

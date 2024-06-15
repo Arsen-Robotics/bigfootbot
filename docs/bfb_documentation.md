@@ -3,6 +3,7 @@
 ## docker/
 In this folder, you can find the Dockerfiles for the different components of the robot.
 
+
 ### camera_d435i/
 This folder contains the Dockerfiles for the camera component (Intel RealSense D435i).
 
@@ -25,3 +26,7 @@ The container will contain:
 
 ## ros_entrypoint.sh 
 this file is added to every Dockerfile as ENTRYPOINT. Script is responsible for setting up the ROS environment.
+
+
+### webrtc/
+This folder contains the Dockerfiles for the WebRTC component.

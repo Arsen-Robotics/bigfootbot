@@ -20,4 +20,4 @@ The container will contain:
 - Linux Ubuntu 22.04
 - ROS 2 Humble
 - Intel RealSense SDK 2.0
-- Intel RealSense ROS2 Wrapper. [GitHub](https://github.com/IntelRealSense/realsense-ros
+- Intel RealSense ROS2 Wrapper. [GitHub realsense-ros](https://github.com/IntelRealSense/realsense-ros)

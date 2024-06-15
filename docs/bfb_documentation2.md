@@ -14,7 +14,8 @@ To start the camera component, run the following command:
 docker-compose -f docker-compose_camera_d435i.yml up
 ```
 
-Will be started docker container *bfb_camera_d435i_container*
+Container *bfb_camera_d435i_container* will be started.
+
 The container will contain:
 - Linux Ubuntu 22.04
 - ROS 2 Humble

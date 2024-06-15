@@ -1,5 +1,18 @@
 # Project Folder Structure
 
+bigfootbot/
+│
+├── docker/
+│   ├── camera_d435i/
+│   │   ├── Dockerfile.bfb_camera_d435i
+│   │   ├── docker-compose_camera_d435i.yml
+│   │
+│   ├── web/
+│   │   └── webrtc/
+│   │       ├── Dockerfile.bfb_webrtc
+│   │
+│   ├── ros_entrypoint.sh
+
 ## docker/
 In this folder, you can find the Dockerfiles for the different components of the robot.
 

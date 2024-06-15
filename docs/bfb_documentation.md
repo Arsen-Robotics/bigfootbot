@@ -48,12 +48,12 @@ The container will contain:
 - Intel RealSense SDK 2.0
 - Intel RealSense ROS Wrapper. [GitHub realsense-ros](https://github.com/IntelRealSense/realsense-ros)
 
-To attach to the running container and open bash shell
+To enter to the running container and to start a bash shell in it:
 ```bash
 docker exec -it bfb_camera_d435i_container bash
 ```
 
-To manually start the camera node
+To manually start the camera node:
 ```bash
 ros2 launch realsense2_camera rs_launch.py
 ```

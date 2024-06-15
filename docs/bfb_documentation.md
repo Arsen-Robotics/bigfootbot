@@ -73,4 +73,4 @@ This folder contains the Dockerfiles for the WebRTC component.
 
 1. Clone the repository: https://github.com/jevgenik/bigfootbot
 
-2. 
+2. Go to docker/ folder and run needed components (like teleop, camera, etc.)

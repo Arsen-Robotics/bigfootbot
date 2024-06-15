@@ -19,8 +19,7 @@ bigfootbot/
 
 ## docs/
 This folder contains the documentation for the project.
-
-bfb_documentation.md - this file.
+*bfb_documentation.md* - this file.
 
 ## docker/
 In this folder, you can find the Dockerfiles for the different components of the robot.

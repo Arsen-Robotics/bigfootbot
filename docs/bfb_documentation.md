@@ -1,8 +1,23 @@
-# Autonomous Versatile Robot BigfootBot Documentation
+# Project Folder Structure
 
-Codebase structure and explanation of the BigfootBot project.
+## docker/
+In this folder, you can find the Dockerfiles for the different components of the robot.
 
-docker/ - it his folder you can find the docker files for the different components of the robot
-  camera_d435i/ - this folder contains the docker files for the camera component (Intel RealSense D435i)
-    Dockerfile.bfb_camera_d435i - https://github.com/jevgenik/bigfootbot/blob/master/docker/camera_d435i/Dockerfile.bfb_camera_d435i
-    docker-compose_camera_d435i.yml - https://github.com/jevgenik/bigfootbot/blob/master/docker/camera_d435i/docker-compose_camera_d435i.yml
+### camera_d435i/
+This folder contains the Dockerfiles for the camera component (Intel RealSense D435i).
+
+- [Dockerfile.bfb_camera_d435i](https://github.com/jevgenik/bigfootbot/blob/master/docker/camera_d435i/Dockerfile.bfb_camera_d435i)
+- [docker-compose_camera_d435i.yml](https://github.com/jevgenik/bigfootbot/blob/master/docker/camera_d435i/docker-compose_camera_d435i.yml)
+
+To start the camera component, run the following command:
+```bash
+docker-compose -f docker-compose_camera_d435i.yml up
+```
+
+Container *bfb_camera_d435i_container* will be started.
+
+The container will contain:
+- Linux Ubuntu 22.04
+- ROS 2 Humble
+- Intel RealSense SDK 2.0
+- Intel RealSense ROS Wrapper. [GitHub realsense-ros](https://github.com/IntelRealSense/realsense-ros)

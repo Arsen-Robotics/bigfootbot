@@ -37,7 +37,7 @@ This folder contains the Dockerfiles for the camera component (Intel RealSense D
 
 To start the camera component, run the following command:
 ```bash
-docker-compose -f docker-compose_camera_d435i.yml up
+docker compose -f docker-compose_camera_d435i.yml up
 ```
 
 Container *bfb_camera_d435i_container* will be created and started.

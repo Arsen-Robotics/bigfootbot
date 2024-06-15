@@ -68,11 +68,16 @@ This folder contains the WebRTC node.js application.
 https://github.com/jevgenik/bigfootbot/tree/master/docker/web/webrtc/app
 
 - [src/server.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/server.ts) - WebRTC signaling server
+- [src/index.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/index.ts) - starting point of the WebRTC application
+- [public/img]
+- [public/scripts]
+- [public/index.html]
+- [public/style.css]
 - [Dockerfile.bfb_webrtc](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/WebRTC/Dockerfile.webrtc) - Dockerfile for the WebRTC application
 
 
 
-# Install 
+# Installation and Usage
 
 1. Clone the repository: https://github.com/jevgenik/bigfootbot
 

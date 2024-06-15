@@ -1,6 +1,6 @@
 # Project Folder Structure
 
-```bash
+```text 
 bigfootbot/
 │
 ├── docker/

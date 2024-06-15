@@ -67,12 +67,12 @@ this file is added to every Dockerfile as ENTRYPOINT. Script is responsible for 
 This folder contains the WebRTC node.js application.
 https://github.com/jevgenik/bigfootbot/tree/master/docker/web/webrtc/app
 
-- [src/server.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/server.ts) - WebRTC signaling server
-- [src/index.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/index.ts) - starting point of the WebRTC application
 - [public/img]
 - [public/scripts]
 - [public/index.html]
 - [public/style.css]
+- [src/server.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/server.ts) - WebRTC signaling server
+- [src/index.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/index.ts) - starting point of the WebRTC application
 - [Dockerfile.bfb_webrtc](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/WebRTC/Dockerfile.webrtc) - Dockerfile for the WebRTC application
 
 

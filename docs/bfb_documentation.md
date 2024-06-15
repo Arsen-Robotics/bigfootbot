@@ -57,3 +57,11 @@ this file is added to every Dockerfile as ENTRYPOINT. Script is responsible for 
 This folder contains the Dockerfiles for the WebRTC component.
 
 - [Dockerfile.bfb_webrtc](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/WebRTC/Dockerfile.webrtc)
+
+
+
+# Install 
+
+1. Clone the repository: https://github.com/jevgenik/bigfootbot
+
+2. 

@@ -3,6 +3,9 @@
 ```text 
 bigfootbot/
 │
+├── docs/
+│   └── bfb_documentation.md
+│
 ├── docker/
 │   ├── camera_d435i/
 │   │   ├── Dockerfile.bfb_camera_d435i
@@ -19,6 +22,7 @@ bigfootbot/
 
 ## docs/
 This folder contains the documentation for the project.
+
 *bfb_documentation.md* - this file.
 
 ## docker/

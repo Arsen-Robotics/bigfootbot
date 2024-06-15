@@ -52,12 +52,12 @@ export class Server { // export means that this class can be imported in other f
    * This function sets up the event handlers for signaling messages such as 'offer', 'answer', and 
    * 'candidate', which are essential for establishing a peer-to-peer connection between clients.
    * socket.io is used as signaling server (to exchange information between two devices about video/audio streams)
-   * So signaling server is this Node.js server (server.ts) and signaling clients are the two devices (browsers) 
-   * that want to communicate. Devices connect to the signaling server using socket.io (WebSockets or HTTP long polling 
+   * So signaling server is this Node.js server (server.ts) and signaling client is the robot operator's browser. 
+   * Browser connect to the signaling server using socket.io (WebSockets or HTTP long polling 
    * [in case WebSocket connection cannot be established]).
    */
   private handleSocketConnection(): void {
-    this.io.on("connection", (socket) => {
+    this.io.on("connection", (socket) => { // When a client connects to the server, this function is called.
       console.log("Socket connected.");
             
       // Handles the 'offer' event sent by a client (robot operator) initiating a WebRTC connection.

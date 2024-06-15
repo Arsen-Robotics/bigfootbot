@@ -1,4 +1,5 @@
 // Install with 'npm i <module>' & Import necessary modules
+// `npm i` installs the module locallu in the node_modules folder and adds it to the dependencies in package.json
 import express, { Application } from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { createServer, Server as HTTPServer } from "http";

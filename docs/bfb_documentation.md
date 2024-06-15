@@ -48,6 +48,11 @@ The container will contain:
 - Intel RealSense SDK 2.0
 - Intel RealSense ROS Wrapper. [GitHub realsense-ros](https://github.com/IntelRealSense/realsense-ros)
 
+To attach to the running container, run
+```bash
+docker exec -it bfb_camera_d435i_container bash
+```
+
 
 ## ros_entrypoint.sh 
 this file is added to every Dockerfile as ENTRYPOINT. Script is responsible for setting up the ROS environment.

@@ -1,5 +1,6 @@
 # Project Folder Structure
 
+```bash
 bigfootbot/
 │
 ├── docker/
@@ -14,7 +15,7 @@ bigfootbot/
 │   ├── ros_entrypoint.sh
 │
 └── README.md
-
+```
 
 ## docker/
 In this folder, you can find the Dockerfiles for the different components of the robot.

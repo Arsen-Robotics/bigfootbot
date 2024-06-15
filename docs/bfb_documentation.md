@@ -24,4 +24,4 @@ The container will contain:
 
 
 ## ros_entrypoint.sh 
-script is added to every Dockerfile to start the ROS 2 node.
+this file is added to every Dockerfile to set up the environment and initialize the ROS workspace.

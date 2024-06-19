@@ -81,8 +81,8 @@ https://github.com/jevgenik/bigfootbot/tree/master/docker/web/webrtc/app
 - [public/scripts]
 - [public/scripts/client.js](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/public/scripts/client.js) - handles the setup of 
   the WebRTC connection facilitates real-time video streaming from the robot to the web client (browser)
-- [public/index.html](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/public/index.html) - main HTML file for the WebRTC
-  application (client side)
+- [public/index.html](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/public/index.html) - web page with the camera stream 
+  (video element) 
 - [public/style.css]
 - [src/server.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/server.ts) - WebRTC signaling server
 - [src/index.ts](https://github.com/jevgenik/bigfootbot/blob/master/docker/web/webrtc/app/src/index.ts) - starting point of the WebRTC application (server)

@@ -1,5 +1,9 @@
 /* 
 
+This script handles the setup of the WebRTC connection, the exchange of signaling messages with the server, 
+the reception and display of the remote media stream. This facilitates real-time video streaming from 
+the robot to the web client (robot operator's browser).
+
 High-level overview of the WebRTC connection process between the client (robot operator's browser) and server (robot):
 
 1. Client Connects: The client connects to the server via Socket.io.

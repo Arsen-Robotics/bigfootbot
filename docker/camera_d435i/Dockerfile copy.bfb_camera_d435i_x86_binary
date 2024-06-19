@@ -65,22 +65,7 @@ ENV SHELL=/bin/bash
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"]
 
-# --- Build RealSense SDK (LibRealSense) from sources.
-# LibrealSense is a cross-platform library for capturing data from the Intel® RealSense™ cameras. 
-# The library provides access to camera controls and sensor data, including depth, color, and infrared streams.
-# Build and install scripts for Intel's librealsense for the NVIDIA Jetson Developer Kits
-# are downloaded from https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/tree/main/docker/scripts
-# which in turn a based on scripts from https://github.com/jetsonhacks/installRealSenseSDK
-#COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
-#COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
-
-#RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
-# NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release 
-# (as of 11.03.2024 is 4.54.1) of the realsense-ros (ROS2 Wrapper for RealSense) supports only LibRealSense v2.54.1 
-#RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.54.1
-# --- end of block 'Build RealSense SDK (LibRealSense) from sources'
-
-# Install Intel RealSense ROS2 wrapper (including RealSense SDK 2.0)
+# Install Intel RealSense ROS 2 wrapper (including RealSense SDK 2.0) (binary packages)
 RUN apt-get update \
     && apt-get install -y ros-${ROS_DISTRO}-realsense2-* \
     && rm -rf /var/lib/apt/lists/* \
@@ -90,14 +75,6 @@ RUN apt-get update \
 
 # Create ROS2 working and source directories
 RUN mkdir -p ${ROS_WS}/src
-
-# Copy the bfb_realsense_camera package to the ROS 2 workspace
-COPY bfb_realsense_camera ${ROS_WS}/src/bfb_realsense_camera
-
-# -- Build and install ROS2 Wrapper (realsense-ros) for RealSense
-# Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
-#RUN cd ${ROS_WS}/src/ \
-#    && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development  
 
 # Clone the xacro package from GitHub
 # We install xacro from sources because binary version of xacro package was not 
@@ -121,12 +98,11 @@ COPY bfb_realsense_camera ${ROS_WS}/src/bfb_realsense_camera
 # --event-handlers console_direct+ - shows console output while building (can otherwise be found in the log directory)
 RUN apt-get update \
     && cd ${ROS_WS} \
-    && apt-get install -y \
-    ffmpeg \
+    && apt-get install -y \    
     python3-pip \
     && pip install \
     # Downgrading setuptools is only needed for newer versions of Python,
-    # In this case only for ros:humble-ros-base image, not needed for nvcr
+    # In this case only for ros:humble-ros-base image, not needed for nvcr (Nvidia GPU accelerated image)
     setuptools==58.2.0 \
     #opencv-python \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \

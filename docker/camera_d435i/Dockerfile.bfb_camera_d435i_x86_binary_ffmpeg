@@ -16,6 +16,26 @@
 #   `docker exec -it bfb_camera_D435i_container bash`
 # -------------------------
 
+# --- ROS2 commands ---   TODO!!!!!!!!!!!!!!!!!!!!!!!
+# Launch Roboclaw (motor controller):
+#   `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
+#
+# Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
+# This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
+# of a joystick buttons and axes
+#   `ros2 launch joy joy-launch.py` 
+#
+# Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
+# sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
+#   `ros2 launch teleop_twist_joy teleop-launch.py`
+#  
+# Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
+#   `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+#  
+# -- ROS2 control commands --
+#   `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
+#-----------------------------
+
 ARG BASE_IMAGE
 
 # --- For running on x86/amd64 and arm64/aarch64
@@ -43,7 +63,7 @@ ENV SHELL=/bin/bash
 # Sets the default shell for running subsequent commands in the Dockerfile
 # (the default shell on Linux is ["/bin/sh", "-c"])
 # -c: This option specifies that the next argument is the command to execute.
-SHELL ["/bin/bash", "-c"] 
+SHELL ["/bin/bash", "-c"]
 
 # --- Build RealSense SDK (LibRealSense) from sources.
 # LibrealSense is a cross-platform library for capturing data from the Intel® RealSense™ cameras. 
@@ -51,25 +71,37 @@ SHELL ["/bin/bash", "-c"]
 # Build and install scripts for Intel's librealsense for the NVIDIA Jetson Developer Kits
 # are downloaded from https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/tree/main/docker/scripts
 # which in turn a based on scripts from https://github.com/jetsonhacks/installRealSenseSDK
-COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
-COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
+#COPY docker/scripts/install-realsense-dependencies.sh /opt/realsense/install-realsense-dependencies.sh
+#COPY docker/scripts/build-librealsense.sh /opt/realsense/build-librealsense.sh
 
-RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
+#RUN chmod +x /opt/realsense/install-realsense-dependencies.sh && /opt/realsense/install-realsense-dependencies.sh
 # NB! we build a particular (NB! not the latest one) release of LibRealSense because the latest release 
 # (as of 11.03.2024 is 4.54.1) of the realsense-ros (ROS2 Wrapper for RealSense) supports only LibRealSense v2.54.1 
-RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.54.1
+#RUN chmod +x /opt/realsense/build-librealsense.sh && /opt/realsense/build-librealsense.sh -v v2.54.1
 # --- end of block 'Build RealSense SDK (LibRealSense) from sources'
 
+# Install Intel RealSense ROS 2 wrapper (including RealSense SDK 2.0) (binary packages)
+RUN apt-get update \
+    && apt-get install -y ros-${ROS_DISTRO}-realsense2-* \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# --- Build and install ROS 2 packages 
+# --- Build and install ROS2 packages 
 
 # Create ROS2 working and source directories
 RUN mkdir -p ${ROS_WS}/src
 
-# -- Build and install from sources ROS 2 Wrapper (realsense-ros) for RealSense
+# Copy the bfb_realsense_camera package to the ROS 2 workspace
+# This package contains a node that subscribes to the /image_raw topic, which is published by the RealSense 
+# camera node (ROS 2 wrapper for RealSense camera)
+# The node reads the raw image data from the /image_raw topic, converts it to a BGR image, 
+# and streams it to a SRT URL using FFmpeg (SRT is Secure Reliable Transport protocol).
+COPY bfb_realsense_camera ${ROS_WS}/src/bfb_realsense_camera
+
+# -- Build and install ROS2 Wrapper (realsense-ros) for RealSense
 # Clone the latest ROS2 Intel® RealSense™ wrapper to '/ros2_ws/src/
-RUN cd ${ROS_WS}/src/ \
-    && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development  
+#RUN cd ${ROS_WS}/src/ \
+#    && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development  
 
 # Clone the xacro package from GitHub
 # We install xacro from sources because binary version of xacro package was not 
@@ -77,8 +109,8 @@ RUN cd ${ROS_WS}/src/ \
 # Note: if the binary version of xacro package would be available for ROS2 Humble,
 # it would be installed automatically by rosdep install command (dependency is written
 # in package.xml file of the package realsense2_description [as: <exec_depend>xacro</exec_depend>])
-RUN cd ${ROS_WS}/src \
-    && git clone -b ros2 https://github.com/ros/xacro.git  
+#RUN cd ${ROS_WS}/src \
+#    && git clone -b ros2 https://github.com/ros/xacro.git  
 
 # Install ROS dependencies (ROS packages on which depend packages that located in the src directory)
 # -y, --default-yes - Tell the package manager to default to y or fail when installing
@@ -93,13 +125,21 @@ RUN cd ${ROS_WS}/src \
 # --event-handlers console_direct+ - shows console output while building (can otherwise be found in the log directory)
 RUN apt-get update \
     && cd ${ROS_WS} \
+    && apt-get install -y \
+    ffmpeg \
+    python3-pip \
+    && pip install \
+    # Downgrading setuptools is only needed for newer versions of Python,
+    # In this case only for ros:humble-ros-base image, not needed for nvcr
+    setuptools==58.2.0 \
+    #opencv-python \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \     
     && rosdep install -y \
       --ignore-src \
       --from-path src \ 
       --rosdistro ${ROS_DISTRO} \
-      --skip-keys "librealsense2 launch_pytest" \
+      #--skip-keys "librealsense2 launch_pytest" \
     # librealsense2 is skipped because it is already installed from sources (see above)    
     # launch_pytest is skipped because it causes error "realsense2_camera: No definition of [launch_pytest] for OS version [focal]"
     # launch_pytest is added in realsense2_camera package.xml file as: <test_depend>launch_pytest</test_depend>
@@ -120,7 +160,8 @@ RUN apt-get update \
 # NB! TODO! This is a temporary solution. Foxglove bridge should be installed as separate docker compose service
 # to be accessable to other containers running other ROS 2 packages
 RUN apt-get update \
-    && apt-get install ros-${ROS_DISTRO}-foxglove-bridge \
+    && apt-get install -y ros-${ROS_DISTRO}-foxglove-bridge \
+    ros-${ROS_DISTRO}-image-transport-plugins \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean 
 

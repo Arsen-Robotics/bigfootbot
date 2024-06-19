@@ -7,10 +7,16 @@ import time
 from sensor_msgs.msg import Image
 import subprocess
 
+# This node (realsense_camera_node) subscribes to the /image_raw topic, which is published by the RealSense 
+# camera node (ROS 2 wrapper for RealSense camera).
+# The /image_raw topic contains the raw image data from the RealSense camera.
+# The node reads the raw image data from the /image_raw topic, converts it to a BGR image, 
+# and streams it to a SRT URL using FFmpeg (SRT is Secure Reliable Transport protocol),
+# so the video stream is accessible over the network using the SRT URL.
 
 class RealsenseCameraNode(Node):
     def __init__(self):
-        super().__init__('realsense_camera_node')
+        super().__init__('realsense_camera_node') # create a node with the name 'realsense_camera_node'
 
         self.srt_url = "udp://192.168.5.101:1234/stream"
         self.width = 640

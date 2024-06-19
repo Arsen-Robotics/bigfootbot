@@ -17,6 +17,7 @@ bigfootbot/
 │   │           ├── public/
 │   │           │   ├── img/
 │   │           │   ├── scripts/
+│   │           │   │   └── client.js
 │   │           │   ├── index.html
 │   │           │   └── style.css
 │   │           ├── src/

@@ -35,8 +35,8 @@ services:
     build: 
       context: ../../ 
       #dockerfile: docker/camera_d435i/Dockerfile.bfb_camera_d435i
-      dockerfile: docker/camera_d435i/Dockerfile.bfb_camera_d435i_x86_binary
-      #dockerfile: docker/camera_d435i/Dockerfile.bfb_camera_d435i_x86_binary_ffmpeg
+      dockerfile: docker/camera_d435i/Dockerfile.bfb_camera_d435i_binary
+      #dockerfile: docker/camera_d435i/Dockerfile.bfb_camera_d435i_binary_ffmpeg
 
       # Pass arguments to Dockerfile to use different base images
       args:

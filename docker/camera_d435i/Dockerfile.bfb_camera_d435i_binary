@@ -2,38 +2,26 @@
 # This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
 # on Nvidia Jetson devices with Nvidia GPU acceleration (extending the Nvidia accelerated image)
 # or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
+#
 # Installed ROS2 packages: 
-#   - 'bigfootbot_base' is used to control the robot's motors via Roboclaw motor controller.
+#   .....
 #
 # --- Docker commands ---
+#    
 # Build docker image:
-#   `docker build -f Dockerfile.bfb_camera_d435i -t bfb_camera_d435i:latest ../..`
+#   `docker build -f Dockerfile.bfb_camera_d435i_binary -t bfb_camera_d435i_binary:latest ../..`
 #
 # Run docker container:
-#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_camera_D435i_container bfb_camera_D435i:latest`
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_camera_d435i_binary_container bfb_camera_d435i_binary:latest`
 #
 # To connect to a running container: 
-#   `docker exec -it bfb_camera_D435i_container bash`
+#   `docker exec -it bfb_camera_d435i_binary_container bash`
 # -------------------------
 
-# --- ROS2 commands ---   TODO!!!!!!!!!!!!!!!!!!!!!!!
-# Launch Roboclaw (motor controller):
-#   `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
+# --- ROS2 commands ---
 #
-# Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
-# This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
-# of a joystick buttons and axes
-#   `ros2 launch joy joy-launch.py` 
-#
-# Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
-# sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
-#   `ros2 launch teleop_twist_joy teleop-launch.py`
-#  
-# Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
-#   `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
-#  
-# -- ROS2 control commands --
-#   `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
+# Launch RealSense D435i camera node:
+#   `ros2 launch realsense2_camera rs_launch.py`
 #-----------------------------
 
 ARG BASE_IMAGE

@@ -21,8 +21,8 @@ const socket = io();
 const remoteVideo = document.getElementById('remoteVideo');
 
 // Create a new RTCPeerConnection with STUN server for ICE candidates
-// It is used to establish a connection between the two peers (in our case one peer is the client 
-// and the other is the server)
+// It is used to establish a connection between the two peers (in our case one peer is the client [operator's browser]
+// and the other peer is the server [server acts as signaling server and the peer that sends the video stream])
 let pc = new RTCPeerConnection({
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
 });
@@ -41,12 +41,12 @@ pc.ontrack = (event) => {
 };
 
 // Handle the offer from the server
-socket.on('offer', async (offer) => {
+socket.on('offer', async (offer) => { // async is used to make the function asynchronous. Offer is the promise that is resolved.
   // Set the remote description to the received offer
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
   
   // Create an answer to the offer
-  const answer = await pc.createAnswer();
+  const answer = await pc.createAnswer(); // pauses execution until the promise returned by createAnswer resolves. 
   
   // Set the local description to the created answer
   await pc.setLocalDescription(answer);

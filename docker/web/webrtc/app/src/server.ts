@@ -4,6 +4,8 @@ import express, { Application } from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { createServer, Server as HTTPServer } from "http";
 import path from "path";
+
+import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "webrtc";
  
 export class Server { // export means that this class can be imported in other files
   private app: Application;

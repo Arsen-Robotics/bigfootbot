@@ -5,7 +5,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { createServer, Server as HTTPServer } from "http";
 import path from "path";
 
-import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "webrtc";
+import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "wrtc";
  
 export class Server { // export means that this class can be imported in other files
   private app: Application;
@@ -65,6 +65,7 @@ export class Server { // export means that this class can be imported in other f
       console.log("Client connected");
 
       // Create a new RTCPeerConnection with STUN server configuration
+      // STUN server is used to find the public IP address of the client
       // Becasue our server not only a signaling server but it is also a WebRTC peer.
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
@@ -85,8 +86,8 @@ export class Server { // export means that this class can be imported in other f
       });
 
       // Send ICE candidates to the client
-      // onicecandidate event is triggered when an ICE candidate has been found.
-      // stun server is used to find the public IP address of the client
+      // onicecandidate event is triggered when the local peer generates an ICE candidate 
+      // (a potential network path).
       pc.onicecandidate = (event) => {
         if (event.candidate) {
           socket.emit("candidate", event.candidate);

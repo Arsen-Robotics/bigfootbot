@@ -1,0 +1,25 @@
+{
+  "global": {
+    "rosReleases": ["humble"],
+    "desiredPackages": ["@transitive-robotics/webrtc-video"]
+  },
+  "@transitive-robotics/webrtc-video": {
+    "default": {
+      "streams": [        
+        {
+          "videoSource": {
+            "type": "v4l2src",
+            "value": "/dev/video6",
+            "streamType": "image/jpeg",
+            "resolution": {
+              "width": "1920",
+              "height": "1080"
+            },
+            "framerate": "30/1"
+          },
+          "complete": true
+        }        
+      ]
+    }
+  }
+}

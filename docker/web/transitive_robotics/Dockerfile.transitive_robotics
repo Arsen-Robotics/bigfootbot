@@ -4,6 +4,7 @@
 # --- Run docker container ---
 # `docker run --rm -it --name transitive_robotics_container transitive_robotics:latest`
 # `docker run --rm -it --privileged -v ./.transitive:/root/.transitive -v /run/udev:/run/udev -e TR_INSTALL_HASH=bot123 transitive_robotics:latest`
+#   NOTE: -v /run/udev:/run/udev is required by gst-device-monitor-1.0 to enumerate available devices and supported resolutions
 
 ARG BASE_IMAGE=ros:humble-ros-base
 # Use the base image from the argument or default to Ubuntu 20.04
@@ -23,7 +24,7 @@ COPY config.json .
 # -s is for silent mode (not showing progress bar or error messages)
 # -f fail silently on server errors (curl will not output the error message and will return a non-zero 
 # exit status instead)
-RUN curl -sf "https://install.transitiverobotics.com?id=jevgeni&token=LKrAD4A6cZxCMv2T&docker=true" | bash    
+RUN curl -sf "https://install.transitiverobotics.com?id=arseni&token=3h4n6w1k5712qa6m1l1833&docker=true" | bash    
 
 WORKDIR /root
 COPY entrypoint.sh .

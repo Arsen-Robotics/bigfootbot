@@ -2,9 +2,12 @@
 # `docker build -f Dockerfile.transitive_robotics -t transitive_robotics:latest .`
 
 # --- Run docker container ---
-# `docker run --rm -it --name transitive_robotics_container transitive_robotics:latest`
-# `docker run --rm -it --privileged -v ./.transitive:/root/.transitive -v /run/udev:/run/udev -e TR_INSTALL_HASH=bot123 transitive_robotics:latest`
+# `docker run --rm -it --name transitive_robotics_cntr transitive_robotics:latest`
+# `docker run --rm -it --name transitive_robotics_cntr --privileged -v ./.transitive:/root/.transitive -v /run/udev:/run/udev -e TR_INSTALL_HASH=bot123 transitive_robotics:latest`
 #   NOTE: -v /run/udev:/run/udev is required by gst-device-monitor-1.0 to enumerate available devices and supported resolutions
+#
+# --- Attach to running container ---
+# `docker exec -it transitive_robotics_cntr bash`
 
 ARG BASE_IMAGE=ros:humble-ros-base
 # Use the base image from the argument or default to Ubuntu 20.04

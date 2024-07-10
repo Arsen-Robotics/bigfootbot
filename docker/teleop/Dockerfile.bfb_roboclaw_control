@@ -32,6 +32,14 @@ RUN mkdir -p ${ROS_WS}/src
 COPY motor_control ${ROS_WS}/src/motor_control
 COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
+# Install wget and pip
+RUN apt-get update \
+    && apt-get install wget unzip \
+    && cd / \
+    && wget https://bootstrap.pypa.io/get-pip.py \
+    && python3 get-pip.py \
+    && rm get-pip.py
+
 # Install Python pyserial library
 RUN pip install pyserial
 

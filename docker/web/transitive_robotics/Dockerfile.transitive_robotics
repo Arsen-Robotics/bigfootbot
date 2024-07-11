@@ -12,7 +12,8 @@
 
 # Documentation: https://transitiverobotics.com/docs/guides/installing_in_docker
 
-ARG BASE_IMAGE=ros:humble-ros-base
+# ARG BASE_IMAGE=ros:humble-ros-base
+ARG BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
 #ARG BASE_IMAGE
 # Use the base image from the argument or default to Ubuntu 20.04
 FROM ${BASE_IMAGE:-'ubuntu:20.04'} 

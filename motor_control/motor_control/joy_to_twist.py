@@ -7,7 +7,7 @@ class JoyToTwistNode(Node):
     def __init__(self):
         super().__init__('joy_to_twist_node')
 
-        self.enable_button = 4 # Only for ps3 controller, if not pressed robot is stopping
+        self.enable_button = 21 # 4 for ps3 controller, 21 for Logitech quadrant, if not pressed robot is stopping
         self.reverse_button = 20 # Only for Logitech quadrant, this button is used to turn on reverse mode
 
         self.reverse_axis = 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
@@ -38,21 +38,22 @@ class JoyToTwistNode(Node):
     # while the other is used for the PS3 controller
     def command_callback(self, msg):
         try:
-            twist_msg = Twist()
+            if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
+                twist_msg = Twist()
 
-            # Logitech quadrant provides values between -1 and +1,
-            # so it is required to scale them to the range of 0 to +1
-            # because this axis is used only for forward motion
-            twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis] + 1) / 2
+                # Logitech quadrant provides values between -1 and +1,
+                # so it is required to scale them to the range of 0 to +1
+                # because this axis is used only for forward motion
+                twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis] + 1) / 2
 
-            # If quadrant's most left axis is pushed all the way down (reverse button),
-            # reverse mode is activated and the most right axis is used to control the speed of the robot in reverse
-            if msg.buttons[self.reverse_button] == 1:
-                twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
+                # If quadrant's most left axis is pushed all the way down (reverse button),
+                # reverse mode is activated and the most right axis is used to control the speed of the robot in reverse
+                if msg.buttons[self.reverse_button] == 1:
+                    twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
 
-            twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+                twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-            self.publisher.publish(twist_msg)
+                self.publisher.publish(twist_msg)
 
         # If an exception occurs, print the exception to the console
         except Exception as e:

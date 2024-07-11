@@ -28,17 +28,28 @@ COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
 # Install Foxglove bridge and build it
 RUN apt-get update \
+    && apt-get install -y ros-humble-rosbridge-suite \
+    # && apt-get install -y ros-humble-foxglove-bridge \
     && cd ${ROS_WS} \
-    && git clone https://github.com/foxglove/ros-foxglove-bridge.git src/ros-foxglove-bridge \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
     && rosdep install -y \
-    --ignore-src \
-    --default-yes \
-    --from-path src \
-    && colcon build --event-handlers console_direct+ --symlink-install \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    && colcon build \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+    # && git clone https://github.com/foxglove/ros-foxglove-bridge.git src/ros-foxglove-bridge \
+    # && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    # && rosdep update \
+    # && rosdep install -y \
+    # --ignore-src \
+    # --default-yes \
+    # --from-path src \
+    # && colcon build --event-handlers console_direct+ --symlink-install \
+    # && rm -rf /var/lib/apt/lists/* \
+    # && apt-get clean
 
 # Setup entrypoint
 COPY docker/ros_entrypoint.sh /

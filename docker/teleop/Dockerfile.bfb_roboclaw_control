@@ -34,7 +34,7 @@ COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
 # Install wget and pip
 RUN apt-get update \
-    && apt-get install wget unzip \
+    && apt-get install -y wget unzip \
     && cd / \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python3 get-pip.py \

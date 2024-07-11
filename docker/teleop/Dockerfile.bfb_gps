@@ -33,7 +33,7 @@ COPY bfb_gps ${ROS_WS}/src/bfb_gps
 
 # Install wget and pip
 RUN apt-get update \
-    && apt-get install wget \
+    && apt-get install -y wget \
     && cd / \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python3 get-pip.py \

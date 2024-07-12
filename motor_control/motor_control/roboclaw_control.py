@@ -40,8 +40,8 @@ class RoboclawControlNode(Node):
         # Create a publisher that will publish Roboclaw state as RoboclawState message
         self.roboclaw_state_publisher = self.create_publisher(RoboclawState, 'roboclaw_state', 10)
 
-        # Timer will call publish_roboclaw_state function every 0.2 sec
-        self.timer = self.create_timer(0.2, self.publish_roboclaw_state)
+        # Timer will call publish_roboclaw_state function every 0.6 sec
+        self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
 
         # self.test_timer = self.create_timer(0.05, self.command_callback)
 

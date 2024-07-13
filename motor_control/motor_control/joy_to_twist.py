@@ -51,7 +51,8 @@ class JoyToTwistNode(Node):
                 if msg.buttons[self.reverse_button] == 1:
                     twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
 
-                twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+                twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
+                # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
                 self.publisher.publish(twist_msg)
 

@@ -30,6 +30,8 @@ class RoboclawControlNode(Node):
         # Initially this flag is set to None, because it is not known if the Roboclaw is connected or not
         self.rclaw_connected = None
 
+        self.turn_compensation_factor = 0.3
+
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
             Twist,
@@ -168,7 +170,7 @@ class RoboclawControlNode(Node):
         if left_motor_command != right_motor_command:
             if left_motor_command > self.max_motor_command or right_motor_command > self.max_motor_command:
                 difference = \
-                max(left_motor_command, right_motor_command) - self.max_motor_command
+                (max(left_motor_command, right_motor_command) - self.max_motor_command) * self.turn_compensation_factor
 
                 if left_motor_command > right_motor_command:
                     right_motor_command = right_motor_command - difference
@@ -178,7 +180,7 @@ class RoboclawControlNode(Node):
 
             if left_motor_command < -self.max_motor_command or right_motor_command < -self.max_motor_command:
                 difference = \
-                min(left_motor_command, right_motor_command) + self.max_motor_command
+                (min(left_motor_command, right_motor_command) + self.max_motor_command) * self.turn_compensation_factor
 
                 if left_motor_command > right_motor_command:
                     left_motor_command = left_motor_command - difference

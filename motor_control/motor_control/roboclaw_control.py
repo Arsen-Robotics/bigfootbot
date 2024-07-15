@@ -30,7 +30,7 @@ class RoboclawControlNode(Node):
         # Initially this flag is set to None, because it is not known if the Roboclaw is connected or not
         self.rclaw_connected = None
 
-        self.turn_compensation_factor = 0.3
+        self.turn_compensation_factor = 0.5
 
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
@@ -106,7 +106,7 @@ class RoboclawControlNode(Node):
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console
         except Exception as e:
-            self.get_logger().error(f"Exception: {e}")
+            self.get_logger().error(f"Exception1: {e}")
 
     def command_callback(self, msg):
         try:
@@ -141,7 +141,7 @@ class RoboclawControlNode(Node):
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console
         except Exception as e:
-            self.get_logger().error(f"Exception: {e}")
+            self.get_logger().error(f"Exception2: {e}")
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):
@@ -183,6 +183,9 @@ class RoboclawControlNode(Node):
 
                 if right_motor_command > left_motor_command:
                     right_motor_command = right_motor_command - difference
+
+        left_motor_command = int(left_motor_command)
+        right_motor_command = int(right_motor_command)
             
         # Ensure the motor commands are within the valid range (-127 to +127)
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)

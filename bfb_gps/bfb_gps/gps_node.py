@@ -30,6 +30,7 @@ class GpsNode(Node):
     # The flags self.gps_module_connected and self.gps_module_receiving_data are only for the reason
     # that the message is printed only once when the connection is established or lost
     # The function returns the value of self.gps_module_connected
+
     def connect_to_gps_module(self):
         try:
             self.serial = serial.Serial(self.comport, self.baudrate)

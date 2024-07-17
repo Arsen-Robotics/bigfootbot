@@ -70,11 +70,11 @@ class GpsNode(Node):
 
                 if line.startswith('$GPVTG') and not got_vtg:
                     # Parse GPVTG string
-                    ground_speed = self.parse_gpvtg(line)
+                    ground_speed_val = self.parse_gpvtg(line)
 
                     # Publish ground speed to ROS2 topic
                     data = GpsData()
-                    data.ground_speed = ground_speed
+                    data.ground_speed = ground_speed_val
                     self.gps_data_publisher.publish(data)
 
                     got_vtg = True

@@ -38,6 +38,7 @@ class GpsNode(Node):
         except:
             if self.gps_module_connected == True or self.gps_module_connected == None:
                 self.gps_module_connected = False
+                self.gps_module_receiving_gps_data = None
                 self.get_logger().error("Failed to open GPS module, retrying...")
 
         else:
@@ -77,6 +78,7 @@ class GpsNode(Node):
         # so SerialException is caught here
         except serial.SerialException:
             self.gps_module_connected = False
+            self.gps_module_receiving_gps_data = None
             self.get_logger().error("Failed to open GPS module, retrying...")
 
         # This exception is thrown when the GPS module is not sending any GPS fix data,

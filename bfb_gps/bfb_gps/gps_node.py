@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
+from bfb_interfaces.msg import GpsData
 import serial
 
 class GpsNode(Node):
@@ -16,14 +17,20 @@ class GpsNode(Node):
         self.gps_module_receiving_gps_data = None
 
         # Create publisher that will publish GPS fixes as NavSatFix message
-        self.publisher = self.create_publisher(
+        self.gps_fix_publisher = self.create_publisher(
             NavSatFix,
             'gps_fix',
+            10)
+
+        # Create publisher that will publish GPS data as GpsData message
+        self.gps_data_publisher = self.create_publisher(
+            GpsData,
+            'gps_data',
             10)
         
         # Timer will call publish_gps_fix function every 0.5 sec
         # Function reads data from GPS module and publishes GPS fixes to ROS2 topic
-        self.timer = self.create_timer(0.5, self.publish_gps_fix)
+        self.timer = self.create_timer(0.5, self.publish_gps)
 
     # This function tries to open a serial connection to the GPS module
     # If the connection succeeds or fails, it prints a message to the console
@@ -48,30 +55,45 @@ class GpsNode(Node):
 
         return self.gps_module_connected
         
-    def publish_gps_fix(self):
+    def publish_gps(self):
         try:
             # If the GPS module is not connected, exit the function to avoid errors when calling GPS module
             if not self.connect_to_gps_module():
                 return
 
+            got_vtg = False
+            got_gga = False
+
             # Read lines from serial until line that starts with $GPGGA (GPS fix) is reached
-            while True:
+            while not (got_vtg and got_gga):
                 line = self.serial.readline().decode('utf-8')
-                if line.startswith('$GPGGA'):
-                    break
-            
-            # Parse GPGGA string
-            nmea_lat, lat_direction, nmea_lon, lon_direction = self.parse_gpgga(line)
 
-            # Convert coordinates in NMEA format to decimals
-            decimal_lat, decimal_lon = self.nmea_to_decimal(nmea_lat, lat_direction, nmea_lon, lon_direction)
+                if line.startswith('$GPVTG') and not got_vtg:
+                    # Parse GPVTG string
+                    ground_speed = self.parse_gpvtg(line)
 
-            # Publish decimal latitude and longitude to ROS2 topic
-            fix = NavSatFix()
-            fix.latitude = decimal_lat
-            fix.longitude = decimal_lon
+                    # Publish ground speed to ROS2 topic
+                    data = GpsData()
+                    data.ground_speed = ground_speed
+                    self.gps_data_publisher.publish(data)
 
-            self.publisher.publish(fix)
+                    got_vtg = True
+
+
+                if line.startswith('$GPGGA') and not got_gga:
+                    # Parse GPGGA string
+                    nmea_lat, lat_direction, nmea_lon, lon_direction = self.parse_gpgga(line)
+
+                    # Convert coordinates in NMEA format to decimals
+                    decimal_lat, decimal_lon = self.nmea_to_decimal(nmea_lat, lat_direction, nmea_lon, lon_direction)
+
+                    # Publish decimal latitude and longitude to ROS2 topic
+                    fix = NavSatFix()
+                    fix.latitude = decimal_lat
+                    fix.longitude = decimal_lon
+                    self.gps_fix_publisher.publish(fix)
+
+                    got_gga = True
 
         # Even though the connection is checked in the connect_to_gps_module function,
         # the connection can be lost while program is communicating with the GPS module,
@@ -110,6 +132,15 @@ class GpsNode(Node):
         lon_direction = parts[5]
 
         return nmea_lat, lat_direction, nmea_lon, lon_direction
+
+    def parse_gpvtg(self, line):
+        # Split the GPGGA string into its components
+        parts = line.split(',')
+
+        # Extract ground speed (in km/h)
+        ground_speed = float(parts[7])
+
+        return ground_speed
     
     def nmea_to_decimal(self, nmea_lat, lat_direction, nmea_lon, lon_direction):
         # Extract degrees and minutes from NMEA format

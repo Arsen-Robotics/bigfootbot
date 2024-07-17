@@ -30,6 +30,7 @@ RUN mkdir -p ${ROS_WS}/src
 
 # -------- Build and install packages --------
 COPY bfb_gps ${ROS_WS}/src/bfb_gps
+COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
 # Install wget and pip
 RUN apt-get update \

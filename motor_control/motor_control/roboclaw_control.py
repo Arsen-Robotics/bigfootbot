@@ -121,7 +121,7 @@ class RoboclawControlNode(Node):
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console
         except Exception as e:
-            self.get_logger().error(f"Exception1: {e}")
+            self.get_logger().error(f"Exception 1: {e}")
 
     def publish_battery_state(self, voltage_val):
         battery_state = BatteryState()
@@ -167,7 +167,7 @@ class RoboclawControlNode(Node):
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console
         except Exception as e:
-            self.get_logger().error(f"Exception2: {e}")
+            self.get_logger().error(f"Exception 2: {e}")
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):

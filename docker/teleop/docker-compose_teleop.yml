@@ -112,9 +112,11 @@ services:
     #network_mode: "host"
 
     ports:
-      - "8765:8765"
+      # - "8765:8765"
+      - "9090:9090"
 
-    command: ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+    # command: ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+    command: ros2 launch rosbridge_server rosbridge_websocket_launch.xml
 
   bfb_gps:
     build:

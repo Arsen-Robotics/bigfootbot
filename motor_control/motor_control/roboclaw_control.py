@@ -8,6 +8,7 @@ from roboclaw_python.roboclaw_3 import Roboclaw
 from geometry_msgs.msg import Twist
 import math
 from bfb_interfaces.msg import RoboclawState
+from sensor_msgs.msg import BatteryState
 
 class RoboclawControlNode(Node):
     def __init__(self):
@@ -30,6 +31,11 @@ class RoboclawControlNode(Node):
         # Initially this flag is set to None, because it is not known if the Roboclaw is connected or not
         self.rclaw_connected = None
 
+        self.turn_compensation_factor = 0.5
+
+        self.max_battery_voltage = 29.4
+        self.min_battery_voltage = 23
+
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
             Twist,
@@ -38,10 +44,19 @@ class RoboclawControlNode(Node):
             10) # 10 is the queue size (how many messages to store in memory)
 
         # Create a publisher that will publish Roboclaw state as RoboclawState message
-        self.roboclaw_state_publisher = self.create_publisher(RoboclawState, 'roboclaw_state', 10)
+        self.roboclaw_state_publisher = self.create_publisher(
+            RoboclawState,
+            'roboclaw_state',
+            10)
 
-        # Timer will call publish_roboclaw_state function every 0.2 sec
-        self.timer = self.create_timer(0.2, self.publish_roboclaw_state)
+        # Create a publisher that will publish battery state as BatteryState message
+        self.battery_state_publisher = self.create_publisher(
+            BatteryState,
+            'battery_state',
+            10)
+
+        # Timer will call publish_roboclaw_state function every 0.6 sec
+        self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
 
         # self.test_timer = self.create_timer(0.05, self.command_callback)
 
@@ -84,6 +99,8 @@ class RoboclawControlNode(Node):
             main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
             roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
 
+            self.publish_battery_state(roboclaw_state.main_battery_voltage)
+
             # Temperature
             temp1_val = self.rclaw.ReadTemp(self.address)
             temp2_val = self.rclaw.ReadTemp2(self.address)
@@ -104,7 +121,18 @@ class RoboclawControlNode(Node):
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console
         except Exception as e:
-            self.get_logger().error(f"Exception: {e}")
+            self.get_logger().error(f"Exception 1: {e}")
+
+    def publish_battery_state(self, voltage_val):
+        battery_state = BatteryState()
+
+        battery_state.voltage = voltage_val
+
+        percentage = (voltage_val - self.min_battery_voltage) / (self.max_battery_voltage - self.min_battery_voltage)
+        percentage = max(min(percentage, 1.0), 0.0)
+        battery_state.percentage = percentage
+
+        self.battery_state_publisher.publish(battery_state)
 
     def command_callback(self, msg):
         try:
@@ -115,10 +143,6 @@ class RoboclawControlNode(Node):
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
-
-            # left_motor_command = 30
-            # right_motor_command = 30
-
 
             # Send motor commands to Roboclaw
             if left_motor_command < 0:
@@ -143,7 +167,7 @@ class RoboclawControlNode(Node):
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console
         except Exception as e:
-            self.get_logger().error(f"Exception: {e}")
+            self.get_logger().error(f"Exception 2: {e}")
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):
@@ -168,7 +192,7 @@ class RoboclawControlNode(Node):
         if left_motor_command != right_motor_command:
             if left_motor_command > self.max_motor_command or right_motor_command > self.max_motor_command:
                 difference = \
-                max(left_motor_command, right_motor_command) - self.max_motor_command
+                (max(left_motor_command, right_motor_command) - self.max_motor_command) * self.turn_compensation_factor
 
                 if left_motor_command > right_motor_command:
                     right_motor_command = right_motor_command - difference
@@ -178,13 +202,16 @@ class RoboclawControlNode(Node):
 
             if left_motor_command < -self.max_motor_command or right_motor_command < -self.max_motor_command:
                 difference = \
-                min(left_motor_command, right_motor_command) + self.max_motor_command
+                (min(left_motor_command, right_motor_command) + self.max_motor_command) * self.turn_compensation_factor
 
                 if left_motor_command > right_motor_command:
                     left_motor_command = left_motor_command - difference
 
                 if right_motor_command > left_motor_command:
                     right_motor_command = right_motor_command - difference
+
+        left_motor_command = int(left_motor_command)
+        right_motor_command = int(right_motor_command)
             
         # Ensure the motor commands are within the valid range (-127 to +127)
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)

@@ -30,10 +30,11 @@ RUN mkdir -p ${ROS_WS}/src
 
 # -------- Build and install packages --------
 COPY bfb_gps ${ROS_WS}/src/bfb_gps
+COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
 # Install wget and pip
 RUN apt-get update \
-    && apt-get install wget \
+    && apt-get install -y wget \
     && cd / \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python3 get-pip.py \

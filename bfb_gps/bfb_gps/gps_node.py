@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
-from bfb_interfaces.msg import GpsData
+from std_msgs.msg import Float32
 import serial
 
 class GpsNode(Node):
@@ -22,22 +22,21 @@ class GpsNode(Node):
             'gps_fix',
             10)
 
-        # Create publisher that will publish GPS data as GpsData message
-        self.gps_data_publisher = self.create_publisher(
-            GpsData,
-            'gps_data',
+        # Create publisher that will publish GPS ground speed as Float32 message
+        self.ground_speed_publisher = self.create_publisher(
+            Float32,
+            'ground_speed',
             10)
         
-        # Timer will call publish_gps_fix function every 0.5 sec
-        # Function reads data from GPS module and publishes GPS fixes to ROS2 topic
-        self.timer = self.create_timer(0.5, self.publish_gps)
+        # Timer will call publish_gps_data function every 0.5 sec
+        # Function reads data from GPS module and publishes GPS data to ROS2 topics
+        self.timer = self.create_timer(0.5, self.publish_gps_data)
 
     # This function tries to open a serial connection to the GPS module
     # If the connection succeeds or fails, it prints a message to the console
     # The flags self.gps_module_connected and self.gps_module_receiving_data are only for the reason
     # that the message is printed only once when the connection is established or lost
     # The function returns the value of self.gps_module_connected
-
     def connect_to_gps_module(self):
         try:
             self.serial = serial.Serial(self.comport, self.baudrate)
@@ -55,7 +54,7 @@ class GpsNode(Node):
 
         return self.gps_module_connected
         
-    def publish_gps(self):
+    def publish_gps_data(self):
         try:
             # If the GPS module is not connected, exit the function to avoid errors when calling GPS module
             if not self.connect_to_gps_module():
@@ -64,7 +63,8 @@ class GpsNode(Node):
             got_vtg = False
             got_gga = False
 
-            # Read lines from serial until line that starts with $GPGGA (GPS fix) is reached
+            # Read lines from serial until both, a line that starts with $GPGGA
+            # and a line that starts with $GPVTG have been reached
             while not (got_vtg and got_gga):
                 line = self.serial.readline().decode('utf-8')
 
@@ -73,9 +73,9 @@ class GpsNode(Node):
                     ground_speed_val = self.parse_gpvtg(line)
 
                     # Publish ground speed to ROS2 topic
-                    data = GpsData()
-                    data.ground_speed = ground_speed_val
-                    self.gps_data_publisher.publish(data)
+                    ground_speed = Float32()
+                    ground_speed.data = ground_speed_val
+                    self.ground_speed_publisher.publish(ground_speed)
 
                     got_vtg = True
 

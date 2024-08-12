@@ -9,6 +9,7 @@ from geometry_msgs.msg import Twist
 import math
 from bfb_interfaces.msg import RoboclawState
 from sensor_msgs.msg import BatteryState
+from std_msgs.msg import Float32
 
 class RoboclawControlNode(Node):
     def __init__(self):
@@ -53,6 +54,11 @@ class RoboclawControlNode(Node):
         self.battery_state_publisher = self.create_publisher(
             BatteryState,
             'battery_state',
+            10)
+
+        self.wheel_speed_publisher = self.create_publisher(
+            Float32,
+            'wheel_speed',
             10)
 
         # Timer will call publish_roboclaw_state function every 0.6 sec
@@ -140,6 +146,8 @@ class RoboclawControlNode(Node):
             if not self.connect_to_roboclaw():
                 return
             
+            # self.get_logger().info(f"{msg}")
+
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
@@ -217,7 +225,14 @@ class RoboclawControlNode(Node):
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)
         right_motor_command = max(min(right_motor_command, self.max_motor_command), -self.max_motor_command)
 
+        self.publish_wheel_speed(linear_speed)
+
         return left_motor_command, right_motor_command
+
+    def publish_wheel_speed(self, wheel_speed_val):
+        wheel_speed = Float32()
+        wheel_speed.data = float(wheel_speed_val * 3.6)
+        self.wheel_speed_publisher.publish(wheel_speed)
     
 def main():
     rclpy.init()

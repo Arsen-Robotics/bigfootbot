@@ -51,17 +51,18 @@ class JoyToTwistNode(Node):
                 if msg.buttons[self.reverse_button] == 1:
                     twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
 
+                # Absolute linear speed
                 abs_linear_speed = abs(twist_msg.linear.x)
 
                 # Compute dynamic angular scale (inverse relationship with linear speed)
-                if abs_linear_speed == 0:
-                    dynamic_angular_scale = self.angular_scale
-                else:
-                    dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
+                dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
 
-                # Ensure dynamic_angular_scale doesn't go below a minimum value
+                # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
                 min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
                 dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
+
+                max_angular_scale = self.angular_scale * 0.75 # 75% of the max scale as maximum value
+                dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
 
                 # Apply the dynamic angular scale to the angular velocity
                 twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]

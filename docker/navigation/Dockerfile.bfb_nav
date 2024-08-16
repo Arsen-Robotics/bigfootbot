@@ -1,3 +1,8 @@
+# To connect to a running container: 
+#   `docker exec -it bfb_nav_cntr bash`
+# -------------------------
+
+
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 

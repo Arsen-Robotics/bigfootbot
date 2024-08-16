@@ -23,7 +23,7 @@
 # To run a certain service:
 #   `docker compose up <service_name>`
 #   i.e `docker compose -f docker-compose_nav.yml up bfb_teleop`
-# --------------------
+# --------------------------------------------------------------
 
 services:
   bfb_nav:

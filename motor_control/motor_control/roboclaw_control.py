@@ -146,7 +146,8 @@ class RoboclawControlNode(Node):
             if not self.connect_to_roboclaw():
                 return
             
-            # self.get_logger().info(f"{msg}")
+            self.get_logger().info(f"{msg}")
+            self.get_logger().info(f"{self.rclaw._port.out_waiting}")
 
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
@@ -231,7 +232,7 @@ class RoboclawControlNode(Node):
 
     def publish_wheel_speed(self, wheel_speed_val):
         wheel_speed = Float32()
-        wheel_speed.data = float(wheel_speed_val * 3.6)
+        wheel_speed.data = float(abs(wheel_speed_val) * 3.6)
         self.wheel_speed_publisher.publish(wheel_speed)
     
 def main():

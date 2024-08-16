@@ -146,7 +146,7 @@ class RoboclawControlNode(Node):
             if not self.connect_to_roboclaw():
                 return
             
-            # self.get_logger().info(f"{msg}")
+            self.get_logger().info(f"{msg}")
 
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]

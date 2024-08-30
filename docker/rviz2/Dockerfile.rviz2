@@ -13,25 +13,26 @@
 #   --name humble_rviz2_container \
 #   humble_rviz2:latest`
 #
-# To connect to a running container: 
-#   `docker exec -it humble_rviz2_container bash`
+# Connect to a running container: 
+#   `docker exec -it humble_rviz2_cntr bash`
 # -------------------------
 
 # --- ROS2 commands ---
 # `ros2 topic echo /my_topic --no-arr` --no-addr - don't print array fields of messages
 #-----------------------------
 
+ARG BASE_IMAGE
+
 # For running on ONLY Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Nvidia catalog of accelerated docker contaieners: https://catalog.ngc.nvidia.com/containers
 # Image built: 05/23/2023
-#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+# BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
 
 # --- For running on BOTH x86/amd64 and arm64/aarch64
 # NB! Not Nvidia GPU accelerated
 # NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
 # ROS2 version: communication libraries, message packages, command line tools. No GUI tools
-# In the interest of keeping ros-core tag minimal in image size, developer tools such as rosdep, 
-# colcon and vcstools are not shipped in ros_core, but in ros-base instead.
-ARG BASE_IMAGE="ros:humble-ros-base"
+# BASE_IMAGE="ros:humble-ros-base"
 # --------
 
 FROM ${BASE_IMAGE}
@@ -71,6 +72,7 @@ RUN apt-get update \
     # publishing joint state values [messages sensor_msgs/JointState to a topic /joint_states] 
     # for a given URDF [reads from a topic /robot_description]):
     ros-${ROS_DISTRO}-joint-state-publisher-gui \
+    #ros-${ROS_DISTRO}-joint-state-publisher \
     # Install rqt package (is a framework for graphical user interfaces for ROS)
     ros-${ROS_DISTRO}-rqt \  
     # Install rqt_graph package (GUI tool for visualizing the ROS computation graph)
@@ -96,8 +98,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# Clean up the source directory
+#RUN rm -rf ${ROS_WS}/src/xacro
+
 # Copy Fast DDS configuration file for Husarnet network
-COPY docker/fastdds_husarnet.xml /
+#COPY docker/fastdds_husarnet.xml /
 
 # Setup entrypoint (entrypoint is a script that is run each time the container is started)
 COPY docker/ros_entrypoint.sh /

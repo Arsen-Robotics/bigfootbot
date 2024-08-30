@@ -14,7 +14,7 @@
 # Rebuild all services (all the images are built from scratch)
 # --build option indicates that Docker Compose should rebuild the images, 
 # even if they already exist
-#   `docker compose -f docker-compose_description.yml --build`
+#   `docker compose -f docker-compose_description.yml up --build`
 # 
 # To rebuild the service 'bfb_description':
 #   `docker compose -f docker-compose_description.yml up --build bfb_description`

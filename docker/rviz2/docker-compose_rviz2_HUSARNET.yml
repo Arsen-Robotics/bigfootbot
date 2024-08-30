@@ -32,14 +32,6 @@ services:
       context: ../../
       dockerfile: docker/rviz2/Dockerfile.rviz2
 
-      # Pass arguments to Dockerfile to use different base images
-      args:
-        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
-        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
-        
-        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
-        - BASE_IMAGE=ros:humble-ros-base
-
     # The name of the Docker image to be created from the Dockerfile.
     image: humble_rviz2:latest
 
@@ -76,19 +68,71 @@ services:
     # Overload the default command executed by the container
     command: "ros2 launch bigfootbot_description view_robot.launch.py \
               model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro \
-              use_robot_state_pub:=true \
+              use_robot_state_pub:=false \
               use_joint_state_pub_gui:=true \
               use_rviz:=true \
               use_sim_time:=false"              
     #command: bash -c "rviz2 && joint_state_publisher_gui"
     #command: "bash"
-        
+    
+    #networks:
+    #  bfb_network:
+
     #network_mode: host
 
-    networks:
-      bfb_network:
+    # This section makes service 'bfb_description' move into the namespace of Husarnet.
+    # This means you no longer can configure ports and other networking settings here
+    # and all of those configs need to be moved to declaration of service 'husarnet'.
+    # This will also wait on Husarnet to actually start before starting your app
+    network_mode: service:husarnet
+    depends_on:
+      husarnet: { condition: service_healthy }
 
-networks:
-  bfb_network:
-    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+  # Husarnet VPN
+  husarnet:
+    image: husarnet/husarnet:latest
+    
+    volumes:
+      # This will persist your Husarnet Client keys, thus IP of the container
+      # will be stable/the same between (re)boots.
+      # Feel free to choose any volume storage method of your liking
+      - ../husarnet-config:/var/lib/husarnet
+      #- ~/husarnet-config:/var/lib/husarnet      
+
+    # The cap_add key is used to add Linux capabilities to the containers in the application. 
+    # In this case, the cap_add key is used to add the NET_ADMIN capability to the containers.
+    # Linux capabilities are a way to give a process some privileges without giving it full root access. 
+    # The NET_ADMIN capability allows a process to perform various network-related tasks, such as 
+    # configuring network interfaces and setting up tunnels.
+    # This is required to create new interface for communication over Husarnet
+    cap_add:
+      - NET_ADMIN
+    
+    # The sysctls key in a Docker Compose file is used to set kernel parameters for 
+    # the containers in the application. These parameters are typically used to 
+    # tune the performance of the container or to enable certain features.
+    # Husarnet is using IPv6 for it's overlay network so we need 
+    # to make sure it's not disabled
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+  
+    environment:
+      - HUSARNET_HOSTNAME=laptop_rviz
+      - HUSARNET_JOIN_CODE=fc94:b01d:1803:8dd8:b293:5c7d:7639:932a/eUZN7ZCtCYukxdyyGqay3z
+      - HUSARNET_DEBUG=0
+
+    #env_file: 
+    #    - ./.env  # create .env file in the same folder as Dockerfile and specify HOSTNAME and JOINCODE there
+
+    # As your apps are now running in Husarnet's container network namespace,
+    # you need to move all the usual networking-related declarations here
+    # If you want to expose your services additionally to hosts from local network (possibly on different ports)
+    #ports:
+    #  - "8765:8765"
+    #  - "8081:81"  # for app1
+    #  - "8082:82"  # for app2
+
+#networks:
+#  bfb_network:
+#    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
                    # instead of creating a new one for this project (docker-compose_rviz2.yml)

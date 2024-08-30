@@ -5,23 +5,22 @@
 # Create and start containers defined in the compose file
 # NOTE Docker Compose detects changes in your configuration files, 
 # including the Dockerfile, and automatically rebuilds the corresponding images if necessary
-#   `docker compose -f docker-compose.yml up'
+#   `docker compose -f docker-compose_description.yml up'
 #
 # Stop and remove containers that were created based on the 
 # configuration specified in the compose file.
-#   `docker compose -f docker-compose.yml down'
+#   `docker compose -f docker-compose_description.yml down'
 # 
 # Rebuild all services (all the images are built from scratch)
 # --build option indicates that Docker Compose should rebuild the images, 
 # even if they already exist
-#   `docker compose -f docker-compose.yml up --build`
+#   `docker compose -f docker-compose_description.yml --build`
 # 
-# To rebuild a certain service:
-#   `docker compose up --build <service_name>`
+# To rebuild the service 'bfb_description':
+#   `docker compose -f docker-compose_description.yml up --build bfb_description`
 #
-# To run a certain service:
-#   `docker compose up <service_name>`
-#   i.e `docker compose up bfb_description`
+# To run the service 'bfb_description':
+#   `docker compose -f docker-compose_description.yml up bfb_description`
 # -----------------------------------------
 
 services:
@@ -45,7 +44,7 @@ services:
     image: bfb_description:latest
 
     # The name to be given to the container created from the image.
-    container_name: bfb_description_container
+    container_name: bfb_description_cntr
 
     volumes:
       # Forward X socket to container to enable GUI

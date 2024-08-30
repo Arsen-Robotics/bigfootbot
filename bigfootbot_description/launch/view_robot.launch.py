@@ -1,17 +1,24 @@
+# --------------------- ATTENTION !!!! ----------------------
 # NB! TODO!!!! Launch argument 'model' (path to URDF robot model) is not working (it is ignored)
 # and hard coded path is used instead (bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro)
+# check line 189
+
 
 # This launch file is used to launch the robot_state_publisher and rviz2 nodes 
 # for visualizing the robot model in ROS2. It also provides options to start 
 # joint_state_publisher and joint_state_publisher_gui nodes. 
 #
-# The launch file takes in arguments such as the path to the rviz config file, 
-# whether to use simulation time, and whether to start the robot_state_publisher and rviz2 nodes.
+# The launch file takes in arguments such as the path to the robot model xacro file,
+# rviz config file, whether to use simulation time, and whether to start the 
+# robot_state_publisher and rviz2 nodes.
+#
+# To show all available arguments and their descriptions, run the launch file with the -s or --show-args option:
+# ros2 launch bigfootbot_description view_robot.launch.py -s
 
 import os
-import xacro
+import xacro # xacro is a tool that allows you to process xacro files (xacro files are xml files that contain macros)
 
-from ament_index_python.packages import get_package_share_directory 
+#from ament_index_python.packages import get_package_share_directory 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
@@ -34,8 +41,8 @@ def generate_launch_description():
     bfb_description_pkg_path = FindPackageShare(package='bigfootbot_description').find('bigfootbot_description')
     
     # get the path to the urdf file 
-    # default_model_path = os.path.join(bfb_description_pkg_path, 'urdf/bigfootbot_NEW.urdf.xacro') # BIGFOOTBOT 
-    default_model_path = os.path.join(bfb_description_pkg_path, 'urdf/barrelbot.xacro') # BARRELBOT
+    default_model_path = os.path.join(bfb_description_pkg_path, 'urdf/bigfootbot_NEW.urdf.xacro') # BIGFOOTBOT 
+    #default_model_path = os.path.join(bfb_description_pkg_path, 'urdf/barrelbot.xacro') # BARRELBOT
     
     # get the path to the rviz config file
     default_rviz_config_path = os.path.join(bfb_description_pkg_path, 'rviz/urdf_config.rviz')
@@ -44,9 +51,11 @@ def generate_launch_description():
     # LaunchConfiguration is a substitution that returns a substitution object (Substitution)
     # (Substitution is an object that can be used in a launch file to substitute a value at runtime)
     # 
-    # 'model' is the name of the launch configuration variable
+    # 'model' is the name of the launch configuration variable (meaning that it can be passed to the launch file from the command line 
+    # (e.g. 'ros2 launch bigfootbot_description view_model.launch.py model:=/home/user/my_robot.urdf')
     # model_lc is a substitution object that returns the value of the launch configuration variable 'model'
-    model_lc = LaunchConfiguration('model', default=default_model_path)
+    #model_lc = LaunchConfiguration('model', default=default_model_path)
+    model_lc = LaunchConfiguration('model')
     
     # whether to start the robot model publisher
     # robot model publisher is a tool that publishes the robot model to tf
@@ -159,8 +168,8 @@ def generate_launch_description():
     # The node subscribes to joint state messages, typically published by joint state publisher nodes or 
     # other components that provide the robot's joint values. It uses these joint state messages, 
     # along with the URDF information, to calculate and publish the transformation between different robot links.
-    # So the node continuously receives joint state information makes claculations and 
-    # publishes these transformations as TF (Transform) messages.
+    # So the node continuously receives joint state information makes calculations and 
+    # publishes these transformations as TF (tf2_msgs/msg/TFMessage) messages.
     # Once the state gets published, it is available to all components in the system 
     # that also use tf2 (tf/tf2 is a tool that allows you to keep track 
     # of the relationship between different coordinate frames)
@@ -178,9 +187,10 @@ def generate_launch_description():
             {
                 'use_sim_time': use_sim_time_lc,
                 'robot_description': xacro.process_file(default_model_path).toxml()     # NB! TODO! use model_lc instead of default_model_path
+                #'robot_description': xacro.process_file(model_lc).toxml()
                 #'robot_description': xacro.process_file(model_lc.perform(None)).toxml()
                 #'robot_description': Command(['xacro ', model_lc])
-                #'robot_description': Command(['xacro',' ', model_lc])
+                #'robot_description': Command(['xacro', ' ', model_lc])
             }
         ]
     )
@@ -217,8 +227,10 @@ def generate_launch_description():
         joint_state_publisher_gui_node,
         rviz_node
     ]
-
-    return LaunchDescription(declared_arguments + nodes)
+    
+    # `LaunchDescription` serves as a container that holds the various actions (launch arguments) and nodes that you want 
+    # to launch when you run a launch file
+    return LaunchDescription(declared_arguments + nodes) # `+` is used to concatenate lists
     
     # --- Create the launch description and populate
     ##ld = LaunchDescription()

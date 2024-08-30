@@ -31,8 +31,8 @@
 #  `docker run -it --rm --privileged --net=host --runtime=nvidia --gpus all --name bfb_description_container bfb_description:latest`
 #
 # To connect to a running container: 
-#   `docker exec -it bfb_description_container bash`
-# -------------------------
+#   `docker exec -it bfb_description_cntr bash`
+# ---------------------------------------------
 
 # --- ROS2 launch commands ---
 
@@ -94,13 +94,13 @@ SHELL ["/bin/bash", "-c"]
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# Copy the bigfootbot_description package to the ROS2 workspace
+# Copy the bigfootbot_description package to the ROS 2 workspace
 COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 
 # Clone the xacro package from GitHub
 # We install xacro from sources because binary version of xacro package was not 
-# available for ROS2 Humble by 09.06.2023
-# Note: if the binary version of xacro package would be available for ROS2 Humble,
+# available for ROS 2 Humble as of 09.06.2023
+# Note: if the binary version of xacro package would be available for ROS 2 Humble,
 # it would be installed automatically by rosdep install command (dependency is written
 # in package.xml file of the package bigfootbot_description [as: <exec_depend>xacro</exec_depend>])
 RUN cd ${ROS_WS}/src \

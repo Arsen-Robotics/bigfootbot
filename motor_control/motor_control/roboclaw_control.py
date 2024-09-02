@@ -1,10 +1,11 @@
 # Official RoboClaw Python library installation:
 # Download the library: http://downloads.basicmicro.com/code/roboclaw_python.zip
-# Unzip the library, move roboclaw_python folder to ~/.local/lib/python3.10/site-packages
+# Unzip the library, move roboclaw_python folder to ~/.local/lib/python3.*/site-packages
 
 import rclpy
 from rclpy.node import Node
-from roboclaw_python.roboclaw_3 import Roboclaw
+# from roboclaw_python.roboclaw_3 import Roboclaw
+from new_roboclaw_driver.roboclaw import Roboclaw
 from geometry_msgs.msg import Twist
 import math
 from bfb_interfaces.msg import RoboclawState
@@ -72,7 +73,7 @@ class RoboclawControlNode(Node):
     # that the message is printed only once when the connection is established or lost
     # The function returns the value of self.rclaw_connected
     def connect_to_roboclaw(self):
-        if self.rclaw.Open():
+        if self.rclaw.open():
             if self.rclaw_connected == False or self.rclaw_connected == None:
                 self.rclaw_connected = True
                 self.get_logger().info("Roboclaw connected")
@@ -93,26 +94,33 @@ class RoboclawControlNode(Node):
             roboclaw_state = RoboclawState()
 
             # Currents
-            currents = self.rclaw.ReadCurrents(self.address)
+            # currents = self.rclaw.ReadCurrents(self.address)
+            currents = self.rclaw.read_motor_currents(self.address)
 
-            current1_val = currents[1] / 100
-            current2_val = currents[2] / 100
+            # current1_val = currents[1] / 100
+            # current2_val = currents[2] / 100
+            current1_val = currents[0] / 100
+            current2_val = currents[1] / 100
 
             roboclaw_state.current_1 = current1_val
             roboclaw_state.current_2 = current2_val
 
             # Main battery voltage
-            main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
-            roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
+            # main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
+            main_battery_voltage_val = self.rclaw.read_main_battery_voltage(self.address)
+            # roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
+            roboclaw_state.main_battery_voltage = main_battery_voltage_val / 10
 
             self.publish_battery_state(roboclaw_state.main_battery_voltage)
 
             # Temperature
-            temp1_val = self.rclaw.ReadTemp(self.address)
-            temp2_val = self.rclaw.ReadTemp2(self.address)
+            # temp1_val = self.rclaw.ReadTemp(self.address)
+            temp1_val = self.rclaw.read_temperature(self.address)
+            # temp2_val = self.rclaw.ReadTemp2(self.address)
 
-            roboclaw_state.temp1 = temp1_val[1] / 10
-            roboclaw_state.temp2 = temp2_val[1] / 10
+            # roboclaw_state.temp1 = temp1_val[1] / 10
+            roboclaw_state.temp1 = temp1_val / 10
+            # roboclaw_state.temp2 = temp2_val[1] / 10
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)
@@ -146,8 +154,8 @@ class RoboclawControlNode(Node):
             if not self.connect_to_roboclaw():
                 return
             
-            self.get_logger().info(f"{msg}")
-            self.get_logger().info(f"{self.rclaw._port.out_waiting}")
+            # self.get_logger().info(f"{msg}")
+            # self.get_logger().info(f"{self.rclaw.ser.out_waiting}")
 
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
@@ -155,16 +163,20 @@ class RoboclawControlNode(Node):
 
             # Send motor commands to Roboclaw
             if left_motor_command < 0:
-                self.rclaw.BackwardM1(self.address, abs(left_motor_command))
+                # self.rclaw.BackwardM1(self.address, abs(left_motor_command))
+                self.rclaw.backward_m1(self.address, abs(left_motor_command))
 
             if right_motor_command < 0:
-                self.rclaw.BackwardM2(self.address, abs(right_motor_command))
+                # self.rclaw.BackwardM2(self.address, abs(right_motor_command))
+                self.rclaw.backward_m2(self.address, abs(right_motor_command))
 
             if left_motor_command >= 0:
-                self.rclaw.ForwardM1(self.address, left_motor_command)
+                # self.rclaw.ForwardM1(self.address, left_motor_command)
+                self.rclaw.forward_m1(self.address, left_motor_command)
 
             if right_motor_command >= 0:
-                self.rclaw.ForwardM2(self.address, right_motor_command)
+                # self.rclaw.ForwardM2(self.address, right_motor_command)
+                self.rclaw.forward_m2(self.address, right_motor_command)
 
         # Even though the connection is checked in the connect_to_roboclaw function,
         # the connection can be lost while program is communicating with Roboclaw,

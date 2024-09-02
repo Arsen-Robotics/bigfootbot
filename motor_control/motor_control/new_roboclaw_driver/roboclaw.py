@@ -1,6 +1,6 @@
 import serial
 import struct
-from commands import Cmd
+from .commands import Cmd
 
 class Roboclaw:
     def __init__(self, port, baudrate, tries=3):
@@ -22,10 +22,10 @@ class Roboclaw:
         :return: True if the port was opened successfully, False otherwise.
         """
         try:
-            self.ser = serial.Serial(self.port, self.baudrate, timeout=1)
+            self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)
             return True
-        except serial.SerialException as e:
-            print(f"Failed to open port {self.port}: {e}")
+        except:
+            # print(f"Failed to open port {self.port}")
             return False
 
     def close(self):
@@ -92,7 +92,7 @@ class Roboclaw:
             else:
                 return None
         except Exception as e:
-            print(f"Error reading version: {e}")
+            # print(f"Error reading version: {e}")
             return None
 
     def read_main_battery_voltage(self, address):
@@ -168,7 +168,7 @@ class Roboclaw:
             self.ser.write(bytes([address, command]))  # Send address and command
             return True
         except Exception as e:
-            print(f"Error sending read command: {e}")
+            # print(f"Error sending read command: {e}")
             return False
         
     def send_drive_command(self, address, command, value):
@@ -197,17 +197,17 @@ class Roboclaw:
                 # Read the acknowledgment
                 ack = self.ser.read(1)
                 if ack == b'\xFF':
-                    print("Drive command acknowledged (0xFF).")
+                    # print("Drive command acknowledged (0xFF).")
                     return True
                 else:
                     tries -= 1
-                    print(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
+                    # print(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
                     
-            print("Failed to send drive command after multiple attempts.")
+            # print("Failed to send drive command after multiple attempts.")
             return False
         
         except Exception as e:
-            print(f"Error sending drive command: {e}")
+            # print(f"Error sending drive command: {e}")
             return False
         
     # def read_2bytes_command(self, address, command):
@@ -260,13 +260,13 @@ class Roboclaw:
                     return struct.unpack('>H', data)[0] # Unpack as an unsigned short
                 else:
                     tries -= 1
-                    print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 2. Remaining tries: {tries}")  # Debugging
+                    # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 2. Remaining tries: {tries}")  # Debugging
 
-            print("Failed to read 2-byte command after multiple attempts.")
+            # print("Failed to read 2-byte command after multiple attempts.")
             return None
         
         except Exception as e:
-            print(f"Error reading 2-byte command: {e}")
+            # print(f"Error reading 2-byte command: {e}")
             return None
 
     def read_4bytes_command(self, address, command):
@@ -292,13 +292,13 @@ class Roboclaw:
                     return struct.unpack('>hh', data) # Unpack as two signed shorts
                 else:
                     tries -= 1
-                    print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 4. Remaining tries: {tries}")  # Debugging
+                    # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 4. Remaining tries: {tries}")  # Debugging
 
-            print("Failed to read 4-byte command after multiple attempts.")
+            # print("Failed to read 4-byte command after multiple attempts.")
             return None
 
         except Exception as e:
-            print(f"Error reading 4-byte command: {e}")
+            # print(f"Error reading 4-byte command: {e}")
             return None
 
     def read_crc(self):
@@ -313,10 +313,10 @@ class Roboclaw:
                 crc = struct.unpack('>H', crc_bytes)[0]  # Unpack as an unsigned short
                 return crc
             else:
-                print("Failed to read 2-byte CRC.")  # Debugging
+                # print("Failed to read 2-byte CRC.")  # Debugging
                 return None
         except Exception as e:
-            print(f"Error reading CRC: {e}")  # Debugging
+            # print(f"Error reading CRC: {e}")  # Debugging
             return None
 
     def _validate_crc(self, data, crc):
@@ -348,14 +348,12 @@ class Roboclaw:
         return crc & 0xFFFF
 
 # Usage example:
-if __name__ == "__main__":
-    roboclaw = Roboclaw("/dev/roboclaw", 38400)
-    if roboclaw.open():
-        address = 0x80
+# if __name__ == "__main__":
+    # roboclaw = Roboclaw("/dev/roboclaw", 38400)
+    # if roboclaw.open():
+    #     address = 0x80
 
-        # Read and print RoboClaw firmware version
-        version = roboclaw.read_version(address)
-        if version:
-            print(f"RoboClaw version: {version}")
-
-        # Read
+    #     # Read and print RoboClaw firmware version
+    #     version = roboclaw.read_version(address)
+    #     if version:
+    #         # print(f"RoboClaw version: {version}")

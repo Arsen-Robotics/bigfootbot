@@ -44,13 +44,14 @@ RUN apt-get update \
 RUN pip install pyserial
 
 # Install official RoboClaw python library
-RUN cd / \
-    && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
-    && unzip roboclaw_python.zip \
-    && cd roboclaw_python \
-    && cp -r roboclaw_python /usr/local/lib/python3.*/dist-packages \
-    && cd / \
-    && rm -rf roboclaw_python.zip roboclaw_python
+# RUN cd / \
+#     && wget http://downloads.basicmicro.com/code/roboclaw_python.zip \
+#     && unzip roboclaw_python.zip \
+#     && cd roboclaw_python \
+#     && cp -r roboclaw_python /usr/local/lib/python3.*/dist-packages \
+#     && cd / \
+#     && rm -rf roboclaw_python.zip roboclaw_python
+RUN cp -r ${ROS_WS}/src/motor_control/motor_control/new_roboclaw_driver /usr/local/lib/python3.*/dist-packages
 
 # Install dependencies for all packages in the workspace
 RUN apt-get update \

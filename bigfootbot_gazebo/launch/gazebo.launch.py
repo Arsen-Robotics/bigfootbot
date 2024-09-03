@@ -64,7 +64,7 @@ def generate_launch_description():
     # Overall, this code is defining a ROS2 node that bridges messages between ROS2 and Gazebo. 
     # It allows the cmd_vel topic to be used to control the motion of the robot in Gazebo, 
     # and allows the odometry topic to be used to track the position and orientation of the 
-    # robot in ROS2.
+    # robot in ROS 2.
     bridge_node = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',

@@ -83,10 +83,10 @@ services:
     # Overload the default command executed by the container
     command: "ros2 launch bigfootbot_description view_robot.launch.py \
               model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro \
-              use_robot_state_pub:=true \
-              use_joint_state_pub_gui:=false \
-              use_rviz:=false \
-              use_sim_time:=false"
+              use_robot_state_pub:=True \
+              use_joint_state_pub_gui:=False \
+              use_rviz:=False \
+              use_sim_time:=False"
     
     #network_mode: host
     

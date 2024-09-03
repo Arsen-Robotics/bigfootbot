@@ -20,11 +20,28 @@ def generate_launch_description():
     # IncludeLaunchDescription class is used to include a launch file in another launch file
     # PythonLaunchDescriptionSource class is used to specify the source of a launch file to be 
     # included in a launch file.
-    gazebo_empty = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')]),
-            launch_arguments={'gz_args': 'empty.sdf'}.items()
-        )
+    gazebo_empty_ld = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
+        ),
+        launch_arguments={
+            'gz_args': 'empty.sdf'
+        }.items()
+    )
+    
+    # Include the view_robot launch file, provided by the bigfootbot_description package
+    # This launch file will start the robot_state_publisher node, which will publish robot URF
+    # model to the /robot_description topic. Gazebo node (ros_gz_sim create) will look for the robot URDF in
+    # this topic and spawn the robot in the world.
+    bfb_view_robot_ld = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('bigfootbot_description'), 'launch', 'view_robot.launch.py')
+        ),
+        launch_arguments={
+            'use_robot_state_pub': 'True',
+            'use_sim_time': 'True'
+        }.items()
+    )
 
     # Spawn the robot in the empty world
     # Create a node that runs the ROS executable ("ros2 run ros_gz_sim create")
@@ -59,7 +76,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        gazebo_empty,
+        gazebo_empty_ld,
+        bfb_view_robot_ld,
         create_node,
         bridge_node
     ])

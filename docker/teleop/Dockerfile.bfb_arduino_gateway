@@ -1,5 +1,5 @@
 # Install udev rule for Arduino Mega on the host:
-# Copy motor_control/udev/99-arduino-mega.rules to /etc/udev/rules.d
+# Copy bfb_arduino_gateway/udev/99-arduino-mega.rules to /etc/udev/rules.d
 # Run udevadm control --reload-rules && udevadm trigger
 
 ARG BASE_IMAGE

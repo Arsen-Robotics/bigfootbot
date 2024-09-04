@@ -1,7 +1,8 @@
 # --- README ---
-# Install udev rules for RoboClaw and GPS module on the host:
+# Install udev rules for RoboClaw, GPS module and Arduino Mega on the host:
 # Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
 # Copy bfb_gps/udev/99-gps-module.rules to /etc/udev/rules.d
+# Copy bfb_arduino_gateway/udev/99-arduino-mega.rules to /etc/udev/rules.d
 # Run udevadm control --reload-rules && udevadm trigger
 
 # --- Docker compose commands ---
@@ -149,3 +150,35 @@ services:
     #network_mode: "host"
 
     command: ros2 run bfb_gps gps_node
+
+  bfb_arduino_gateway:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_arduino_gateway
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+      
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_arduino_gateway:latest
+
+    # The name to be given to the container created from the image
+    container_name: bfb_arduino_gateway_container
+
+    # Map all devices from host to container
+    volumes:
+      - '/dev:/dev'
+
+    privileged: true
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: "host"
+
+    command: ros2 run motor_control arduino_gateway_node

@@ -29,7 +29,6 @@ setup(
             'relay_control_server = motor_control.relay_control_server:main',
             'relay_control_client = motor_control.relay_control_client:main',
             'roboclaw_control_node = motor_control.roboclaw_control:main',
-            'arduino_gateway_node = motor_control.arduino_gateway:main',
         ],
     },
 )

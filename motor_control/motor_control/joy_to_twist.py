@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist
+from std_msgs.msg import String
 
 class JoyToTwistNode(Node):
     def __init__(self):
@@ -9,6 +10,13 @@ class JoyToTwistNode(Node):
 
         self.enable_button = 4 # 4 for ps3 controller, 21 for Logitech quadrant, if not pressed robot is stopping
         self.reverse_button = 20 # Only for Logitech quadrant, this button is used to turn on reverse mode
+        
+        # Servos control buttons
+        self.camera_up_button = 12
+        self.camera_down_button = 13
+        self.camera_left_button = 14
+        self.camera_right_button = 15
+        self.camera_reset_position_button = 3
 
         self.reverse_axis = 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
         self.linear_axis = 1 # 1 for ps3 controller, 2 for logitech yoke
@@ -25,9 +33,15 @@ class JoyToTwistNode(Node):
             10)
 
         # Create a publisher that will publish Twist messages to the cmd_vel topic
-        self.publisher = self.create_publisher(
+        self.twist_publisher = self.create_publisher(
             Twist,
             'cmd_vel',
+            10)
+
+        # Create a publisher that will publish String messages to the arduino_gateway topic
+        self.arduino_command_publisher = self.create_publisher(
+            String,
+            'arduino_gateway',
             10)
 
     # This function is called every time a message is received on the joy topic
@@ -72,19 +86,69 @@ class JoyToTwistNode(Node):
 
     #             self.publisher.publish(twist_msg)
 
+            # if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
+            #     string_msg = String()
+            #     string_msg.data = str(0)
+            #     self.arduino_command_publisher.publish(string_msg)
+
+            # if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
+            #     string_msg = String()
+            #     string_msg.data = str(1)
+            #     self.arduino_command_publisher.publish(string_msg)
+
+            # if msg.buttons[self.camera_down_button] == 1:  # Check if camera down button is pressed
+            #     string_msg = String()
+            #     string_msg.data = str(2)  # Command for camera down
+            #     self.arduino_command_publisher.publish(string_msg)
+
+            # if msg.buttons[self.camera_left_button] == 1:  # Check if camera left button is pressed
+            #     string_msg = String()
+            #     string_msg.data = str(3)  # Command for camera left
+            #     self.arduino_command_publisher.publish(string_msg)
+
+            # if msg.buttons[self.camera_right_button] == 1:  # Check if camera right button is pressed
+            #     string_msg = String()
+            #     string_msg.data = str(4)  # Command for camera right
+            #     self.arduino_command_publisher.publish(string_msg)
+
     #     # If an exception occurs, print the exception to the console
     #     except Exception as e:
     #         self.get_logger().error(f"Exception: {e}")
 
     def command_callback(self, msg):
         try:
-            # if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
-            twist_msg = Twist()
+            if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
+                twist_msg = Twist()
 
-            twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
-            twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+                twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
+                twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-            self.publisher.publish(twist_msg)
+                self.twist_publisher.publish(twist_msg)
+
+            if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
+                string_msg = String()
+                string_msg.data = str(0)
+                self.arduino_command_publisher.publish(string_msg)
+
+            if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
+                string_msg = String()
+                string_msg.data = str(1)
+                self.arduino_command_publisher.publish(string_msg)
+
+            if msg.buttons[self.camera_down_button] == 1:  # Check if camera down button is pressed
+                string_msg = String()
+                string_msg.data = str(2)  # Command for camera down
+                self.arduino_command_publisher.publish(string_msg)
+
+            if msg.buttons[self.camera_left_button] == 1:  # Check if camera left button is pressed
+                string_msg = String()
+                string_msg.data = str(3)  # Command for camera left
+                self.arduino_command_publisher.publish(string_msg)
+
+            if msg.buttons[self.camera_right_button] == 1:  # Check if camera right button is pressed
+                string_msg = String()
+                string_msg.data = str(4)  # Command for camera right
+                self.arduino_command_publisher.publish(string_msg)
 
         # If an exception occurs, print the exception to the console
         except Exception as e:

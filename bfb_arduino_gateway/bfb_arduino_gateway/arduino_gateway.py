@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int32
+from std_msgs.msg import String
 import serial
 
 class ArduinoGatewayNode(Node):
@@ -15,8 +15,8 @@ class ArduinoGatewayNode(Node):
 
         # Create a subscription to the arduino_servos topic
         self.subscription = self.create_subscription(
-            Int32,
-            'arduino_servos',
+            String,
+            'arduino_gateway',
             self.command_callback,
             10) # 10 is the queue size (how many messages to store in memory)
 

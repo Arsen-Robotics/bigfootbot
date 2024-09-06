@@ -4,8 +4,8 @@
 Servo servo1;
 Servo servo2;
 
-int servo1Neutral = 90;
-int servo2Neutral = 90;
+int servo1Neutral = 75;
+int servo2Neutral = 100;
 
 int lastServo1Angle = 0;
 int lastServo2Angle = 0;

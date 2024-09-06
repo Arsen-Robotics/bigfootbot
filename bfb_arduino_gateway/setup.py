@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'arduino_gateway_node = motor_control.arduino_gateway:main',
+            'arduino_gateway_node = bfb_arduino_gateway.arduino_gateway:main',
         ],
     },
 )

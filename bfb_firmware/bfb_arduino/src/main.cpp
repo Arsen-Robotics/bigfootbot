@@ -1,27 +1,36 @@
 #include <Arduino.h>
 #include <Servo.h>
 
-Servo servo1;
-Servo servo2;
+Servo tiltServo;
+Servo panServo;
 
-int servo1Neutral = 90;
-int servo2Neutral = 90;
+// Neutral position for servos in degrees
+int tiltNeutral = 75;
+int panNeutral = 100;
 
-int lastServo1Angle = 0;
-int lastServo2Angle = 0;
+int lastTiltAngle = 0;
+int lastPanAngle = 0;
+
+// Angle for quick look to left/right
+int lookAngle = 60;
+bool lookToLeftSide = false;
+bool lookToRightSide = false;
+
+unsigned long lastCommandTime = 0;  // Last time a command was received
+unsigned long returnDelay = 100;   // Time (in ms) before returning to neutral position
 
 void setup() {
   Serial.begin(9600);
-  servo1.attach(9);  // Connect servo 1 to pin 9
-  servo2.attach(10); // Connect servo 2 to pin 10
+  tiltServo.attach(9);  // Connect servo 1 to pin 9
+  panServo.attach(10); // Connect servo 2 to pin 10
 
   // Initialize servos to neutral position
-  servo1.write(servo1Neutral);
-  servo2.write(servo2Neutral);
+  tiltServo.write(tiltNeutral);
+  panServo.write(panNeutral);
 
   // Update last angles
-  lastServo1Angle = servo1Neutral;
-  lastServo2Angle = servo2Neutral;
+  lastPanAngle = panNeutral;
+  lastTiltAngle = tiltNeutral;
 }
 
 void loop() {
@@ -29,27 +38,52 @@ void loop() {
     String command = Serial.readStringUntil('\n');  // Read the command
 
     if (command == "s0") {
-      servo1.write(servo1Neutral); // Set servo 1 to neutral position
-      lastServo1Angle = servo1Neutral; // Update last angle
+      tiltServo.write(tiltNeutral); // Set servo 1 to neutral position
+      lastTiltAngle = tiltNeutral; // Update last angle
 
-      servo2.write(servo2Neutral); // Set servo 2 to neutral position
-      lastServo2Angle = servo2Neutral; // Update last angle
+      panServo.write(panNeutral); // Set servo 2 to neutral position
+      lastPanAngle = panNeutral; // Update last angle
     }
     if (command == "s1") {
-      servo1.write(lastServo1Angle + 1); // Increment servo 1 angle by +1
-      lastServo1Angle += 1; // Update last angle
+      lastTiltAngle = constrain(lastTiltAngle + 1, 0, 180); // Ensure angle stays between 0 and 180
+      tiltServo.write(lastTiltAngle); // Increment servo 1 angle by +1
     }
     if (command == "s2") {
-      servo1.write(lastServo2Angle - 1); // Increment servo 1 angle by -1
-      lastServo2Angle -= 1; // Update last angle
+      lastTiltAngle = constrain(lastTiltAngle - 1, 0, 180); // Ensure angle stays between 0 and 180
+      tiltServo.write(lastTiltAngle); // Decrement servo 1 angle by -1
     }
     if (command == "s3") {
-      servo2.write(lastServo2Angle + 1); // Increment servo 2 angle by +1
-      lastServo2Angle += 1; // Update last angle
+      // lastPanAngle = constrain(lastPanAngle + 1, 0, 180); // Ensure angle stays between 0 and 180
+      // panServo.write(lastPanAngle); // Increment servo 2 angle by +1
+
+      if (lookToLeftSide == false || lookToRightSide == true) {
+        lookToLeftSide = true;
+        lookToRightSide = false;
+        panServo.write(panNeutral + lookAngle); // Look to the left
+        lastCommandTime = millis();
+      }
     }
     if (command == "s4") {
-      servo2.write(lastServo2Angle - 1); // Increment servo 2 angle by -1
-      lastServo2Angle -= 1; // Update last angle
+      // lastPanAngle = constrain(lastPanAngle - 1, 0, 180); // Ensure angle stays between 0 and 180
+      // panServo.write(lastPanAngle); // Decrement servo 2 angle by -1
+
+      lastCommandTime = millis();  // Update last command time
+      if (lookToRightSide == false || lookToLeftSide == true) {
+        lookToRightSide = true;
+        lookToLeftSide = false;
+        panServo.write(panNeutral - lookAngle); // Look to the right
+        lastCommandTime = millis();
+      }
+    }
+    // If no command was received for a while, return to neutral position
+    if ((millis() - lastCommandTime > returnDelay) && (lookToLeftSide || lookToRightSide)) {
+      panServo.write(panNeutral);  // Move pan back to neutral
+      lastPanAngle = panNeutral;
+      lookToLeftSide = false;
+      lookToRightSide = false;
+
+      delay(200);  // Wait for the servo to reach the neutral position
+      // panServo.detach();  // Detach the servo to stop it from auto adjusting
     }
   }
 }

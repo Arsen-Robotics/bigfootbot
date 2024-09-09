@@ -127,27 +127,27 @@ class JoyToTwistNode(Node):
 
             if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
                 string_msg = String()
-                string_msg.data = str(s0)
+                string_msg.data = "s0"
                 self.arduino_command_publisher.publish(string_msg)
 
             if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
                 string_msg = String()
-                string_msg.data = str(s1)
+                string_msg.data = "s1" # Command for camera up
                 self.arduino_command_publisher.publish(string_msg)
 
             if msg.buttons[self.camera_down_button] == 1:  # Check if camera down button is pressed
                 string_msg = String()
-                string_msg.data = str(s2)  # Command for camera down
+                string_msg.data = "s2"  # Command for camera down
                 self.arduino_command_publisher.publish(string_msg)
 
             if msg.buttons[self.camera_left_button] == 1:  # Check if camera left button is pressed
                 string_msg = String()
-                string_msg.data = str(s3)  # Command for camera left
+                string_msg.data = "s3"  # Command for camera left
                 self.arduino_command_publisher.publish(string_msg)
 
             if msg.buttons[self.camera_right_button] == 1:  # Check if camera right button is pressed
                 string_msg = String()
-                string_msg.data = str(s4)  # Command for camera right
+                string_msg.data = "s4"  # Command for camera right
                 self.arduino_command_publisher.publish(string_msg)
 
         # If an exception occurs, print the exception to the console

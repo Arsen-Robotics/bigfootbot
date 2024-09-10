@@ -45,12 +45,12 @@ void loop() {
       lastPanAngle = panNeutral; // Update last angle
     }
     if (command == "1") {
-      lastTiltAngle = constrain(lastTiltAngle + 3, 0, 180); // Ensure angle stays between 0 and 180
-      tiltServo.write(lastTiltAngle); // Increment servo 1 angle by +1
+      lastTiltAngle = constrain(lastTiltAngle + 2, 0, 180); // Ensure angle stays between 0 and 180
+      tiltServo.write(lastTiltAngle); // Increment servo 1 angle by +2 deg
     }
     if (command == "2") {
-      lastTiltAngle = constrain(lastTiltAngle - 3, 0, 180); // Ensure angle stays between 0 and 180
-      tiltServo.write(lastTiltAngle); // Decrement servo 1 angle by -1
+      lastTiltAngle = constrain(lastTiltAngle - 2, 0, 180); // Ensure angle stays between 0 and 180
+      tiltServo.write(lastTiltAngle); // Decrement servo 1 angle by -2 deg
     }
     if (command == "3") {
       lastCommandTime = millis();  // Update last command time
@@ -72,11 +72,11 @@ void loop() {
     }
     if (command == "5") {
       lastPanAngle = constrain(lastPanAngle + 3, 0, 180); // Ensure angle stays between 0 and 180
-      panServo.write(lastPanAngle); // Increment servo 1 angle by +1
+      panServo.write(lastPanAngle); // Increment servo 1 angle by +3 deg
     }
     if (command == "6") {
       lastPanAngle = constrain(lastPanAngle - 3, 0, 180); // Ensure angle stays between 0 and 180
-      panServo.write(lastPanAngle); // Decrement servo 1 angle by -1
+      panServo.write(lastPanAngle); // Decrement servo 1 angle by -3 deg
     }
   }
   // If no quick look command was received for a while, return to neutral position

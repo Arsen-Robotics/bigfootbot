@@ -68,10 +68,10 @@ def generate_launch_description():
     bridge_node = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
-        arguments=['/model/barrelbot/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
-                   '/model/barrelbot/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry'],
-        parameters=[{'qos_overrides./model/barrelbot.subscriber.reliability': 'reliable',
-                     'qos_overrides./model/barrelbot.subscriber.reliability': 'reliable'}],
+        arguments=['/model/bigfootbot/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
+                   '/model/bigfootbot/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry'],
+        parameters=[{'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable',
+                     'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
         output='screen'
     )
 

@@ -9,53 +9,57 @@
       <origin xyz="-0.10 0 0.05" rpy="0 0 0"/>
     </joint>
 
-    <link name="imu_link"/>
+    <link name="imu_link">
+      <visual>
+        <geometry>
+          <box size="0.05 0.05 0.05"/>
+        </geometry>
+      </visual>
+    </link>
 
     <!-- *********************** IMU SENSOR SETUP **************************  -->
     <gazebo reference="imu_link">
-      <gravity>true</gravity>
-      <sensor name="bmb_imu" type="imu">
+      <!--gravity>true</gravity-->
+      <sensor name="imu_sensor" type="imu">      
+        <!--plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin"-->
+        <plugin filename="gz-sim-imu-system"
+                name="gz::sim::systems::Imu">
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+          <!--frame_name>imu_link</frame_name-->
+          <ros>
+            <namespace>/demo</namespace>
+            <remapping>~/out:=data</remapping>
+          </ros>
+        </plugin>        
+
         <always_on>true</always_on>
         <update_rate>100</update_rate>
         <visualize>true</visualize>
-        <!--imu>
-          <orientation>
-            <x>
-              <noise type="gaussian">
-                <mean>0.0</mean>
-                <stddev>2e-3</stddev>
-              </noise>
-            </x>
-            <y>
-              <noise type="gaussian">
-                <mean>0.0</mean>
-                <stddev>2e-3</stddev>
-              </noise>
-            </y>
-            <z>
-              <noise type="gaussian">
-                <mean>0.0</mean>
-                <stddev>2e-3</stddev>
-              </noise>
-            </z>
-          </orientation>
+
+        <imu>
           <angular_velocity>
             <x>
               <noise type="gaussian">
                 <mean>0.0</mean>
                 <stddev>2e-4</stddev>
+                <bias_mean>0.0000075</bias_mean>
+                <bias_stddev>0.0000008</bias_stddev>
               </noise>
             </x>
             <y>
               <noise type="gaussian">
                 <mean>0.0</mean>
                 <stddev>2e-4</stddev>
+                <bias_mean>0.0000075</bias_mean>
+                <bias_stddev>0.0000008</bias_stddev>
               </noise>
             </y>
             <z>
               <noise type="gaussian">
                 <mean>0.0</mean>
                 <stddev>2e-4</stddev>
+                <bias_mean>0.0000075</bias_mean>
+                <bias_stddev>0.0000008</bias_stddev>
               </noise>
             </z>
           </angular_velocity>
@@ -64,32 +68,28 @@
               <noise type="gaussian">
                 <mean>0.0</mean>
                 <stddev>1.7e-2</stddev>
+                <bias_mean>0.1</bias_mean>
+                <bias_stddev>0.001</bias_stddev>
               </noise>
             </x>
             <y>
               <noise type="gaussian">
                 <mean>0.0</mean>
                 <stddev>1.7e-2</stddev>
+                <bias_mean>0.1</bias_mean>
+                <bias_stddev>0.001</bias_stddev>
               </noise>
             </y>
             <z>
               <noise type="gaussian">
                 <mean>0.0</mean>
                 <stddev>1.7e-2</stddev>
+                <bias_mean>0.1</bias_mean>
+                <bias_stddev>0.001</bias_stddev>
               </noise>
             </z>
           </linear_acceleration>
-        </imu-->
-
-        <plugin name="basic_mobile_bot_imu" filename="libgazebo_ros_imu_sensor.so">
-          <initial_orientation_as_reference>false</initial_orientation_as_reference>
-          <frame_name>imu_link</frame_name>
-          <ros>
-            <namespace>/imu</namespace>
-            <remapping>~/out:=data</remapping>
-          </ros>
-        </plugin>
-      
+        </imu>
       </sensor>
     </gazebo>
   </xacro:macro>

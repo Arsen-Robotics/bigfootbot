@@ -29,10 +29,11 @@
         <origin xyz="0 0 0" rpy="0 0 ${rotate_yaw}"/>
         <geometry>
             <!--cylinder radius="${wheel_radius}" length="${wheel_width}"/-->
-            <mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/>
+            <!--mesh filename="package://bigfootbot_description/meshes/wheel.stl" scale="0.001 0.001 0.001"/-->
 
-            <!--mesh filename="file://$(find bigfootbot_description)/meshes/wheel.stl" scale="0.001 0.001 0.001"/--> 
+            <mesh filename="file://$(find bigfootbot_description)/meshes/wheel.stl" scale="0.001 0.001 0.001"/> 
             <!-- file:// is used instead on package:// because URDF->SDF converter converts package:// to model:// and Gazebo can't fint STLs -->
+            <!-- RViz can handle both file:// and package:// -->
         </geometry>
         <material name="Gray"> <!-- Material for RViz -->
           <color rgba="${128/255} ${128/255} ${128/255} 1.0"/>

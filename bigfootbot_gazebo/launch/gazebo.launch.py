@@ -20,12 +20,14 @@ def generate_launch_description():
     # IncludeLaunchDescription class is used to include a launch file in another launch file
     # PythonLaunchDescriptionSource class is used to specify the source of a launch file to be 
     # included in a launch file.
+    # Source: https://github.com/gazebosim/ros_gz/tree/ros2/ros_gz_sim/launch
+    # Gazebo worlds: <https://github.com/gazebosim/gz-sim/tree/gz-sim9/examples/worlds>
     gazebo_empty_ld = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
         ),
         launch_arguments={
-            'gz_args': 'empty.sdf'
+            'gz_args': '-r empty.sdf' # -r - simulation should start immediately (not needed to press play in Gazebo)
         }.items()
     )
     
@@ -39,7 +41,9 @@ def generate_launch_description():
         ),
         launch_arguments={
             'use_robot_state_pub': 'True',
-            'use_sim_time': 'True'
+            'use_joint_state_pub_gui': 'False',
+            'use_rviz': 'False',
+            'use_sim_time': 'False',
         }.items()
     )
 
@@ -60,24 +64,28 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ROS2 node that bridges messages between ROS2 and Gazebo.
-    # Overall, this code is defining a ROS2 node that bridges messages between ROS2 and Gazebo. 
+    # ROS 2 node that bridges messages between ROS2 and Gazebo.
+    # Overall, this code is defining a ROS2 node that bridges messages between ROS 2 and Gazebo. 
     # It allows the cmd_vel topic to be used to control the motion of the robot in Gazebo, 
     # and allows the odometry topic to be used to track the position and orientation of the 
     # robot in ROS 2.
+    # Source: https://github.com/gazebosim/ros_gz/tree/ros2/ros_gz_bridge
     bridge_node = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
-        arguments=['/model/bigfootbot/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
-                   '/model/bigfootbot/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry'],
-        parameters=[{'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable',
-                     'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
-        output='screen'
+        arguments=[#'/imu@sensor_msgs/msg/Imu@gz.msgs.IMU'],
+                   '/world/empty/model/bigfootbot/link/base_footprint/sensor/imu_sensor/imu@sensor_msgs/msg/Imu@gz.msgs.IMU'],
+                   #'/model/bigfootbot/imu@sensor_msgs/msg/Imu@gz.msgs.IMU'],           
+                   #'/model/bigfootbot/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
+                   #'/model/bigfootbot/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry'],        
+        #parameters=[{'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
+         #            'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
+        output='screen' # Print the output of the node to the screen
     )
 
     return LaunchDescription([
-        gazebo_empty_ld,
-        bfb_view_robot_ld,
-        create_node,
-        bridge_node
+        gazebo_empty_ld, # Launch Gazebo with an empty world
+        bfb_view_robot_ld, # Launch the robot_state_publisher node
+        create_node, # Spawn the robot in the world
+        bridge_node # Launch the node that exchanges messages between ROS 2 and Gazebo
     ])

@@ -16,7 +16,7 @@
 #    gazebo /usr/share/gazebo-11/worlds/seesaw.world
 #
 # To connect to a running container: 
-#   `docker exec -it humble_gazebo_container bash`
+#   `docker exec -it humble_gazebo_cntr bash`
 # -------------------------
 
 # --- ROS2 launch commands ---

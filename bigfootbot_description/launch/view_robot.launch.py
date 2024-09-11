@@ -156,7 +156,7 @@ def generate_launch_description():
     # Node is an action that launches a ROS node (it returns an action object)
     # a ROS node is a process that performs computation
 
-    # The robot_state_publisher node publishes the robot_description topic only once when it is started. 
+    # The robot_state_publisher node publishes the 'robot_description' topic only once when it is started. 
     # The 'robot_description' topic contains the URDF description of the robot, 
     # which is typically loaded from a URDF file (other tools. e.g. rviz subscribe to this topic)
     # When the robot_state_publisher node is launched, it reads the URDF file and extracts 
@@ -189,7 +189,7 @@ def generate_launch_description():
                 'robot_description': xacro.process_file(default_model_path).toxml()     # NB! TODO! use model_lc instead of default_model_path
                 #'robot_description': xacro.process_file(model_lc).toxml()
                 #'robot_description': xacro.process_file(model_lc.perform(None)).toxml()
-                #'robot_description': Command(['xacro ', model_lc])
+                #'robot_description': Command(['xacro ', default_model_path])
                 #'robot_description': Command(['xacro', ' ', model_lc])
             }
         ]

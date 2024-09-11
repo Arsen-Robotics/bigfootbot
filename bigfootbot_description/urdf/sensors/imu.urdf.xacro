@@ -26,10 +26,10 @@
                 name="gz::sim::systems::Imu">
           <initial_orientation_as_reference>false</initial_orientation_as_reference>
           <!--frame_name>imu_link</frame_name-->
-          <ros>
+          <!--ros>
             <namespace>/demo</namespace>
             <remapping>~/out:=data</remapping>
-          </ros>
+          </ros-->
         </plugin>        
 
         <always_on>true</always_on>

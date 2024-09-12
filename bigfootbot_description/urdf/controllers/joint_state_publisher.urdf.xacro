@@ -3,20 +3,22 @@
   <xacro:macro name="joint_state_publisher" params="front_left_whl_joint front_right_whl_joint 
                                                     rear_left_whl_joint rear_right_whl_joint">
     <gazebo>
-      <plugin name="bigfootbot_joint_state" filename="libgazebo_ros_joint_state_publisher.so">
-        <ros>
-          <remapping>~/out:=joint_states</remapping>
-        </ros>
-        <update_rate>30</update_rate>
+      <!-- JointStatePublisher class reference: https://gazebosim.org/api/sim/6/classignition_1_1gazebo_1_1systems_1_1JointStatePublisher.html 
+      The JointStatePub system publishes state information for a model. The published message type is gz::msgs::Model, and the publication 
+      topic is determined by the <topic> parameter.-->
+      <plugin filename="gz-sim-joint-state-publisher-system"
+              name="gz::sim::systems::JointStatePublisher">        
+        
+        <!-- Name of the topic to publish to. This parameter is optional, and if not provided, the joint state will be 
+        published to "/world/<world_name>/model/<model_name>/state" as gz.msgs.Model -->
+        <topic>joint_states</topic>
+
+        <!-- Name of a joint to publish. This parameter can be specified multiple times, and is optional. 
+        All joints in a model will be published if joint names are not specified. -->
         <joint_name>${front_left_whl_joint}</joint_name>
         <joint_name>${front_right_whl_joint}</joint_name>
         <joint_name>${rear_left_whl_joint}</joint_name>
-        <joint_name>${rear_right_whl_joint}</joint_name>
-        
-        <!--joint_name>drivewhl_fl_joint</joint_name>
-        <joint_name>drivewhl_fr_joint</joint_name>
-        <joint_name>drivewhl_rl_joint</joint_name>
-        <joint_name>drivewhl_rr_joint</joint_name-->
+        <joint_name>${rear_right_whl_joint}</joint_name>        
       </plugin>   
     </gazebo>
   </xacro:macro>

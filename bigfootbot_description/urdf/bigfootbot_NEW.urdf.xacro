@@ -23,7 +23,7 @@
   <xacro:include filename="$(find bigfootbot_description)/urdf/sensors/gps.urdf.xacro"/>
 
   <!-- Drive controller (Arduino + L298N motor driver) for ros2_control -->
-  <xacro:include filename="$(find bigfootbot_description)/urdf/controllers/bfb_ros2_control.xacro"/>
+  <!--xacro:include filename="$(find bigfootbot_description)/urdf/controllers/bfb_ros2_control.xacro"/-->
 
   <!-- Drive controller (Gazebo plugin) -->
   <xacro:include filename="$(find bigfootbot_description)/urdf/controllers/skid_steer.urdf.xacro"/>

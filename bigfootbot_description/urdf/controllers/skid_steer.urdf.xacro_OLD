@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="diff_drive_controller" params="wheel_separation wheel_radius wheel_torque">
+    <gazebo>
+      <!-- Drive controller + wheel odometry -->      
+      <plugin name="bigfootbot_skid_drive" filename="libgazebo_ros_diff_drive.so">      
+        <update_rate>30</update_rate>
+
+        <!-- Number of wheel pairs -->
+        <num_wheel_pairs>2</num_wheel_pairs>
+          
+        <!-- Front pair of wheels -->
+        <left_joint>drivewhl_fl_joint</left_joint>
+        <right_joint>drivewhl_fr_joint</right_joint>
+
+        <!-- Rear pair of wheels -->
+        <left_joint>drivewhl_rl_joint</left_joint>
+        <right_joint>drivewhl_rr_joint</right_joint>
+
+        <!-- Kinematics -->
+        <wheel_separation>${wheel_separation}</wheel_separation> <!-- front wheel pair-->
+        <wheel_separation>${wheel_separation}</wheel_separation> <!-- rear wheel pair-->
+
+        <wheel_diameter>${wheel_radius * 2}</wheel_diameter> <!-- front wheels -->
+        <wheel_diameter>${wheel_radius * 2}</wheel_diameter> <!-- rear wheels -->
+
+        <!-- limits -->
+        <max_wheel_torque>${wheel_torque}</max_wheel_torque> <!-- Maximum torque which the wheels can produce, in Nm, defaults to 5 Nm -->
+        <max_wheel_acceleration>1.0</max_wheel_acceleration>
+
+        <!-- Receive velocity commands on this ROS topic -->
+        <command_topic>cmd_vel</command_topic>
+
+        <!-- Topic to publish nav_msgs/Odometry messages, defaults to `odom` -->
+        <odometry_topic>odom</odometry_topic>
+
+        <!-- Odometry frame, defaults to `odom` -->
+        <odometry_frame>odom</odometry_frame>
+
+        <!-- Robot frame to calculate odometry from, defaults to `base_footprint` -->
+        <robot_base_frame>base_footprint</robot_base_frame>
+
+        <!-- output -->
+        <!-- When false, publish no wheel odometry data to a ROS topic -->
+        <publish_odom>true</publish_odom>
+
+        <!-- When true, publish coordinate transform from odom to base_footprint -->
+        <!-- I usually use the robot_localization package to publish this transform -->   
+        <publish_odom_tf>false</publish_odom_tf>
+        
+        <!-- When true, publish coordinate transform from base_link to the wheels, defaults to false -->
+        <!-- The robot_state_publisher package is often used to publish this transform -->   
+        <publish_wheel_tf>false</publish_wheel_tf>
+
+        <!-- Set to true to publish sensor_msgs/JointState on /joint_states for the wheel joints, defaults to false -->
+        <!-- publishWheelJointState>true</publishWheelJointState -->
+
+        <!-- Odometry source, 0 for ENCODER, 1 for WORLD, defaults to WORLD -->
+        <odometry_source>1</odometry_source>
+
+        <!-- Change the ROS topic we will publish the odometry data to -->
+        <ros>
+            <remapping> odom:=wheel/odometry</remapping>
+            <!--remapping> /gazebo/cmd_vel:=/cmd_vel </remapping--> <!-- we remap to /cmd_vel because the node teleop_twist_joy_node
+                                                                    publishes to the topic /cmd_vel -->
+            <!-- Set namespace -->
+            <!--namespace>/gazebo</namespace-->
+
+            <!-- Remap default topics -->
+            <!--argument>cmd_vel:=cmd_demo</argument>
+            <argument>odom:=odom_demo</argument-->
+        </ros>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+</robot>

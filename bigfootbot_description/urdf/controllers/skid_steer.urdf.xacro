@@ -3,74 +3,60 @@
   <xacro:macro name="diff_drive_controller" params="wheel_separation wheel_radius wheel_torque">
     <gazebo>
       <!-- Drive controller + wheel odometry -->
-      <plugin name="bigfootbot_skid_drive" filename="libgazebo_ros_diff_drive.so">
+      <!-- DiffDrive Class Reference https://gazebosim.org/api/gazebo/6/classignition_1_1gazebo_1_1systems_1_1DiffDrive.html -->      
+      <plugin filename="gz-sim-diff-drive-system"
+              name="gz::sim::systems::DiffDrive">
 
-        <update_rate>30</update_rate>
-
-        <!-- Number of wheel pairs -->
-        <num_wheel_pairs>2</num_wheel_pairs>
-          
         <!-- Front pair of wheels -->
+        <!-- Name of a joint that controls a left wheel. This element can appear multiple times, and must 
+        appear at least once-->
         <left_joint>drivewhl_fl_joint</left_joint>
+        <!-- Name of a joint that controls a right wheel. This element can appear multiple times, and must 
+        appear at least once-->
         <right_joint>drivewhl_fr_joint</right_joint>
 
         <!-- Rear pair of wheels -->
         <left_joint>drivewhl_rl_joint</left_joint>
         <right_joint>drivewhl_rr_joint</right_joint>
-
-        <!-- Kinematics -->
-        <wheel_separation>${wheel_separation}</wheel_separation> <!-- front wheel pair-->
-        <wheel_separation>${wheel_separation}</wheel_separation> <!-- rear wheel pair-->
-
-        <wheel_diameter>${wheel_radius * 2}</wheel_diameter> <!-- front wheels -->
-        <wheel_diameter>${wheel_radius * 2}</wheel_diameter> <!-- rear wheels -->
-
-        <!-- limits -->
-        <max_wheel_torque>${wheel_torque}</max_wheel_torque> <!-- Maximum torque which the wheels can produce, in Nm, defaults to 5 Nm -->
-        <max_wheel_acceleration>1.0</max_wheel_acceleration>
-
-        <!-- Receive velocity commands on this ROS topic -->
-        <command_topic>cmd_vel</command_topic>
-
-        <!-- Topic to publish nav_msgs/Odometry messages, defaults to `odom` -->
-        <odometry_topic>odom</odometry_topic>
-
-        <!-- Odometry frame, defaults to `odom` -->
-        <odometry_frame>odom</odometry_frame>
-
-        <!-- Robot frame to calculate odometry from, defaults to `base_footprint` -->
-        <robot_base_frame>base_footprint</robot_base_frame>
-
-        <!-- output -->
-        <!-- When false, publish no wheel odometry data to a ROS topic -->
-        <publish_odom>true</publish_odom>
-
-        <!-- When true, publish coordinate transform from odom to base_footprint -->
-        <!-- I usually use the robot_localization package to publish this transform -->   
-        <publish_odom_tf>false</publish_odom_tf>
         
-        <!-- When true, publish coordinate transform from base_link to the wheels, defaults to false -->
-        <!-- The robot_state_publisher package is often used to publish this transform -->   
-        <publish_wheel_tf>false</publish_wheel_tf>
+        <!-- KINEMATICS -->
+        <!-- Distance between wheels, in meters. This element is optional, although it is recommended to be included 
+        with an appropriate value. The default value is 1.0m. -->
+        <!-- variable 'wheel_separation' is the parameter passed to this macro -->
+        <wheel_separation>${wheel_separation}</wheel_separation>           
+        <!-- Wheel radius in meters. This element is optional, although it is recommended to be included 
+        with an appropriate value. The default value is 0.2m. -->
+        <wheel_radius>${wheel_radius}</wheel_radius>  
+                
+        <!--  Odometry publication frequency. This element is optional, and the default value is 50Hz. -->
+        <odom_publish_frequency>30</odom_publish_frequency>   
+        
+        <!-- Custom topic that this system will subscribe to in order to receive command velocity messages. 
+        This element if optional, and the default value is /model/{name_of_model}/cmd_vel -->
+        <!-- ROS 2 publishes messages to /cmd_vel as geometry_msgs/msg/Twist then they are bridged by ros_gz_bridge 
+        to Gazebo as gz.msgs.Twist -->
+        <topic>cmd_vel</topic>        
 
-        <!-- Set to true to publish sensor_msgs/JointState on /joint_states for the wheel joints, defaults to false -->
-        <!-- publishWheelJointState>true</publishWheelJointState -->
+        <!-- Custom topic on which this system will publish odometry messages. This element is optional, and the 
+        default value is /model/{name_of_model}/odometry -->
+        <!-- Plugin publishes odometry messages as gz.msgs.Odometry that then bridged by ros_gz_bridge to ROS 2 as nav_msgs/msg/Odometry -->
+        <odom_topic>odom</odom_topic>
+        
+        <!-- Custom topic on which this system will publish the transform from frame_id to child_frame_id. This element is optional, 
+        and the default value is /model/{name_of_model}/tf -->
+        <tf_topic>tf</tf_topic>
+        
+        <!-- Custom frame_id field that this system will use as the origin of the odometry transform in both the <tf_topic> ignition.msgs.Pose_V message 
+        and the <odom_topic> ignition.msgs.Odometry message. This element if optional, and the default value is {name_of_model}/odom.-->
+        <frame_id>odom</frame_id>  
 
-        <!-- Odometry source, 0 for ENCODER, 1 for WORLD, defaults to WORLD -->
-        <odometry_source>1</odometry_source>
+        <!-- Custom child_frame_id that this system will use as the target of the odometry transform in both the <tf_topic> ignition.msgs.Pose_V message 
+        and the <odom_topic> ignition.msgs.Odometry message. This element if optional, and the default value is {name_of_model}/{name_of_link}. -->
+        <child_frame_id>base_footprint</child_frame_id>
 
-        <!-- Change the ROS topic we will publish the odometry data to -->
-        <ros>
-            <remapping> odom:=wheel/odometry</remapping>
-            <!--remapping> /gazebo/cmd_vel:=/cmd_vel </remapping--> <!-- we remap to /cmd_vel because the node teleop_twist_joy_node
-                                                                    publishes to the topic /cmd_vel -->
-            <!-- Set namespace -->
-            <!--namespace>/gazebo</namespace-->
-
-            <!-- Remap default topics -->
-            <!--argument>cmd_vel:=cmd_demo</argument>
-            <argument>odom:=odom_demo</argument-->
-        </ros>
+        <!-- LIMITS -->
+        <!-- Sets the maximum linear acceleration. Overrides <max_acceleration> -->
+        <!--max_linear_acceleration>0.033</max_linear_acceleration-->
       </plugin>
     </gazebo>
   </xacro:macro>

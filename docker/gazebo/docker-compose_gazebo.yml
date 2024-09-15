@@ -44,10 +44,10 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
       ## Mount launch files to be able to update them inside the container without rebuilding the image
-      # package bigfootbot_gazebo
+      # launch files from the package bigfootbot_gazebo
       - ../../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
 
-       # package bigfootbot_description
+       # launch files from the package bigfootbot_description
       - ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
 
       # Mount folder with URDF files to be able to update URDFs on-the-fly in the running container,

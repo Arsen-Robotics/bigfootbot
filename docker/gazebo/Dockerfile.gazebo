@@ -11,9 +11,12 @@
 # `docker run -it --rm \
 #   -e DISPLAY \
 #   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-#    --name humble_gazebo_container \
+#    --name humble_gazebo_cntr \
 #    humble_gazebo:latest \
 #    gazebo /usr/share/gazebo-11/worlds/seesaw.world
+# 
+# Run container with NVIDIA GPU support:
+# docker run -it --rm  --gpus all -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:rw --name humble_gazebo_cntr humble_gazebo:latest bash
 #
 # To connect to a running container: 
 #   `docker exec -it humble_gazebo_cntr bash`

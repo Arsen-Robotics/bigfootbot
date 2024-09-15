@@ -8,6 +8,9 @@
 #  --gpus all (not needed when container is run on WSL2)
 #  -e QT_X11_NO_MITSHM=1 (it used to be a fix for a bug with QT and OpenGL)
 #
+# Run on the host machine:
+# `xhost +local:root` - allow apps tunning as root in the container to connect to the host's X server
+#
 # `docker run -it --rm \
 #   -e DISPLAY \
 #   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
@@ -68,10 +71,10 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update \
     # Bug/problem fix with gazebo gui black screen (dated July 2023)
     # software-properties-common - for `add-apt-repository` command
-    && apt-get install -y \     
-    software-properties-common \     
-    && add-apt-repository ppa:kisak/kisak-mesa \
-    && apt upgrade -y \    
+    #&& apt-get install -y \     
+    #software-properties-common \     
+    #&& add-apt-repository ppa:kisak/kisak-mesa \
+    #&& apt upgrade -y \    
     # Install ROS Gazebo
     && apt-get install -y \
     ros-${ROS_DISTRO}-ros-gz \

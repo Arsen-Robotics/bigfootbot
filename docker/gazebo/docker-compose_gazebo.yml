@@ -58,14 +58,21 @@ services:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
                           # X11 server for GUI applications.
       #- QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
+      #- NVIDIA_VISIBLE_DEVICES=all # alternative to `devices` below
+                                    # controls which GPUs will be made accessible inside the container
+      #- NVIDIA_DRIVER_CAPABILITIES=all # alternative to `capabilities` below
+                                        # Controls which driver libraries/binaries will be mounted inside the container.
 
     # Enable GPU access for the container NB! Only for NVIDIA GPUs
-    #deploy:
-    #  resources:
-    #    reservations:
-    #      devices:
-    #        - driver: nvidia
-    #          capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia 
+              device_ids: ['0'] # The ID of the GPU to be made accessible inside the container
+    #          count: 1
+              capabilities: ['compute','video','graphics','utility'] # Controls which driver libraries/binaries will 
+                                                                     # be mounted inside the container.
 
     #runtime: nvidia
 

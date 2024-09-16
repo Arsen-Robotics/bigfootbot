@@ -36,7 +36,10 @@ services:
         # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
         - BASE_IMAGE=ros:humble-ros-base
         
-        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        # Build the docker image for ONLY Jetson device (Nvidia GPU-accelerated)
+        # nvcr.io is the NVIDIA NGC container registry containing pre-built, GPU-accelerated 
+        # Docker containers
+        # It's similar to Docker Hub but tailored for NVIDIA's GPU-accelerated containers.
         #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
       
     # The name of the Docker image to be created from the Dockerfile

@@ -19,7 +19,13 @@
 #    gazebo /usr/share/gazebo-11/worlds/seesaw.world
 # 
 # Run container with NVIDIA GPU support:
-# docker run -it --rm  --gpus all -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:rw --name humble_gazebo_cntr humble_gazebo:latest bash
+# docker run -it --rm --runtime=nvidia \
+#   -e DISPLAY \
+#   -e NVIDIA_VISIBLE_DEVICES=all \
+#   -e NVIDIA_DRIVER_CAPABILITIES=all \
+#   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+#   --name humble_gazebo_cntr humble_gazebo:latest bash
+
 #
 # To connect to a running container: 
 #   `docker exec -it humble_gazebo_cntr bash`
@@ -66,7 +72,7 @@ SHELL ["/bin/bash", "-c"]
 
 # Install ROS Gazebo
 # ROS Gazebo repository: https://github.com/gazebosim/ros_gz
-# By the 12.07.2023 binaries only of Gazebo Fortress existed for ROS2 Humble
+# As of September 2024, only binaries of Gazebo Fortress existed for ROS2 Humble.
 # We install binaries ros-humble-ros-gz, i.e. Gazebo Fortress (So we have ROS2 Humble + Gazebo Fortress)
 RUN apt-get update \
     # Bug/problem fix with gazebo gui black screen (dated July 2023)

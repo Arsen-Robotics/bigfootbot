@@ -2,8 +2,8 @@
 #   `docker exec -it bfb_nav_cntr bash`
 # ------------------------------------
 
+ARG BASE_IMAGE="ros:humble-ros-base"
 
-ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 # Zero interaction while installing or upgrading the system via apt. 
@@ -26,12 +26,20 @@ ENV SHELL=/bin/bash
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"]
 
+# Install Nav2 and SLAM Toolbox binaries
+RUN apt-get update \    
+    && apt-get install -y \
+    ros-${ROS_DISTRO}-navigation2 \
+    ros-${ROS_DISTRO}-nav2-bringup \
+    ros-${ROS_DISTRO}-slam-toolbox \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
 # Create ROS2 working directory
 RUN mkdir -p ${ROS_WS}/src
 
-# -------- Build and install packages --------
+# -------- BEGIN Build and install ROS 2 packages from sources --------
 COPY bigfootbot_navigation ${ROS_WS}/src/bigfootbot_navigation
-
 
 # Install dependencies for all packages in the workspace
 RUN apt-get update \
@@ -45,6 +53,7 @@ RUN apt-get update \
     && colcon build --symlink-install \  
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+# --- END Build and install ROS 2 packages from sources' ---
 
 # Setup entrypoint
 COPY docker/ros_entrypoint.sh /

@@ -57,8 +57,15 @@ services:
 
     stdin_open: true # docker run -i
     tty: true        # docker run -t
-
-    #network_mode: "host"
     
     # Overload the default command executed by the container
     #command: ros2 run motor_control roboclaw_control_node
+
+    #network_mode: "host"
+    networks:
+      bfb_network:
+
+networks:
+  bfb_network:
+    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+                   # instead of creating a new one for this project (docker-compose_gazebo.yml)

@@ -105,6 +105,8 @@ class RoboclawControlNode(Node):
             roboclaw_state.current_1 = current1_val
             roboclaw_state.current_2 = current2_val
 
+            self.get_logger().info(f"{roboclaw_state.current_1} {roboclaw_state.current_2}")
+
             # Main battery voltage
             # main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
             main_battery_voltage_val = self.rclaw.read_main_battery_voltage(self.address)
@@ -112,6 +114,8 @@ class RoboclawControlNode(Node):
             roboclaw_state.main_battery_voltage = main_battery_voltage_val / 10
 
             self.publish_battery_state(roboclaw_state.main_battery_voltage)
+
+            self.get_logger().info(f"{roboclaw_state.main_battery_voltage}")
 
             # Temperature
             # temp1_val = self.rclaw.ReadTemp(self.address)
@@ -121,6 +125,8 @@ class RoboclawControlNode(Node):
             # roboclaw_state.temp1 = temp1_val[1] / 10
             roboclaw_state.temp1 = temp1_val / 10
             # roboclaw_state.temp2 = temp2_val[1] / 10
+
+            self.get_logger().info(f"{roboclaw_state.temp1}")
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)

@@ -167,6 +167,8 @@ class RoboclawControlNode(Node):
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
+            self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
+
             # Send motor commands to Roboclaw
             if left_motor_command < 0:
                 # self.rclaw.BackwardM1(self.address, abs(left_motor_command))

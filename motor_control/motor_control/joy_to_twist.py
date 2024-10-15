@@ -94,34 +94,34 @@ class JoyToTwistNode(Node):
 
     def command_callback(self, msg):
         try:
-            if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
-                twist_msg = Twist()
+            # if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
+            twist_msg = Twist()
 
-                # Logitech quadrant provides values between -1 and +1,
-                # so it is required to scale them to the range of 0 to +1
-                # because this axis is used only for forward motion
-                twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
+            # Logitech quadrant provides values between -1 and +1,
+            # so it is required to scale them to the range of 0 to +1
+            # because this axis is used only for forward motion
+            twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
 
-                # Absolute linear speed
-                abs_linear_speed = abs(twist_msg.linear.x)
+            # Absolute linear speed
+            abs_linear_speed = abs(twist_msg.linear.x)
 
-                # Compute dynamic angular scale (inverse relationship with linear speed)
-                dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
+            # Compute dynamic angular scale (inverse relationship with linear speed)
+            dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
 
-                # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
-                min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
-                dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
+            # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
+            min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
+            dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
 
-                max_angular_scale = self.angular_scale * 0.75 # 75% of the max scale as maximum value
-                dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
+            max_angular_scale = self.angular_scale * 0.75 # 75% of the max scale as maximum value
+            dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
 
-                # Apply the dynamic angular scale to the angular velocity
-                twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
+            # Apply the dynamic angular scale to the angular velocity
+            twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
 
-                # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
-                # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+            # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
+            # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-                self.twist_publisher.publish(twist_msg)
+            self.twist_publisher.publish(twist_msg)
 
             if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
                 string_msg = String()

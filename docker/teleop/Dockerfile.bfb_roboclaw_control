@@ -65,8 +65,7 @@ RUN apt-get update \
     # with --symlink-install you don't have to rebuild the package 
     # when Python source file is changed
     # NB! package needs to be rebuilt if a new file is added to the package
-    && colcon build --symlink-install \  
-    && colcon build \
+    && colcon build --symlink-install \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

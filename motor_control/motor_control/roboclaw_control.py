@@ -2,6 +2,9 @@
 # Download the library: http://downloads.basicmicro.com/code/roboclaw_python.zip
 # Unzip the library, move roboclaw_python folder to ~/.local/lib/python3.*/site-packages
 
+
+# THIS LINE WAS ADDED on 19.10 at 15:41
+
 import rclpy
 from rclpy.node import Node
 # from roboclaw_python.roboclaw_3 import Roboclaw

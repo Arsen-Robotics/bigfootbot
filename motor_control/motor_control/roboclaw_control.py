@@ -63,7 +63,7 @@ class RoboclawControlNode(Node):
             10)
 
         # Timer will call publish_roboclaw_state function every 0.6 sec
-        self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
+        # self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
 
         # self.test_timer = self.create_timer(0.05, self.command_callback)
 
@@ -170,21 +170,21 @@ class RoboclawControlNode(Node):
             self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
 
             # Send motor commands to Roboclaw
-            if left_motor_command < 0:
-                # self.rclaw.BackwardM1(self.address, abs(left_motor_command))
-                self.rclaw.backward_m1(self.address, abs(left_motor_command))
+            # if left_motor_command < 0:
+            #     # self.rclaw.BackwardM1(self.address, abs(left_motor_command))
+            #     self.rclaw.backward_m1(self.address, abs(left_motor_command))
 
-            if right_motor_command < 0:
-                # self.rclaw.BackwardM2(self.address, abs(right_motor_command))
-                self.rclaw.backward_m2(self.address, abs(right_motor_command))
+            # if right_motor_command < 0:
+            #     # self.rclaw.BackwardM2(self.address, abs(right_motor_command))
+            #     self.rclaw.backward_m2(self.address, abs(right_motor_command))
 
-            if left_motor_command >= 0:
-                # self.rclaw.ForwardM1(self.address, left_motor_command)
-                self.rclaw.forward_m1(self.address, left_motor_command)
+            # if left_motor_command >= 0:
+            #     # self.rclaw.ForwardM1(self.address, left_motor_command)
+            #     self.rclaw.forward_m1(self.address, left_motor_command)
 
-            if right_motor_command >= 0:
-                # self.rclaw.ForwardM2(self.address, right_motor_command)
-                self.rclaw.forward_m2(self.address, right_motor_command)
+            # if right_motor_command >= 0:
+            #     # self.rclaw.ForwardM2(self.address, right_motor_command)
+            #     self.rclaw.forward_m2(self.address, right_motor_command)
 
         # Even though the connection is checked in the connect_to_roboclaw function,
         # the connection can be lost while program is communicating with Roboclaw,

@@ -198,10 +198,11 @@ class Roboclaw:
                 ack = self.ser.read(1)
                 if ack == b'\xFF':
                     # print("Drive command acknowledged (0xFF).")
+                    print(f"test")
                     return True
                 else:
                     tries -= 1
-                    # print(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
+                    print(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
                     
             # print("Failed to send drive command after multiple attempts.")
             return False

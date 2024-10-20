@@ -63,7 +63,7 @@ class RoboclawControlNode(Node):
             10)
 
         # Timer will call publish_roboclaw_state function every 0.6 sec
-        self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
+        # self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
 
         # self.test_timer = self.create_timer(0.05, self.command_callback)
 
@@ -161,7 +161,7 @@ class RoboclawControlNode(Node):
                 return
             
             # self.get_logger().info(f"{msg}")
-            # self.get_logger().info(f"{self.rclaw.ser.out_waiting}")
+            self.get_logger().info(f"{self.rclaw.ser.out_waiting}")
 
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]

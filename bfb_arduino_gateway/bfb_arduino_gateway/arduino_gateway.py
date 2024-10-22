@@ -39,7 +39,7 @@ class ArduinoGatewayNode(Node):
         else:
             if self.arduino_connected == False or self.arduino_connected == None:
                 self.arduino_connected = True
-                self.get_logger().info("Arduino Mega connected")
+                self.get_logger().warning("Arduino Mega connected")
 
         return self.arduino_connected
 

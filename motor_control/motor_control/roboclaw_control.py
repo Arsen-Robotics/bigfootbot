@@ -5,7 +5,10 @@
 import rclpy
 from rclpy.node import Node
 # from roboclaw_python.roboclaw_3 import Roboclaw
-from new_roboclaw_driver.roboclaw import Roboclaw
+#from new_roboclaw_driver.roboclaw import Roboclaw
+from .roboclaw import Roboclaw
+# import importlib
+# importlib.reload(Roboclaw)
 from geometry_msgs.msg import Twist
 import math
 from bfb_interfaces.msg import RoboclawState
@@ -76,7 +79,7 @@ class RoboclawControlNode(Node):
         if self.rclaw.open():
             if self.rclaw_connected == False or self.rclaw_connected == None:
                 self.rclaw_connected = True
-                self.get_logger().info("Roboclaw connected")
+                self.get_logger().warning("Roboclaw connected")
 
         else:
             if self.rclaw_connected == True or self.rclaw_connected == None:
@@ -97,36 +100,40 @@ class RoboclawControlNode(Node):
             # currents = self.rclaw.ReadCurrents(self.address)
             currents = self.rclaw.read_motor_currents(self.address)
 
-            # current1_val = currents[1] / 100
-            # current2_val = currents[2] / 100
-            current1_val = currents[0] / 100
-            current2_val = currents[1] / 100
+            if currents is not None:
+                # current1_val = currents[1] / 100
+                # current2_val = currents[2] / 100
+                current1_val = currents[0] / 100
+                current2_val = currents[1] / 100
 
-            roboclaw_state.current_1 = current1_val
-            roboclaw_state.current_2 = current2_val
+                roboclaw_state.current_1 = current1_val
+                roboclaw_state.current_2 = current2_val
 
-            self.get_logger().info(f"{roboclaw_state.current_1} {roboclaw_state.current_2}")
+            # self.get_logger().info(f"{roboclaw_state.current_1} {roboclaw_state.current_2}")
 
             # Main battery voltage
             # main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
             main_battery_voltage_val = self.rclaw.read_main_battery_voltage(self.address)
-            # roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
-            roboclaw_state.main_battery_voltage = main_battery_voltage_val / 10
 
-            self.publish_battery_state(roboclaw_state.main_battery_voltage)
+            if main_battery_voltage_val is not None:
+                # roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
+                roboclaw_state.main_battery_voltage = main_battery_voltage_val / 10
 
-            self.get_logger().info(f"{roboclaw_state.main_battery_voltage}")
+                self.publish_battery_state(roboclaw_state.main_battery_voltage)
+
+            # self.get_logger().info(f"{roboclaw_state.main_battery_voltage}")
 
             # Temperature
             # temp1_val = self.rclaw.ReadTemp(self.address)
             temp1_val = self.rclaw.read_temperature(self.address)
             # temp2_val = self.rclaw.ReadTemp2(self.address)
 
-            # roboclaw_state.temp1 = temp1_val[1] / 10
-            roboclaw_state.temp1 = temp1_val / 10
-            # roboclaw_state.temp2 = temp2_val[1] / 10
+            if temp1_val is not None:
+                # roboclaw_state.temp1 = temp1_val[1] / 10
+                roboclaw_state.temp1 = temp1_val / 10
+                # roboclaw_state.temp2 = temp2_val[1] / 10
 
-            self.get_logger().info(f"{roboclaw_state.temp1}")
+            # self.get_logger().info(f"{roboclaw_state.temp1}")
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)
@@ -161,7 +168,7 @@ class RoboclawControlNode(Node):
                 return
             
             # self.get_logger().info(f"{msg}")
-            self.get_logger().info(f"{self.rclaw.ser.out_waiting}")
+            # self.get_logger().info(f"{self.rclaw.ser.in_waiting}")
 
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]

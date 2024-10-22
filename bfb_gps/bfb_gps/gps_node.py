@@ -50,7 +50,7 @@ class GpsNode(Node):
         else:
             if self.gps_module_connected == False or self.gps_module_connected == None:
                 self.gps_module_connected = True
-                self.get_logger().info("GPS module connected")
+                self.get_logger().warning("GPS module connected")
 
         return self.gps_module_connected
         

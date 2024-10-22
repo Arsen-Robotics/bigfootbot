@@ -22,7 +22,7 @@ class Roboclaw:
         :return: True if the port was opened successfully, False otherwise.
         """
         try:
-            self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)
+            self.ser = serial.Serial(self.port, self.baudrate, timeout=0.05)
             return True
         except:
             # print(f"Failed to open port {self.port}")
@@ -182,30 +182,33 @@ class Roboclaw:
         :return: True if the command was acknowledged (0xFF), False otherwise.
         """
         try:
-            tries = self.tries
-            while tries:
-                self.ser.flushInput()  # Clear the input buffer
-                
-                # Prepare the data to send
-                data = bytes([address, command, value])
-                crc = self._crc16(data)  # Use the existing _crc16 method
-                crc_bytes = struct.pack('>H', crc)  # Convert CRC to 2-byte array
+            # tries = self.tries
+            # while tries:
+            self.ser.flushInput()  # Clear the input buffer
+            
+            # Prepare the data to send
+            data = bytes([address, command, value])
+            crc = self._crc16(data)  # Use the existing _crc16 method
+            crc_bytes = struct.pack('>H', crc)  # Convert CRC to 2-byte array
 
-                # Send the data + CRC
-                self.ser.write(data + crc_bytes)
-                
-                # Read the acknowledgment
-                ack = self.ser.read(1)
+            # Send the data + CRC
+            self.ser.write(data + crc_bytes)
+            
+            # Read the acknowledgment
+            ack = self.ser.read(1)
+            with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
                 if ack == b'\xFF':
                     # print("Drive command acknowledged (0xFF).")
-                    print(f"test")
+                    # log_file.write(f"OK\n")
                     return True
                 else:
                     tries -= 1
-                    print(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
+                    log_file.write(f"Received byte: {ack}; left tries: NONE\n")
+                    # logger.info(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
+                    return False
                     
             # print("Failed to send drive command after multiple attempts.")
-            return False
+            # return False
         
         except Exception as e:
             # print(f"Error sending drive command: {e}")

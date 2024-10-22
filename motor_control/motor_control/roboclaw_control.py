@@ -14,6 +14,7 @@ import math
 from bfb_interfaces.msg import RoboclawState
 from sensor_msgs.msg import BatteryState
 from std_msgs.msg import Float32
+import time
 
 class RoboclawControlNode(Node):
     def __init__(self):
@@ -69,6 +70,8 @@ class RoboclawControlNode(Node):
         # self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
 
         # self.test_timer = self.create_timer(0.05, self.command_callback)
+
+        self.is_running = False  # Flag to control the speed increment thread
 
     # This function tries to open a serial connection to the Roboclaw
     # If the connection succeeds or fails, it prints a message to the console
@@ -162,48 +165,90 @@ class RoboclawControlNode(Node):
         self.battery_state_publisher.publish(battery_state)
 
     def command_callback(self, msg):
-        try:
-            # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
-            if not self.connect_to_roboclaw():
-                return
+        if self.is_running:
+            return  # Prevent multiple threads from running
+
+        self.run_motor_speed_increment()
+
+        # try:
+        #     # If the Roboclaw is not connected, exit the function to avoid errors when calling Roboclaw
+        #     if not self.connect_to_roboclaw():
+        #         return
             
-            # self.get_logger().info(f"{msg}")
-            # self.get_logger().info(f"{self.rclaw.ser.in_waiting}")
+        #     # self.get_logger().info(f"{msg}")
+        #     # self.get_logger().info(f"{self.rclaw.ser.in_waiting}")
 
-            # Unpack the tuple returned by twist_to_motor_commands function into two variables
-            # left_motor_command and right_motor_command [-127, 127]
-            left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
+        #     # Unpack the tuple returned by twist_to_motor_commands function into two variables
+        #     # left_motor_command and right_motor_command [-127, 127]
+        #     left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
-            self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
+        #     self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
 
-            # Send motor commands to Roboclaw
-            if left_motor_command < 0:
-                # self.rclaw.BackwardM1(self.address, abs(left_motor_command))
-                self.rclaw.backward_m1(self.address, abs(left_motor_command))
+        #     # Send motor commands to Roboclaw
+        #     if left_motor_command < 0:
+        #         # self.rclaw.BackwardM1(self.address, abs(left_motor_command))
+        #         self.rclaw.backward_m1(self.address, abs(left_motor_command))
 
-            if right_motor_command < 0:
-                # self.rclaw.BackwardM2(self.address, abs(right_motor_command))
-                self.rclaw.backward_m2(self.address, abs(right_motor_command))
+        #     if right_motor_command < 0:
+        #         # self.rclaw.BackwardM2(self.address, abs(right_motor_command))
+        #         self.rclaw.backward_m2(self.address, abs(right_motor_command))
 
-            if left_motor_command >= 0:
-                # self.rclaw.ForwardM1(self.address, left_motor_command)
-                self.rclaw.forward_m1(self.address, left_motor_command)
+        #     if left_motor_command >= 0:
+        #         # self.rclaw.ForwardM1(self.address, left_motor_command)
+        #         self.rclaw.forward_m1(self.address, left_motor_command)
 
-            if right_motor_command >= 0:
-                # self.rclaw.ForwardM2(self.address, right_motor_command)
-                self.rclaw.forward_m2(self.address, right_motor_command)
+        #     if right_motor_command >= 0:
+        #         # self.rclaw.ForwardM2(self.address, right_motor_command)
+        #         self.rclaw.forward_m2(self.address, right_motor_command)
 
-        # Even though the connection is checked in the connect_to_roboclaw function,
-        # the connection can be lost while program is communicating with Roboclaw,
-        # so OSError exception (usually because of Input/Output error) is caught here
-        except OSError:
-            self.rclaw_connected = False
-            self.get_logger().error("Failed to open Roboclaw, retrying...")
+        # # Even though the connection is checked in the connect_to_roboclaw function,
+        # # the connection can be lost while program is communicating with Roboclaw,
+        # # so OSError exception (usually because of Input/Output error) is caught here
+        # except OSError:
+        #     self.rclaw_connected = False
+        #     self.get_logger().error("Failed to open Roboclaw, retrying...")
         
-        # All known exceptions are caught, but if some unknown exception occurs,
-        # it is caught here and printed to the console
-        except Exception as e:
-            self.get_logger().error(f"Exception 2: {e}")
+        # # All known exceptions are caught, but if some unknown exception occurs,
+        # # it is caught here and printed to the console
+        # except Exception as e:
+        #     self.get_logger().error(f"Exception 2: {e}")
+
+    def run_motor_speed_increment(self):
+        min_speed = 10
+        max_speed = 50
+        speed = min_speed
+        speed_increment = 2
+        while True:
+            try:
+                if not self.connect_to_roboclaw():
+                    return
+
+                # Send motor commands
+                if not self.rclaw.forward_m1(self.address, speed):
+                    self.get_logger().error("Failed to set M1 speed")
+                if not self.rclaw.forward_m2(self.address, speed):
+                    self.get_logger().error("Failed to set M2 speed")
+
+                self.get_logger().info(f"Setting speed to {speed}")
+
+                # Change speed incrementally
+                if speed >= max_speed:
+                    speed_increment = -2  # Decrease speed
+                elif speed <= min_speed:
+                    speed_increment = 2  # Increase speed
+
+                speed += speed_increment
+
+                time.sleep(0.04)  # Adjust as necessary for the state check interval
+
+            except Exception as e:
+                self.get_logger().error(f"Exception in speed increment thread: {e}")
+
+            finally:
+                self.is_running = False  # Reset the running flag
+                # Optionally stop the motors when done
+                self.rclaw.forward_m1(self.address, 0)
+                self.rclaw.forward_m2(self.address, 0)
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):

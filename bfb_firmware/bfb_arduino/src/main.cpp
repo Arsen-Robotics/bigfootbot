@@ -6,7 +6,7 @@ Servo panServo;
 
 // Neutral position for servos in degrees
 int tiltNeutral = 75;
-int panNeutral = 100;
+int panNeutral = 72;
 
 int lastTiltAngle = 0;
 int lastPanAngle = 0;

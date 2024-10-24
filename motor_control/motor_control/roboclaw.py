@@ -208,7 +208,7 @@ class Roboclaw:
                     return True
                 else:
                     # tries -= 1
-                    elapsed_time = time.time() - start_time
+                    # elapsed_time = time.time() - start_time
                     log_file.write(f"Received byte: {ack}; left tries: {tries}. Time: {elapsed_time}\n")
                     # logger.info(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
                     return False
@@ -260,24 +260,24 @@ class Roboclaw:
         :return: The interpreted value from the 2-byte response or None if an error occurred.
         """
         try:
-            # tries = self.tries
-            # while tries:
-            self.ser.flushInput()  # Clear the input buffer
-            self.send_read_command(address, command)  # Send the address and command
+            tries = self.tries
+            while tries:
+                self.ser.flushInput()  # Clear the input buffer
+                self.send_read_command(address, command)  # Send the address and command
 
-            data = self.ser.read(2)  # Read 2 bytes of data
-            crc_received = self.read_crc()  # Read the CRC
-            crc_input = bytes([address, command]) + data  # Combine address, command, and data for CRC validation
+                data = self.ser.read(2)  # Read 2 bytes of data
+                crc_received = self.read_crc()  # Read the CRC
+                crc_input = bytes([address, command]) + data  # Combine address, command, and data for CRC validation
 
-            if len(data) == 2 and self._validate_crc(crc_input, crc_received):
-                return struct.unpack('>H', data)[0] # Unpack as an unsigned short
-            else:
-                # tries -= 1
-                # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 2. Remaining tries: {tries}")  # Debugging
-                return None
+                if len(data) == 2 and self._validate_crc(crc_input, crc_received):
+                    return struct.unpack('>H', data)[0] # Unpack as an unsigned short
+                else:
+                    tries -= 1
+                    # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 2. Remaining tries: {tries}")  # Debugging
+                    # return None
 
             # print("Failed to read 2-byte command after multiple attempts.")
-            # return None
+            return None
         
         except Exception as e:
             # print(f"Error reading 2-byte command: {e}")
@@ -293,24 +293,24 @@ class Roboclaw:
         """
 
         try:
-            # tries = self.tries
-            # while tries:
-            self.ser.flushInput()  # Clear the input buffer
-            self.send_read_command(address, command)  # Send the address and command
+            tries = self.tries
+            while tries:
+                self.ser.flushInput()  # Clear the input buffer
+                self.send_read_command(address, command)  # Send the address and command
 
-            data = self.ser.read(4)  # Read 4 bytes of data
-            crc_received = self.read_crc()  # Read the CRC
-            crc_input = bytes([address, command]) + data  # Combine address, command, and data for CRC validation
+                data = self.ser.read(4)  # Read 4 bytes of data
+                crc_received = self.read_crc()  # Read the CRC
+                crc_input = bytes([address, command]) + data  # Combine address, command, and data for CRC validation
 
-            if len(data) == 4 and self._validate_crc(crc_input, crc_received):
-                return struct.unpack('>hh', data) # Unpack as two signed shorts
-            else:
-                # tries -= 1
-                # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 4. Remaining tries: {tries}")  # Debugging
-                return None
+                if len(data) == 4 and self._validate_crc(crc_input, crc_received):
+                    return struct.unpack('>hh', data) # Unpack as two signed shorts
+                else:
+                    tries -= 1
+                    # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 4. Remaining tries: {tries}")  # Debugging
+                    # return None
 
             # print("Failed to read 4-byte command after multiple attempts.")
-            # return None
+            return None
 
         except Exception as e:
             # print(f"Error reading 4-byte command: {e}")

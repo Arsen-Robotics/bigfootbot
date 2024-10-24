@@ -47,11 +47,13 @@ services:
     image: bfb_roboclaw_control:latest
 
     # The name to be given to the container created from the image
-    container_name: bfb_roboclaw_control_container
+    container_name: bfb_roboclaw_control_cntr
 
     # Map all devices from host to container
     volumes:
       - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
 
     privileged: true
 
@@ -79,7 +81,11 @@ services:
     image: bfb_joy_to_twist:latest
 
     # The name to be given to the container created from the image
-    container_name: bfb_joy_to_twist_container
+    container_name: bfb_joy_to_twist_cntr
+
+    volumes:
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
 
     stdin_open: true # docker run -i
     tty: true        # docker run -t
@@ -105,7 +111,7 @@ services:
     image: bfb_foxglove_bridge:latest
 
     # The name to be given to the container created from the image
-    container_name: bfb_foxglove_bridge_container
+    container_name: bfb_foxglove_bridge_cntr
 
     stdin_open: true # docker run -i
     tty: true        # docker run -t
@@ -136,11 +142,13 @@ services:
     image: bfb_gps:latest
 
     # The name to be given to the container created from the image
-    container_name: bfb_gps_container
+    container_name: bfb_gps_cntr
 
     # Map all devices from host to container
     volumes:
       - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
 
     privileged: true
 
@@ -168,11 +176,13 @@ services:
     image: bfb_arduino_gateway:latest
 
     # The name to be given to the container created from the image
-    container_name: bfb_arduino_gateway_container
+    container_name: bfb_arduino_gateway_cntr
 
     # Map all devices from host to container
     volumes:
       - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../bfb_arduino_gateway/bfb_arduino_gateway:/ros2_ws/src/bfb_arduino_gateway/bfb_arduino_gateway
 
     privileged: true
 

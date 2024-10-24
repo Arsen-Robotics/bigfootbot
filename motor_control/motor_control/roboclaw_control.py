@@ -5,12 +5,16 @@
 import rclpy
 from rclpy.node import Node
 # from roboclaw_python.roboclaw_3 import Roboclaw
-from new_roboclaw_driver.roboclaw import Roboclaw
+#from new_roboclaw_driver.roboclaw import Roboclaw
+from .roboclaw import Roboclaw
+# import importlib
+# importlib.reload(Roboclaw)
 from geometry_msgs.msg import Twist
 import math
 from bfb_interfaces.msg import RoboclawState
 from sensor_msgs.msg import BatteryState
 from std_msgs.msg import Float32
+import time
 
 class RoboclawControlNode(Node):
     def __init__(self):
@@ -21,8 +25,8 @@ class RoboclawControlNode(Node):
         self.max_rpm = 177.5
         self.max_motor_command = 126
 
-        self.comport = "/dev/roboclaw"
-        self.baudrate = 38400
+        self.comport = "/dev/ttyS0"
+        self.baudrate = 57600
 
         self.rclaw = Roboclaw(self.comport, self.baudrate)
 
@@ -62,10 +66,8 @@ class RoboclawControlNode(Node):
             'wheel_speed',
             10)
 
-        # Timer will call publish_roboclaw_state function every 0.6 sec
-        self.timer = self.create_timer(0.6, self.publish_roboclaw_state)
-
-        # self.test_timer = self.create_timer(0.05, self.command_callback)
+        # Timer will call publish_roboclaw_state function every 1.1 sec
+        self.timer = self.create_timer(1.1, self.publish_roboclaw_state)
 
     # This function tries to open a serial connection to the Roboclaw
     # If the connection succeeds or fails, it prints a message to the console
@@ -76,7 +78,7 @@ class RoboclawControlNode(Node):
         if self.rclaw.open():
             if self.rclaw_connected == False or self.rclaw_connected == None:
                 self.rclaw_connected = True
-                self.get_logger().info("Roboclaw connected")
+                self.get_logger().warning("Roboclaw connected")
 
         else:
             if self.rclaw_connected == True or self.rclaw_connected == None:
@@ -97,30 +99,40 @@ class RoboclawControlNode(Node):
             # currents = self.rclaw.ReadCurrents(self.address)
             currents = self.rclaw.read_motor_currents(self.address)
 
-            # current1_val = currents[1] / 100
-            # current2_val = currents[2] / 100
-            current1_val = currents[0] / 100
-            current2_val = currents[1] / 100
+            if currents is not None:
+                # current1_val = currents[1] / 100
+                # current2_val = currents[2] / 100
+                current1_val = currents[0] / 100
+                current2_val = currents[1] / 100
 
-            roboclaw_state.current_1 = current1_val
-            roboclaw_state.current_2 = current2_val
+                roboclaw_state.current_1 = current1_val
+                roboclaw_state.current_2 = current2_val
+
+            # self.get_logger().info(f"{roboclaw_state.current_1} {roboclaw_state.current_2}")
 
             # Main battery voltage
             # main_battery_voltage_val = self.rclaw.ReadMainBatteryVoltage(self.address)
             main_battery_voltage_val = self.rclaw.read_main_battery_voltage(self.address)
-            # roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
-            roboclaw_state.main_battery_voltage = main_battery_voltage_val / 10
 
-            self.publish_battery_state(roboclaw_state.main_battery_voltage)
+            if main_battery_voltage_val is not None:
+                # roboclaw_state.main_battery_voltage = main_battery_voltage_val[1] / 10
+                roboclaw_state.main_battery_voltage = main_battery_voltage_val / 10
+
+                self.publish_battery_state(roboclaw_state.main_battery_voltage)
+
+            # self.get_logger().info(f"{roboclaw_state.main_battery_voltage}")
 
             # Temperature
             # temp1_val = self.rclaw.ReadTemp(self.address)
             temp1_val = self.rclaw.read_temperature(self.address)
             # temp2_val = self.rclaw.ReadTemp2(self.address)
 
-            # roboclaw_state.temp1 = temp1_val[1] / 10
-            roboclaw_state.temp1 = temp1_val / 10
-            # roboclaw_state.temp2 = temp2_val[1] / 10
+            if temp1_val is not None:
+                # roboclaw_state.temp1 = temp1_val[1] / 10
+                roboclaw_state.temp1 = temp1_val / 10
+                # roboclaw_state.temp2 = temp2_val[1] / 10
+
+            # self.get_logger().info(f"{roboclaw_state.temp1}")
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)
@@ -155,11 +167,13 @@ class RoboclawControlNode(Node):
                 return
             
             # self.get_logger().info(f"{msg}")
-            # self.get_logger().info(f"{self.rclaw.ser.out_waiting}")
+            # self.get_logger().info(f"{self.rclaw.ser.in_waiting}")
 
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
+
+            self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
 
             # Send motor commands to Roboclaw
             if left_motor_command < 0:
@@ -189,6 +203,41 @@ class RoboclawControlNode(Node):
         # it is caught here and printed to the console
         except Exception as e:
             self.get_logger().error(f"Exception 2: {e}")
+
+    # def run_motor_speed_increment(self):
+    #     min_speed = 10
+    #     max_speed = 50
+    #     speed = min_speed
+    #     speed_increment = 2
+
+    #     while True:
+    #         try:
+    #             # Send motor commands
+    #             if not self.rclaw.forward_m1(self.address, speed):
+    #                 self.get_logger().error("Failed to set M1 speed")
+    #             if not self.rclaw.forward_m2(self.address, speed):
+    #                 self.get_logger().error("Failed to set M2 speed")
+
+    #             self.get_logger().info(f"Setting speed to {speed}")
+
+    #             # Change speed incrementally
+    #             if speed >= max_speed:
+    #                 speed_increment = -2  # Decrease speed
+    #             elif speed <= min_speed:
+    #                 speed_increment = 2  # Increase speed
+
+    #             speed += speed_increment
+
+    #             time.sleep(0.04)  # Adjust as necessary for the state check interval
+
+    #         except Exception as e:
+    #             self.get_logger().error(f"Exception in speed increment thread: {e}")
+
+    #         finally:
+    #             self.is_running = False  # Reset the running flag
+    #             # Optionally stop the motors when done
+    #             self.rclaw.forward_m1(self.address, 0)
+    #             self.rclaw.forward_m2(self.address, 0)
 
     # Convert a Twist message to motor commands and return them as a tuple (left, right)
     def twist_to_motor_commands(self, msg):

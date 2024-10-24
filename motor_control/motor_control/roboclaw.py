@@ -1,9 +1,10 @@
 import serial
 import struct
 from .commands import Cmd
+import time
 
 class Roboclaw:
-    def __init__(self, port, baudrate, tries=3):
+    def __init__(self, port, baudrate, tries=2):
         """
         Initializes the Roboclaw class with the specified serial port and baud rate.
         
@@ -22,7 +23,7 @@ class Roboclaw:
         :return: True if the port was opened successfully, False otherwise.
         """
         try:
-            self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)
+            self.ser = serial.Serial(self.port, baudrate=self.baudrate, timeout=0.01)
             return True
         except:
             # print(f"Failed to open port {self.port}")
@@ -182,29 +183,41 @@ class Roboclaw:
         :return: True if the command was acknowledged (0xFF), False otherwise.
         """
         try:
-            tries = self.tries
-            while tries:
-                self.ser.flushInput()  # Clear the input buffer
-                
-                # Prepare the data to send
-                data = bytes([address, command, value])
-                crc = self._crc16(data)  # Use the existing _crc16 method
-                crc_bytes = struct.pack('>H', crc)  # Convert CRC to 2-byte array
+            start_time = time.time()
+            self.ser.flushInput()  # Clear the input buffer
 
-                # Send the data + CRC
-                self.ser.write(data + crc_bytes)
-                
-                # Read the acknowledgment
-                ack = self.ser.read(1)
+            # Prepare the data to send
+            data = bytes([address, command, value])
+            crc = self._crc16(data)  # Use the existing _crc16 method
+            crc_bytes = struct.pack('>H', crc)  # Convert CRC to 2-byte array
+            
+            # tries = self.tries
+            # while tries:
+            
+            # Send the data + CRC
+            self.ser.write(data + crc_bytes)
+            
+            # Read the acknowledgment
+            ack = self.ser.read(1)
+            with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
                 if ack == b'\xFF':
+                    # elapsed_time = time.time() - start_time
+                    # log_file.write(f"True, time: {elapsed_time}\n")
                     # print("Drive command acknowledged (0xFF).")
+                    # log_file.write(f"OK\n")
                     return True
                 else:
-                    tries -= 1
-                    # print(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
-                    
-            # print("Failed to send drive command after multiple attempts.")
-            return False
+                    # tries -= 1
+                    # elapsed_time = time.time() - start_time
+                    log_file.write(f"Received byte: {ack}; left tries: {tries}. Time: {elapsed_time}\n")
+                    # logger.info(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
+                    return False
+
+            # with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
+            #     elapsed_time = time.time() - start_time
+            #     log_file.write(f"Failed after multiple attempts, time: {elapsed_time}\n")        
+            # # print("Failed to send drive command after multiple attempts.")
+            # return False
         
         except Exception as e:
             # print(f"Error sending drive command: {e}")
@@ -261,6 +274,7 @@ class Roboclaw:
                 else:
                     tries -= 1
                     # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 2. Remaining tries: {tries}")  # Debugging
+                    # return None
 
             # print("Failed to read 2-byte command after multiple attempts.")
             return None
@@ -293,6 +307,7 @@ class Roboclaw:
                 else:
                     tries -= 1
                     # print(f"CRC validation failed or data length incorrect: {len(data)}. Expected: 4. Remaining tries: {tries}")  # Debugging
+                    # return None
 
             # print("Failed to read 4-byte command after multiple attempts.")
             return None

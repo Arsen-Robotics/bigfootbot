@@ -287,7 +287,7 @@ class RoboclawControlNode(Node):
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)
         right_motor_command = max(min(right_motor_command, self.max_motor_command), -self.max_motor_command)
 
-        self.publish_wheel_speed(linear_speed)
+        self.publish_wheel_speed((left_wheel_linear_speed + right_wheel_linear_speed) / 2)
 
         return left_motor_command, right_motor_command
 

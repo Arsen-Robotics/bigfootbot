@@ -8,6 +8,7 @@ class JoyToTwistNode(Node):
     def __init__(self):
         super().__init__('joy_to_twist_node')
 
+        # Buttons related to driving
         self.enable_button = 21 # 4 for ps3 controller, 21 for Logitech quadrant, if not pressed robot is stopping
         self.reverse_button = 20 # Only for Logitech quadrant, this button is used to turn on reverse mode
         
@@ -20,12 +21,18 @@ class JoyToTwistNode(Node):
         self.camera_right_quick_view_button = 7 # 15 for ps3 controller, 7 for Logitech quadrant
         self.camera_reset_position_button = 0 # 3 for ps3 controller, 0 for Logitech quadrant
 
+        # Other buttons
+        self.buzzer_button = 1
+
+        # Axes
         self.linear_axis = 2 # 1 for ps3 controller, 2 for logitech yoke
         self.angular_axis = 0 # 2 for ps3 controller, 0 for logitech yoke
         self.reverse_axis = 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
 
         self.linear_scale = 3.067
         self.angular_scale = 9.437
+
+        self.buzzer_enabled = 0
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -126,6 +133,16 @@ class JoyToTwistNode(Node):
             #     string_msg = String()
             #     string_msg.data = "6" # Command for camera right
             #     self.arduino_command_publisher.publish(string_msg)
+
+            if msg.buttons[self.buzzer_button] == 1 and self.buzzer_enabled == 0:
+                string_msg = String()
+                string_msg.data = "7" # Command to enable buzzer
+                self.arduino_command_publisher.publish(string_msg)
+            elif msg.buttons[self.buzzer_button] == 0 and self.buzzer_enabled == 1:
+                string_msg = String()
+                string_msg.data = "8" # Command to disable buzzer
+                self.arduino_command_publisher.publish(string_msg)
+            self.buzzer_enabled = msg.buttons[self.buzzer_button]
 
         # If an exception occurs, print the exception to the console
         except Exception as e:

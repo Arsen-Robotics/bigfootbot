@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Servo.h>
 
+#define buzzerPin 50
+
 Servo tiltServo;
 Servo panServo;
 
@@ -31,6 +33,9 @@ void setup() {
   // Update last angles
   lastPanAngle = panNeutral;
   lastTiltAngle = tiltNeutral;
+
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(buzzerPin, HIGH);
 }
 
 void loop() {
@@ -77,6 +82,12 @@ void loop() {
     if (command == "6") {
       lastPanAngle = constrain(lastPanAngle - 3, 0, 180); // Ensure angle stays between 0 and 180
       panServo.write(lastPanAngle); // Decrement servo 1 angle by -3 deg
+    }
+    if (command == "7") {
+      digitalWrite(buzzerPin, LOW);
+    }
+    if (command == "8") {
+      digitalWrite(buzzerPin, HIGH);
     }
   }
   // If no quick look command was received for a while, return to neutral position

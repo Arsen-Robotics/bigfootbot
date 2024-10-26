@@ -2,6 +2,7 @@
 #include <Servo.h>
 
 #define buzzerPin 50
+#define lightPin 51
 
 Servo tiltServo;
 Servo panServo;
@@ -35,7 +36,10 @@ void setup() {
   lastTiltAngle = tiltNeutral;
 
   pinMode(buzzerPin, OUTPUT);
+  pinMode(lightPin, OUTPUT);
+
   digitalWrite(buzzerPin, HIGH);
+  digitalWrite(lightPin, HIGH);
 }
 
 void loop() {
@@ -88,6 +92,12 @@ void loop() {
     }
     if (command == "8") {
       digitalWrite(buzzerPin, HIGH);
+    }
+    if (command == "9") {
+      digitalWrite(lightPin, HIGH);
+    }
+    if (command == "10") {
+      digitalWrite(lightPin, LOW);
     }
   }
   // If no quick look command was received for a while, return to neutral position

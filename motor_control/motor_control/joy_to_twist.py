@@ -151,12 +151,12 @@ class JoyToTwistNode(Node):
                 string_msg = String()
                 string_msg.data = "9" # Command to disable light
                 self.arduino_command_publisher.publish(string_msg)
-                self.light_enabled = msg.buttons[self.light_off_button]
+                self.light_enabled = 0
             elif msg.buttons[self.light_on_button] == 1 and self.light_enabled == 0:
                 string_msg = String()
                 string_msg.data = "10" # Command to enable light
                 self.arduino_command_publisher.publish(string_msg)
-                self.light_enabled = msg.buttons[self.light_on_button]
+                self.light_enabled = 1
 
         # If an exception occurs, print the exception to the console
         except Exception as e:

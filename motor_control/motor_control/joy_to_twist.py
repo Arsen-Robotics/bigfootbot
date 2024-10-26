@@ -23,6 +23,8 @@ class JoyToTwistNode(Node):
 
         # Other buttons
         self.buzzer_button = 1
+        self.light_off_button = 8
+        self.light_on_button = 9
 
         # Axes
         self.linear_axis = 2 # 1 for ps3 controller, 2 for logitech yoke
@@ -33,6 +35,7 @@ class JoyToTwistNode(Node):
         self.angular_scale = 9.437
 
         self.buzzer_enabled = 0
+        self.light_enabled = 0
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -143,6 +146,17 @@ class JoyToTwistNode(Node):
                 string_msg.data = "8" # Command to disable buzzer
                 self.arduino_command_publisher.publish(string_msg)
             self.buzzer_enabled = msg.buttons[self.buzzer_button]
+
+            if msg.buttons[self.light_off_button] == 1 and self.light_enabled == 1:
+                string_msg = String()
+                string_msg.data = "9" # Command to disable light
+                self.arduino_command_publisher.publish(string_msg)
+                self.light_enabled = msg.buttons[self.light_off_button]
+            elif msg.buttons[self.light_on_button] == 1 and self.light_enabled == 0:
+                string_msg = String()
+                string_msg.data = "10" # Command to enable light
+                self.arduino_command_publisher.publish(string_msg)
+                self.light_enabled = msg.buttons[self.light_on_button]
 
         # If an exception occurs, print the exception to the console
         except Exception as e:

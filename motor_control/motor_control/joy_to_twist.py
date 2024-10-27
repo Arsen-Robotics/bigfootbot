@@ -31,11 +31,15 @@ class JoyToTwistNode(Node):
         self.angular_axis = 0 # 2 for ps3 controller, 0 for logitech yoke
         self.reverse_axis = 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
 
+        # Scales
         self.linear_scale = 3.067
         self.angular_scale = 9.437
 
+        # Flags
         self.buzzer_enabled = 0
         self.light_enabled = 0
+        self.right_quickview_enabled = 0
+        self.left_quickview_enabled = 0
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -102,9 +106,11 @@ class JoyToTwistNode(Node):
 
                 self.twist_publisher.publish(twist_msg)
 
-            if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
+            if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera reset position button is pressed
                 string_msg = String()
-                string_msg.data = "0" # Command for camera reset position
+                string_msg.data = "0" # Command for camera tilt reset position
+                self.arduino_command_publisher.publish(string_msg)
+                string_msg.data = "11" # Command for camera pan reset position
                 self.arduino_command_publisher.publish(string_msg)
 
             # if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
@@ -117,15 +123,27 @@ class JoyToTwistNode(Node):
             #     string_msg.data = "2"  # Command for camera down
             #     self.arduino_command_publisher.publish(string_msg)
 
-            if msg.buttons[self.camera_left_quick_view_button] == 1:  # Check if camera left button is pressed
+            if msg.buttons[self.camera_left_quick_view_button] == 1 and self.left_quickview_enabled == 0:  # Check if camera left button is pressed
                 string_msg = String()
                 string_msg.data = "3"  # Command for camera left quick view
                 self.arduino_command_publisher.publish(string_msg)
+                self.left_quickview_enabled = 1
+            elif msg.buttons[self.camera_left_quick_view_button] == 0 and self.left_quickview_enabled == 1: # Check if camera left button is released
+                string_msg = String()
+                string_msg.data = "11"  # Command to reset camera position (pan only)
+                self.arduino_command_publisher.publish(string_msg)
+                self.left_quickview_enabled = 0
 
-            if msg.buttons[self.camera_right_quick_view_button] == 1:  # Check if camera right button is pressed
+            if msg.buttons[self.camera_right_quick_view_button] == 1 and self.right_quickview_enabled == 0:  # Check if camera right button is pressed
                 string_msg = String()
                 string_msg.data = "4"  # Command for camera right quick view
                 self.arduino_command_publisher.publish(string_msg)
+                self.right_quickview_enabled = 1
+            elif msg.buttons[self.camera_right_quick_view_button] == 0 and self.right_quickview_enabled == 1: # Check if camera right button is released
+                string_msg = String()
+                string_msg.data = "11"  # Command to reset camera position (pan only)
+                self.arduino_command_publisher.publish(string_msg)
+                self.right_quickview_enabled = 0
 
             # if msg.buttons[self.camera_left_button] == 1:
             #     string_msg = String()

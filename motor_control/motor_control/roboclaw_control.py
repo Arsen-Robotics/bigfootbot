@@ -24,6 +24,7 @@ class RoboclawControlNode(Node):
         self.wheel_diameter = 0.33 # Wheel diameter in meters
         self.max_rpm = 177.5
         self.max_motor_command = 126
+        self.turn_compensation_factor = 0.5
 
         self.comport = "/dev/ttyS0"
         self.baudrate = 57600
@@ -37,8 +38,7 @@ class RoboclawControlNode(Node):
         # Initially this flag is set to None, because it is not known if the Roboclaw is connected or not
         self.rclaw_connected = None
 
-        self.turn_compensation_factor = 0.5
-
+        # Battery
         self.max_battery_voltage = 29.4
         self.min_battery_voltage = 21
         self.battery_wh = 652.68
@@ -46,21 +46,15 @@ class RoboclawControlNode(Node):
         # Variables for battery range calculation depending on motors setting
         self.last_m1_command = None
         self.last_m2_command = None
+        self.last_wheel_speed = None
 
         # Average wattage draw of everything in the robot (without motors)
         self.avg_static_wattage = 26
 
-        # Average wattage draw of motors
-        self.avg_motors_wattage = 160
-
+        # Record motor wattage draw and wheel speed throughout the trip
         self.motor_wattage_samples = []
-        self.max_motor_wattage_samples = 100  # Maximum number of samples to keep
-
-        # In km/h
-        self.speed_for_battery_range_calculation = 6.62472 # 60% of max speed
-
-        # Record motor wattage draw throughout the trip
-        self.motor_wattage_samples = []
+        self.wheel_speed_samples = []
+        self.max_motor_wattage_speed_samples = 100  # Maximum number of samples to keep
 
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
@@ -154,8 +148,8 @@ class RoboclawControlNode(Node):
 
             # self.get_logger().info(f"{roboclaw_state.temp1}")
 
-            if m1_current_val is not None and m2_current_val is not None and roboclaw_state.main_battery_voltage is not None and self.last_m1_command is not None and self.last_m2_command is not None:
-                roboclaw_state.battery_range_km = float(self.calculate_battery_range(m1_current_val, m2_current_val, roboclaw_state.main_battery_voltage))
+            if roboclaw_state.current_1 is not None and roboclaw_state.current_2 is not None and roboclaw_state.main_battery_voltage is not None and self.last_m1_command is not None and self.last_m2_command is not None and self.last_wheel_speed is not None:
+                roboclaw_state.battery_range_km = float(self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage))
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)
@@ -186,32 +180,33 @@ class RoboclawControlNode(Node):
     # Calculate battery range in km
     def calculate_battery_range(self, m1_current, m2_current, battery_voltage):
         # Convert motor currents to battery currents and calculate power draw per motors
-        # NOTE Roboclaw reads only motor currents
+        # Note that Roboclaw reads only motor currents
         battery_wattage_1 = (self.last_m1_command / self.max_motor_command * m1_current) * battery_voltage
         battery_wattage_2 = (self.last_m2_command / self.max_motor_command * m2_current) * battery_voltage
 
         # Only add to motor wattage samples if the robot is moving
         if abs(self.last_m1_command) > 0 or abs(self.last_m2_command) > 0:
             # Maintain max length of motor_wattage_samples
-            if len(self.motor_wattage_samples) >= self.max_motor_wattage_samples:
-                self.motor_wattage_samples.pop(0)  # Remove oldest sample
+            if len(self.motor_wattage_samples) >= self.max_motor_wattage_speed_samples:
+                self.motor_wattage_samples.pop(0) # Remove oldest sample
+            if len(self.wheel_speed_samples) >= self.max_motor_wattage_speed_samples:
+                self.wheel_speed_samples.pop(0) # Remove oldest sample
 
-            # Append the combined motor wattage to the samples array
+            # Append the combined motor wattage and wheel speed to the samples arrays
             self.motor_wattage_samples.append(battery_wattage_1 + battery_wattage_2)
+            self.wheel_speed_samples.append(self.last_wheel_speed)
 
-        # Calculate average motor wattage if samples exist
-        if len(self.motor_wattage_samples) >= 30:
+        # Calculate average motor wattage and average wheel speed if samples exist
+        if len(self.motor_wattage_samples) >= 30 and len(self.wheel_speed_samples) >= 30:
             motor_average_wattage = sum(self.motor_wattage_samples) / len(self.motor_wattage_samples)
-            total_current_battery_wattage = motor_average_wattage + self.avg_static_wattage
-        else:
-            motor_average_wattage = self.avg_motors_wattage
+            average_wheel_speed = sum(self.wheel_speed_samples) / len(self.wheel_speed_samples)
             total_current_battery_wattage = motor_average_wattage + self.avg_static_wattage
 
         # Estimate remaining energy
         remaining_energy_wh = self.battery_wh * (battery_voltage / self.max_battery_voltage)
         
         # Estimate range in km
-        range_km = (remaining_energy_wh / total_current_battery_wattage) * self.speed_for_battery_range_calculation
+        range_km = (remaining_energy_wh / total_current_battery_wattage) * average_wheel_speed
 
         return range_km
 
@@ -346,13 +341,14 @@ class RoboclawControlNode(Node):
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)
         right_motor_command = max(min(right_motor_command, self.max_motor_command), -self.max_motor_command)
 
-        self.publish_wheel_speed((left_wheel_linear_speed + right_wheel_linear_speed) / 2)
+        self.publish_wheel_speed(abs(linear_speed))
+        self.last_wheel_speed = abs(linear_speed) * 3.6
 
         return left_motor_command, right_motor_command
 
     def publish_wheel_speed(self, wheel_speed_val):
         wheel_speed = Float32()
-        wheel_speed.data = float(abs(wheel_speed_val) * 3.6)
+        wheel_speed.data = float(wheel_speed_val * 3.6)
         self.wheel_speed_publisher.publish(wheel_speed)
     
 def main():

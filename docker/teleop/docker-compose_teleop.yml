@@ -148,7 +148,9 @@ services:
     volumes:
       - '/dev:/dev'
       # Mount Python source files to be able to update them inside the container without rebuilding the image
-      - ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
+      #- ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
+
+      - ../../bfb_gps/config:/ros2_ws/src/nmea_navsat_driver/config
 
     privileged: true
 
@@ -157,7 +159,8 @@ services:
 
     #network_mode: "host"
 
-    command: ros2 run bfb_gps gps_node
+    #command: ros2 run bfb_gps gps_node
+    command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
 
   bfb_arduino_gateway:
     build:

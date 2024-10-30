@@ -148,8 +148,10 @@ class RoboclawControlNode(Node):
 
             # self.get_logger().info(f"{roboclaw_state.temp1}")
 
+
             if roboclaw_state.current_1 is not None and roboclaw_state.current_2 is not None and roboclaw_state.main_battery_voltage is not None and self.last_m1_command is not None and self.last_m2_command is not None and self.last_wheel_speed is not None:
-                roboclaw_state.battery_range_km = float(self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage))
+                self.get_logger().info(f"Variables are not none: {self.last_m1_command}; {self.last_wheel_speed}")
+            #     roboclaw_state.battery_range_km = float(self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage))
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)
@@ -202,11 +204,11 @@ class RoboclawControlNode(Node):
             average_wheel_speed = sum(self.wheel_speed_samples) / len(self.wheel_speed_samples)
             total_current_battery_wattage = motor_average_wattage + self.avg_static_wattage
 
-        # Estimate remaining energy
-        remaining_energy_wh = self.battery_wh * (battery_voltage / self.max_battery_voltage)
-        
-        # Estimate range in km
-        range_km = (remaining_energy_wh / total_current_battery_wattage) * average_wheel_speed
+            # Estimate remaining energy
+            remaining_energy_wh = self.battery_wh * (battery_voltage / self.max_battery_voltage)
+            
+            # Estimate range in km
+            range_km = (remaining_energy_wh / total_current_battery_wattage) * average_wheel_speed
 
         return range_km
 

@@ -206,7 +206,7 @@ class RoboclawControlNode(Node):
             total_current_battery_wattage = motor_average_wattage + self.avg_static_wattage
 
             # Estimate remaining energy
-            remaining_energy_wh = self.battery_wh * (battery_voltage / self.max_battery_voltage)
+            remaining_energy_wh = self.battery_wh * ((battery_voltage - self.min_battery_voltage) / (self.max_battery_voltage - self.min_battery_voltage))
             
             # Estimate range in km
             range_km = (remaining_energy_wh / total_current_battery_wattage) * average_wheel_speed

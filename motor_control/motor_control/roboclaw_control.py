@@ -150,7 +150,7 @@ class RoboclawControlNode(Node):
 
             # self.get_logger().info(f"{roboclaw_state.temp1}")
             
-            if currents is not None and main_battery_voltage_val is not None and self.last_m1_command is not None and self.last_m2_command is not None and self.last_wheel_speed is not None:
+            if currents is not None and main_battery_voltage_val is not None and self.last_m1_command is not None and self.last_m2_command is not None and self.last_wheel_speed_kmh is not None:
                 roboclaw_state.battery_range_km = float(self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage))
 
             # Publish roboclaw state
@@ -198,7 +198,7 @@ class RoboclawControlNode(Node):
 
             # Append wattage and wheel speed samples
             self.motor_wattage_samples.append(battery_wattage_1 + battery_wattage_2)
-            self.wheel_speed_samples.append(self.last_wheel_speed)
+            self.wheel_speed_samples.append(self.last_wheel_speed_kmh)
 
         # Calculate average motor wattage and average wheel speed if enough samples
         # Then estimate remaining energy and range in km
@@ -234,7 +234,7 @@ class RoboclawControlNode(Node):
             self.last_m1_command = left_motor_command
             self.last_m2_command = right_motor_command
 
-            self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
+            # self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
 
             # Send motor commands to Roboclaw
             if left_motor_command < 0:

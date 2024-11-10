@@ -1,13 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>WebRTC Video Streaming</title>
-  <link rel="stylesheet" type="text/css" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Video Chat</title>
 </head>
 <body>
-  <h1>WebRTC Video Streaming</h1>
-  <video id="remoteVideo" autoplay></video>
+  <h1>WebRTC Video Chat</h1>
+  <!-- Video element for displaying the remote stream -->
+  <video id="remoteVideo" autoplay playsinline></video>
+
+  <!-- Include the Socket.IO library -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="scripts/client.js"></script>
+  <!-- Include the client-side WebRTC script -->
+  <script src="/scripts/client.js"></script>
 </body>
 </html>

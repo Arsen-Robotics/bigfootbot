@@ -3,3 +3,4 @@ float32 current_2
 float32 main_battery_voltage
 float32 temp1
 float32 temp2
+float32 battery_range_km

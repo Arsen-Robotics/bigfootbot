@@ -31,6 +31,8 @@ RUN mkdir -p ${ROS_WS}/src
 # -------- Build and install packages --------
 COPY bfb_gps ${ROS_WS}/src/bfb_gps
 COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
+RUN cd ${ROS_WS}/src \
+    && git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
 
 # Install wget and pip
 RUN apt-get update \

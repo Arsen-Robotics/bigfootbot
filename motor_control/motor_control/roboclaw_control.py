@@ -26,7 +26,7 @@ class RoboclawControlNode(Node):
         self.max_motor_command = 126
         self.turn_compensation_factor = 0.5
 
-        self.comport = "/dev/ttyS0"
+        self.comport = "/dev/ttyAMA0"
         self.baudrate = 57600
 
         self.rclaw = Roboclaw(self.comport, self.baudrate)

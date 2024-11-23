@@ -8,7 +8,7 @@ class GpsNode(Node):
     def __init__(self):
         super().__init__('gps_node')
 
-        self.comport = "/dev/gps-module"
+        self.comport = "/dev/ttyACM1"
         self.baudrate = 9600
 
         # Initially these flags are set to None, because it is not known if the GPS module is connected or not

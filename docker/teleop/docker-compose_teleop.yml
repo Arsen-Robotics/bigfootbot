@@ -148,7 +148,7 @@ services:
     volumes:
       - '/dev:/dev'
       # Mount Python source files to be able to update them inside the container without rebuilding the image
-      #- ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
+      - ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
 
       - ../../bfb_gps/config:/ros2_ws/src/nmea_navsat_driver/config
 

@@ -29,8 +29,8 @@ class JoyToTwistNode(Node):
         self.plow_down_button = 3
 
         # Axes
-        self.linear_axis = 1 # 1 for ps3 controller, 2 for logitech yoke
-        self.angular_axis = 2 # 2 for ps3 controller, 0 for logitech yoke
+        self.linear_axis = 2 # 1 for ps3 controller, 2 for logitech yoke
+        self.angular_axis = 0 # 2 for ps3 controller, 0 for logitech yoke
         self.reverse_axis = 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
 
         # Scales

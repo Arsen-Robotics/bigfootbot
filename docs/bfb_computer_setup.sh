@@ -120,6 +120,9 @@ sudo cp ~/ros2_ws/src/bigfootbot/bfb_arduino_gateway/udev/99-arduino-mega.rules 
 # Reload rules
 sudo udevadm control --reload-rules && sudo udevadm trigger
 
+# Notify user to setup Docker swarm and network
+echo "After reboot, follow instructions in the end of this file to setup Docker Swarm and network."
+
 while true; do
     echo "Do you want to reboot now?"
     echo "1. Yes"
@@ -146,3 +149,11 @@ while true; do
 
     esac
 done
+
+# --- Set up Docker network ---
+
+# 1. Create swarm on one machine: docker swarm init --advertise-addr <PC1_IP>
+# 2. Join swarm on the other machine: docker swarm join --token <token> <PC1_IP>:2377
+# 3. Create overlay network on swarm leader machine: docker network create --driver overlay --attachable bfb_teleop_overlay
+
+# To run Docker compose services, use: docker compose -f <compose_file> up <service_1> <service_2> ...

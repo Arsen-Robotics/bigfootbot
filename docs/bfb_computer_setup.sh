@@ -109,8 +109,16 @@ done
 echo "Adding user to the Docker group..."
 sudo usermod -aG docker ${USER}
 
-# Prompt to reboot to apply Docker group changes
-echo "Setup complete. Please reboot your device for changes to take effect."
+# Udev rules
+echo "Installing necessary Udev rules..."
+
+# Copy udev rules
+sudo cp ~/ros2_ws/src/bigfootbot/motor_control/udev/99-roboclaw.rules /etc/udev/rules.d
+sudo cp ~/ros2_ws/src/bigfootbot/bfb_gps/udev/99-gps-module.rules /etc/udev/rules.d
+sudo cp ~/ros2_ws/src/bigfootbot/bfb_arduino_gateway/udev/99-arduino-mega.rules /etc/udev/rules.d
+
+# Reload rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
 
 while true; do
     echo "Do you want to reboot now?"

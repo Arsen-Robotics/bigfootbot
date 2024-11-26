@@ -63,7 +63,7 @@ services:
     #network_mode: "host"
 
     networks:
-      - bfb_teleop_overlay
+      - bfb_overlay
 
     command: ros2 run motor_control roboclaw_control_node
 
@@ -96,7 +96,7 @@ services:
     #network_mode: "host"
 
     networks:
-      - bfb_teleop_overlay
+      - bfb_overlay
 
     command: ros2 run motor_control joy_to_twist_node
 
@@ -125,7 +125,7 @@ services:
     #network_mode: "host"
 
     networks:
-      - bfb_teleop_overlay
+      - bfb_overlay
 
     ports:
       # - "8765:8765"
@@ -169,7 +169,7 @@ services:
     #network_mode: "host"
 
     networks:
-      - bfb_teleop_overlay
+      - bfb_overlay
 
     command: ros2 run bfb_gps gps_node
     #command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
@@ -207,10 +207,10 @@ services:
     #network_mode: "host"
 
     networks:
-      - bfb_teleop_overlay
+      - bfb_overlay
 
     command: ros2 run bfb_arduino_gateway arduino_gateway_node
 
 networks:
-  bfb_teleop_overlay:
+  bfb_overlay:
     external: true

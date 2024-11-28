@@ -64,7 +64,7 @@ services:
 
     networks:
       macnet:
-        ipv4_address: 192.168.5.32
+        ipv4_address: 192.168.70
 
     command: ros2 run motor_control roboclaw_control_node
 
@@ -98,7 +98,7 @@ services:
 
     networks:
       macnet:
-        ipv4_address: 192.168.5.33
+        ipv4_address: 192.168.5.71
 
     command: ros2 run motor_control joy_to_twist_node
 
@@ -128,7 +128,7 @@ services:
 
     networks:
       macnet:
-        ipv4_address: 192.168.5.34
+        ipv4_address: 192.168.5.72
 
     ports:
       # - "8765:8765"
@@ -173,7 +173,7 @@ services:
 
     networks:
       macnet:
-        ipv4_address: 192.168.5.35
+        ipv4_address: 192.168.5.73
 
     command: ros2 run bfb_gps gps_node
     #command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
@@ -212,7 +212,7 @@ services:
 
     networks:
       macnet:
-        ipv4_address: 192.168.5.36
+        ipv4_address: 192.168.5.74
 
     command: ros2 run bfb_arduino_gateway arduino_gateway_node
 

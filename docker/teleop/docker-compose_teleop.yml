@@ -62,8 +62,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   - bfb_overlay
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.32
 
     command: ros2 run motor_control roboclaw_control_node
 
@@ -95,8 +96,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   - bfb_overlay
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.33
 
     command: ros2 run motor_control joy_to_twist_node
 
@@ -124,8 +126,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   - bfb_overlay
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.34
 
     ports:
       # - "8765:8765"
@@ -168,8 +171,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   - bfb_overlay
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.35
 
     command: ros2 run bfb_gps gps_node
     #command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
@@ -206,11 +210,12 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   - bfb_overlay
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.36
 
     command: ros2 run bfb_arduino_gateway arduino_gateway_node
 
-# networks:
-#   bfb_overlay:
-#     external: true
+networks:
+  macnet:
+    external: true  # Use the existing Macvlan network

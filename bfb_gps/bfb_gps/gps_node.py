@@ -45,7 +45,7 @@ class GpsNode(Node):
             if self.gps_module_connected == True or self.gps_module_connected == None:
                 self.gps_module_connected = False
                 self.gps_module_receiving_gps_data = None
-                self.get_logger().error("Failed to open GPS module, retrying...")
+                self.get_logger().error("Failed to open GPS module, retrying...1")
 
         else:
             if self.gps_module_connected == False or self.gps_module_connected == None:
@@ -53,6 +53,15 @@ class GpsNode(Node):
                 self.get_logger().warning("GPS module connected")
 
         return self.gps_module_connected
+
+    def destroy_node(self):
+        try:
+            self.get_logger().info("Closing GPS serial port.")
+            self.serial.close()
+        except Exception as e:
+            self.get_logger().warning(f"Failed to close GPS serial port: {e}")
+        finally:
+            super().destroy_node()
         
     def publish_gps_data(self):
         try:
@@ -101,7 +110,7 @@ class GpsNode(Node):
         except serial.SerialException:
             self.gps_module_connected = False
             self.gps_module_receiving_gps_data = None
-            self.get_logger().error("Failed to open GPS module, retrying...")
+            self.get_logger().error("Failed to open GPS module, retrying...2")
 
         # This exception is thrown when the GPS module is not sending any GPS fix data,
         # because most likely the module is not receiving GPS signal

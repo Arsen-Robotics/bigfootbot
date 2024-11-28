@@ -25,6 +25,8 @@ class JoyToTwistNode(Node):
         self.buzzer_button = 1
         self.light_off_button = 8
         self.light_on_button = 9
+        self.plow_up_button = 2
+        self.plow_down_button = 3
 
         # Axes
         self.linear_axis = 2 # 1 for ps3 controller, 2 for logitech yoke
@@ -40,6 +42,8 @@ class JoyToTwistNode(Node):
         self.light_enabled = 0
         self.right_quickview_enabled = 0
         self.left_quickview_enabled = 0
+        self.plow_moving_up = 0
+        self.plow_moving_down = 0
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -123,27 +127,27 @@ class JoyToTwistNode(Node):
             #     string_msg.data = "2"  # Command for camera down
             #     self.arduino_command_publisher.publish(string_msg)
 
-            if msg.buttons[self.camera_left_quick_view_button] == 1 and self.left_quickview_enabled == 0:  # Check if camera left button is pressed
-                string_msg = String()
-                string_msg.data = "3"  # Command for camera left quick view
-                self.arduino_command_publisher.publish(string_msg)
-                self.left_quickview_enabled = 1
-            elif msg.buttons[self.camera_left_quick_view_button] == 0 and self.left_quickview_enabled == 1: # Check if camera left button is released
-                string_msg = String()
-                string_msg.data = "11"  # Command to reset camera position (pan only)
-                self.arduino_command_publisher.publish(string_msg)
-                self.left_quickview_enabled = 0
+            # if msg.buttons[self.camera_left_quick_view_button] == 1 and self.left_quickview_enabled == 0:  # Check if camera left button is pressed
+            #     string_msg = String()
+            #     string_msg.data = "3"  # Command for camera left quick view
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.left_quickview_enabled = 1
+            # elif msg.buttons[self.camera_left_quick_view_button] == 0 and self.left_quickview_enabled == 1: # Check if camera left button is released
+            #     string_msg = String()
+            #     string_msg.data = "11"  # Command to reset camera position (pan only)
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.left_quickview_enabled = 0
 
-            if msg.buttons[self.camera_right_quick_view_button] == 1 and self.right_quickview_enabled == 0:  # Check if camera right button is pressed
-                string_msg = String()
-                string_msg.data = "4"  # Command for camera right quick view
-                self.arduino_command_publisher.publish(string_msg)
-                self.right_quickview_enabled = 1
-            elif msg.buttons[self.camera_right_quick_view_button] == 0 and self.right_quickview_enabled == 1: # Check if camera right button is released
-                string_msg = String()
-                string_msg.data = "11"  # Command to reset camera position (pan only)
-                self.arduino_command_publisher.publish(string_msg)
-                self.right_quickview_enabled = 0
+            # if msg.buttons[self.camera_right_quick_view_button] == 1 and self.right_quickview_enabled == 0:  # Check if camera right button is pressed
+            #     string_msg = String()
+            #     string_msg.data = "4"  # Command for camera right quick view
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.right_quickview_enabled = 1
+            # elif msg.buttons[self.camera_right_quick_view_button] == 0 and self.right_quickview_enabled == 1: # Check if camera right button is released
+            #     string_msg = String()
+            #     string_msg.data = "11"  # Command to reset camera position (pan only)
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.right_quickview_enabled = 0
 
             # if msg.buttons[self.camera_left_button] == 1:
             #     string_msg = String()
@@ -176,6 +180,28 @@ class JoyToTwistNode(Node):
                 self.arduino_command_publisher.publish(string_msg)
                 self.light_enabled = 1
 
+            if msg.buttons[self.plow_up_button] == 1 and self.plow_moving_up == 0:
+                string_msg = String()
+                string_msg.data = "12" # Command to raise plow
+                self.arduino_command_publisher.publish(string_msg)
+                self.plow_moving_up = 1
+            elif msg.buttons[self.plow_up_button] == 0 and self.plow_moving_up == 1:
+                string_msg = String()
+                string_msg.data = "14" # Command to stop plow
+                self.arduino_command_publisher.publish(string_msg)
+                self.plow_moving_up = 0
+
+            if msg.buttons[self.plow_down_button] == 1 and self.plow_moving_down == 0:
+                string_msg = String()
+                string_msg.data = "13" # Command to lower plow
+                self.arduino_command_publisher.publish(string_msg)
+                self.plow_moving_down = 1
+            elif msg.buttons[self.plow_down_button] == 0 and self.plow_moving_down == 1:
+                string_msg = String()
+                string_msg.data = "14" # Command to stop plow
+                self.arduino_command_publisher.publish(string_msg)
+                self.plow_moving_down = 0
+            
         # If an exception occurs, print the exception to the console
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")
@@ -215,40 +241,40 @@ class JoyToTwistNode(Node):
 
     #         self.twist_publisher.publish(twist_msg)
 
-    #         if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
-    #             string_msg = String()
-    #             string_msg.data = "0" # Command for camera reset position
-    #             self.arduino_command_publisher.publish(string_msg)
+    # #         if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
+    # #             string_msg = String()
+    # #             string_msg.data = "0" # Command for camera reset position
+    # #             self.arduino_command_publisher.publish(string_msg)
 
-    #         if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
-    #             string_msg = String()
-    #             string_msg.data = "1" # Command for camera up
-    #             self.arduino_command_publisher.publish(string_msg)
+    # #         if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
+    # #             string_msg = String()
+    # #             string_msg.data = "1" # Command for camera up
+    # #             self.arduino_command_publisher.publish(string_msg)
 
-    #         if msg.buttons[self.camera_down_button] == 1:  # Check if camera down button is pressed
-    #             string_msg = String()
-    #             string_msg.data = "2"  # Command for camera down
-    #             self.arduino_command_publisher.publish(string_msg)
+    # #         if msg.buttons[self.camera_down_button] == 1:  # Check if camera down button is pressed
+    # #             string_msg = String()
+    # #             string_msg.data = "2"  # Command for camera down
+    # #             self.arduino_command_publisher.publish(string_msg)
 
-    #         if msg.buttons[self.camera_left_quick_view_button] == 1:  # Check if camera left button is pressed
-    #             string_msg = String()
-    #             string_msg.data = "3"  # Command for camera left quick view
-    #             self.arduino_command_publisher.publish(string_msg)
+    # #         if msg.buttons[self.camera_left_quick_view_button] == 1:  # Check if camera left button is pressed
+    # #             string_msg = String()
+    # #             string_msg.data = "3"  # Command for camera left quick view
+    # #             self.arduino_command_publisher.publish(string_msg)
 
-    #         if msg.buttons[self.camera_right_quick_view_button] == 1:  # Check if camera right button is pressed
-    #             string_msg = String()
-    #             string_msg.data = "4"  # Command for camera right quick view
-    #             self.arduino_command_publisher.publish(string_msg)
+    # #         if msg.buttons[self.camera_right_quick_view_button] == 1:  # Check if camera right button is pressed
+    # #             string_msg = String()
+    # #             string_msg.data = "4"  # Command for camera right quick view
+    # #             self.arduino_command_publisher.publish(string_msg)
 
-    #         if msg.buttons[self.camera_left_button] == 1:
-    #             string_msg = String()
-    #             string_msg.data = "5" # Command for camera left
-    #             self.arduino_command_publisher.publish(string_msg)
+    # #         if msg.buttons[self.camera_left_button] == 1:
+    # #             string_msg = String()
+    # #             string_msg.data = "5" # Command for camera left
+    # #             self.arduino_command_publisher.publish(string_msg)
 
-    #         if msg.buttons[self.camera_right_button] == 1:
-    #             string_msg = String()
-    #             string_msg.data = "6" # Command for camera right
-    #             self.arduino_command_publisher.publish(string_msg)
+    # #         if msg.buttons[self.camera_right_button] == 1:
+    # #             string_msg = String()
+    # #             string_msg.data = "6" # Command for camera right
+    # #             self.arduino_command_publisher.publish(string_msg)
 
     #     # If an exception occurs, print the exception to the console
     #     except Exception as e:

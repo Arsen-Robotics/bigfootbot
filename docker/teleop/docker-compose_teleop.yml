@@ -62,6 +62,10 @@ services:
 
     #network_mode: "host"
 
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.70
+
     command: ros2 run motor_control roboclaw_control_node
 
   bfb_joy_to_twist:
@@ -92,6 +96,10 @@ services:
 
     #network_mode: "host"
 
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.71
+
     command: ros2 run motor_control joy_to_twist_node
 
   bfb_foxglove_bridge:
@@ -118,9 +126,13 @@ services:
 
     #network_mode: "host"
 
-    ports:
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.72
+
+    # ports:
       # - "8765:8765"
-      - "9090:9090"
+      # - "9090:9090"
 
     # command: ros2 launch foxglove_bridge foxglove_bridge_launch.xml
     command: ros2 launch rosbridge_server rosbridge_websocket_launch.xml
@@ -148,7 +160,7 @@ services:
     volumes:
       - '/dev:/dev'
       # Mount Python source files to be able to update them inside the container without rebuilding the image
-      #- ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
+      - ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
 
       - ../../bfb_gps/config:/ros2_ws/src/nmea_navsat_driver/config
 
@@ -158,6 +170,10 @@ services:
     tty: true        # docker run -t
 
     #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.73
 
     command: ros2 run bfb_gps gps_node
     #command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
@@ -194,4 +210,12 @@ services:
 
     #network_mode: "host"
 
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.74
+
     command: ros2 run bfb_arduino_gateway arduino_gateway_node
+
+networks:
+  macnet:
+    external: true  # Use the existing Macvlan network

@@ -109,8 +109,19 @@ done
 echo "Adding user to the Docker group..."
 sudo usermod -aG docker ${USER}
 
-# Prompt to reboot to apply Docker group changes
-echo "Setup complete. Please reboot your device for changes to take effect."
+# Udev rules
+echo "Installing necessary Udev rules..."
+
+# Copy udev rules
+sudo cp ~/ros2_ws/src/bigfootbot/motor_control/udev/99-roboclaw.rules /etc/udev/rules.d
+sudo cp ~/ros2_ws/src/bigfootbot/bfb_gps/udev/99-gps-module.rules /etc/udev/rules.d
+sudo cp ~/ros2_ws/src/bigfootbot/bfb_arduino_gateway/udev/99-arduino-mega.rules /etc/udev/rules.d
+
+# Reload rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# Notify user to setup Docker swarm and network
+echo "After reboot, follow instructions in the end of this file to setup Docker macvlan network."
 
 while true; do
     echo "Do you want to reboot now?"
@@ -138,3 +149,19 @@ while true; do
 
     esac
 done
+
+# --- Set up Docker network ---
+
+# docker network create -d macvlan \
+#     --subnet=192.168.5.0/24 \
+#     --gateway=192.168.5.1 \
+#     --ip-range=192.168.5.64/27 \
+#     --attachable \
+#     -o parent=eth0 \
+#     macnet
+
+# sudo ip link add macnet-shim link eth0 type macvlan  mode bridge
+# sudo ip addr add 192.168.5.64/27 dev macnet-shim
+# sudo ip link set macnet-shim up
+
+# docker run --rm -d --net=macnet <IMAGE>

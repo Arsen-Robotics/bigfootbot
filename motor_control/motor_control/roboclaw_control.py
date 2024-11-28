@@ -26,7 +26,7 @@ class RoboclawControlNode(Node):
         self.max_motor_command = 126
         self.turn_compensation_factor = 0.5
 
-        self.comport = "/dev/ttyS0"
+        self.comport = "/dev/ttyAMA0" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
         self.baudrate = 57600
 
         self.rclaw = Roboclaw(self.comport, self.baudrate)
@@ -151,7 +151,10 @@ class RoboclawControlNode(Node):
             # self.get_logger().info(f"{roboclaw_state.temp1}")
             
             if currents is not None and main_battery_voltage_val is not None and self.last_m1_command is not None and self.last_m2_command is not None and self.last_wheel_speed_kmh is not None:
-                roboclaw_state.battery_range_km = float(self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage))
+                range_km = float(self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage))
+
+                if range_km is not None:
+                    roboclaw_state.battery_range_km = range_km
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)
@@ -181,8 +184,8 @@ class RoboclawControlNode(Node):
 
     # Calculate battery range in km
     def calculate_battery_range(self, m1_current, m2_current, battery_voltage):
-        range_km = 0.0 # Define range_km to always return something even if the calculation fails
-
+        range_km = None # Always return something not to get NameError
+        
         # Convert motor currents to battery wattages of motors
         # Note that Roboclaw reads only motor currents
         battery_wattage_1 = (self.last_m1_command / self.max_motor_command * m1_current) * battery_voltage

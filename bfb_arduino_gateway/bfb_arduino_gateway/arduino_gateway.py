@@ -34,14 +34,23 @@ class ArduinoGatewayNode(Node):
         except:
             if self.arduino_connected == True or self.arduino_connected == None:
                 self.arduino_connected = False
-                self.get_logger().error("Failed to open Arduino Mega, retrying...")
+                self.get_logger().error("Failed to open Arduino, retrying...")
 
         else:
             if self.arduino_connected == False or self.arduino_connected == None:
                 self.arduino_connected = True
-                self.get_logger().warning("Arduino Mega connected")
+                self.get_logger().warning("Arduino connected")
 
         return self.arduino_connected
+
+    def destroy_node(self):
+        try:
+            self.get_logger().info("Closing Arduino serial port.")
+            self.serial.close()
+        except Exception as e:
+            self.get_logger().warning(f"Failed to close Arduino serial port: {e}")
+        finally:
+            super().destroy_node()
 
     def command_callback(self, msg):
         try:
@@ -56,7 +65,7 @@ class ArduinoGatewayNode(Node):
         # so SerialException is caught here
         except serial.SerialException:
             self.arduino_connected = False
-            self.get_logger().error("Failed to open Arduino Mega, retrying...")
+            self.get_logger().error("Failed to open Arduino, retrying...")
 
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console

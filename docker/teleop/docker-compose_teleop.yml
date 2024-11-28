@@ -64,7 +64,7 @@ services:
 
     networks:
       macnet:
-        ipv4_address: 192.168.70
+        ipv4_address: 192.168.5.70
 
     command: ros2 run motor_control roboclaw_control_node
 

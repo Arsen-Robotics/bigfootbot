@@ -23,8 +23,8 @@ class JoyToTwistNode(Node):
 
         # Other buttons
         self.buzzer_button = 1
-        self.light_off_button = 8
-        self.light_on_button = 9
+        self.headlight_button = 6
+        self.beacon_light_button = 7
         self.plow_up_button = 2
         self.plow_down_button = 3
 
@@ -39,11 +39,15 @@ class JoyToTwistNode(Node):
 
         # Flags
         self.buzzer_enabled = 0
-        self.light_enabled = 0
+        self.headlight_enabled = 0
+        self.headlight_button_pressed = 0 
+        self.beacon_light_enabled = 0
+        self.beacon_light_button_pressed = 0
         self.right_quickview_enabled = 0
         self.left_quickview_enabled = 0
         self.plow_moving_up = 0
         self.plow_moving_down = 0
+        self.reverse_beeper_enabled = 0
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -82,11 +86,9 @@ class JoyToTwistNode(Node):
 
                 # If quadrant's most left axis is pushed all the way down (reverse button),
                 # reverse mode is activated and the most right axis is used to control the speed of the robot in reverse
+                # When driving backwards, angular axis should be flipped for realism
                 if msg.buttons[self.reverse_button] == 1:
                     twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
-
-                # When driving backwards, angular axis should be flipped for realism
-                if twist_msg.linear.x < 0:
                     msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
 
                 # Absolute linear speed
@@ -159,27 +161,36 @@ class JoyToTwistNode(Node):
             #     string_msg.data = "6" # Command for camera right
             #     self.arduino_command_publisher.publish(string_msg)
 
+            # Buzzer
             if msg.buttons[self.buzzer_button] == 1 and self.buzzer_enabled == 0:
                 string_msg = String()
                 string_msg.data = "7" # Command to enable buzzer
                 self.arduino_command_publisher.publish(string_msg)
+                self.buzzer_enabled = 1
             elif msg.buttons[self.buzzer_button] == 0 and self.buzzer_enabled == 1:
                 string_msg = String()
                 string_msg.data = "8" # Command to disable buzzer
                 self.arduino_command_publisher.publish(string_msg)
-            self.buzzer_enabled = msg.buttons[self.buzzer_button]
+                self.buzzer_enabled = 0
 
-            if msg.buttons[self.light_off_button] == 1 and self.light_enabled == 1:
-                string_msg = String()
-                string_msg.data = "9" # Command to disable light
-                self.arduino_command_publisher.publish(string_msg)
-                self.light_enabled = 0
-            elif msg.buttons[self.light_on_button] == 1 and self.light_enabled == 0:
-                string_msg = String()
-                string_msg.data = "10" # Command to enable light
-                self.arduino_command_publisher.publish(string_msg)
-                self.light_enabled = 1
+            # Headlight
+            if msg.buttons[self.headlight_button] == 1 and self.headlight_button_pressed == 0:
+                self.headlight_button_pressed = 1
+                if self.headlight_enabled == 0:
+                    string_msg = String()
+                    string_msg.data = "10"  # Command to enable light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.headlight_enabled = 1
+                else:
+                    string_msg = String()
+                    string_msg.data = "9"  # Command to disable light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.headlight_enabled = 0
 
+            elif msg.buttons[self.headlight_button] == 0 and self.headlight_button_pressed == 1:
+                self.headlight_button_pressed = 0
+
+            # Snow plow
             if msg.buttons[self.plow_up_button] == 1 and self.plow_moving_up == 0:
                 string_msg = String()
                 string_msg.data = "12" # Command to raise plow
@@ -201,6 +212,38 @@ class JoyToTwistNode(Node):
                 string_msg.data = "14" # Command to stop plow
                 self.arduino_command_publisher.publish(string_msg)
                 self.plow_moving_down = 0
+
+            # Beacon light
+            if msg.buttons[self.beacon_light_button] == 1 and self.beacon_light_button_pressed == 0:
+                self.beacon_light_button_pressed = 1
+                if self.beacon_light_enabled == 0:
+                    string_msg = String()
+                    string_msg.data = "15"  # Command to enable beacon light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.beacon_light_enabled = 1
+                else:
+                    string_msg = String()
+                    string_msg.data = "16"  # Command to disable beacon light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.beacon_light_enabled = 0
+
+            elif msg.buttons[self.beacon_light_button] == 0 and self.beacon_light_button_pressed == 1:
+                self.beacon_light_button_pressed = 0
+
+            # When reversing, start beeping for people's awareness
+            if msg.buttons[self.reverse_button] == 1:
+                if self.reverse_beeper_enabled == 0:
+                    string_msg = String()
+                    string_msg.data = "17" # Command to enable reverse beeper
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.reverse_beeper_enabled = 1
+
+            # If reverse mode is disabled, disable the reverse beeper
+            if msg.buttons[self.reverse_button] == 0 and self.reverse_beeper_enabled == 1:
+                string_msg = String()
+                string_msg.data = "18" # Command to disable reverse beeper
+                self.arduino_command_publisher.publish(string_msg)
+                self.reverse_beeper_enabled = 0
             
         # If an exception occurs, print the exception to the console
         except Exception as e:

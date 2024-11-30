@@ -1,18 +1,21 @@
 #include <Arduino.h>
 #include <Servo.h>
 
-#define buzzerPin 50
-#define lightPin 51
+// --- Pin definitions ---
+#define buzzerPin 52
+#define headLightPin 53
+#define beaconLightPin 51
 
 // L298N #1
 #define linActSpeedPin 2
 #define linActMove1Pin 3
 #define linActMove2Pin 4
 
-int linActSpeed = 255;
-
 Servo tiltServo;
 Servo panServo;
+
+// --- Variables ---
+int linActSpeed = 255;
 
 // Neutral position for servos in degrees
 int tiltNeutral = 75;
@@ -28,6 +31,20 @@ int lookAngle = 60;
 
 // unsigned long lastCommandTime = 0;  // Last time a command was received
 // unsigned long returnDelay = 100;   // Time (in ms) to wait after qucick look button was released, before returning to neutral position
+
+// Beacon light
+bool beaconBlinking = false;
+unsigned long previousBeaconMillis = 0;
+const long blinkIntervalOn = 500;  // 0.5 second on
+const long blinkIntervalOff = 500;  // 0.5 second off
+bool beaconState = false;
+
+// Reverse beeper
+bool reverseBeeping = false;
+unsigned long previousBeepMillis = 0;
+const long beepIntervalOn = 500;  // 0.5 second on
+const long beepIntervalOff = 250;  // 1/4 second off
+bool beepState = false;
 
 void moveLinAct(int speed, int move1, int move2) {
   analogWrite(linActSpeedPin, speed);
@@ -49,14 +66,16 @@ void setup() {
   // lastTiltAngle = tiltNeutral;
 
   pinMode(buzzerPin, OUTPUT);
-  pinMode(lightPin, OUTPUT);
+  pinMode(headLightPin, OUTPUT);
+  pinMode(beaconLightPin, OUTPUT);
 
   pinMode(linActSpeedPin, OUTPUT);
   pinMode(linActMove1Pin, OUTPUT);
   pinMode(linActMove2Pin, OUTPUT);
 
   digitalWrite(buzzerPin, HIGH);
-  digitalWrite(lightPin, HIGH);
+  digitalWrite(headLightPin, HIGH);
+  digitalWrite(beaconLightPin, HIGH);
 }
 
 void loop() {
@@ -135,12 +154,12 @@ void loop() {
 
     // Light off
     if (command == "9") {
-      digitalWrite(lightPin, HIGH);
+      digitalWrite(headLightPin, HIGH);
     }
 
     // Light on
     if (command == "10") {
-      digitalWrite(lightPin, LOW);
+      digitalWrite(headLightPin, LOW);
     }
 
     // Linear actuator up
@@ -156,6 +175,57 @@ void loop() {
     // Linear actuator stop
     if (command == "14") {
       moveLinAct(0, LOW, LOW);
+    }
+
+    // Beacon light start blinking
+    if (command == "15") {
+      beaconBlinking = true;
+    }
+
+    // Beacon light off
+    if (command == "16") {
+      beaconBlinking = false;
+      digitalWrite(beaconLightPin, LOW);  // Turn off beacon
+    }
+
+    // Reverse beeper start beeping
+    if (command == "17") {
+      reverseBeeping = true;
+    }
+
+    // Reverse beeper off
+    if (command == "18") {
+      reverseBeeping = false;
+      digitalWrite(buzzerPin, HIGH);  // Turn off beeper
+    }
+  }
+
+  // Handle beacon blinking
+  if (beaconBlinking) {
+    unsigned long currentMillis = millis();
+    if (beaconState && currentMillis - previousBeaconMillis >= blinkIntervalOn) {
+      beaconState = false;
+      previousBeaconMillis = currentMillis;
+      digitalWrite(beaconLightPin, LOW);  // Turn off beacon
+    }
+    else if (!beaconState && currentMillis - previousBeaconMillis >= blinkIntervalOff) {
+      beaconState = true;
+      previousBeaconMillis = currentMillis;
+      digitalWrite(beaconLightPin, HIGH);  // Turn on beacon
+    }
+  }
+  // Handle reverse beeping
+  if (reverseBeeping) {
+    unsigned long currentMillis = millis();
+    if (beepState && currentMillis - previousBeepMillis >= beepIntervalOn) {
+      beepState = false;
+      previousBeepMillis = currentMillis;
+      digitalWrite(buzzerPin, HIGH);  // Turn off beeper
+    }
+    else if (!beepState && currentMillis - previousBeepMillis >= beepIntervalOff) {
+      beepState = true;
+      previousBeepMillis = currentMillis;
+      digitalWrite(buzzerPin, LOW);  // Turn on beeper
     }
   }
   // If no quick look command was received for a while, return to neutral position

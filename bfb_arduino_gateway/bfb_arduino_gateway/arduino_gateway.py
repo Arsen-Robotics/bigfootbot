@@ -31,10 +31,10 @@ class ArduinoGatewayNode(Node):
         try:
             self.serial = serial.Serial(self.comport, self.baudrate)
 
-        except:
+        except Exception as e:
             if self.arduino_connected == True or self.arduino_connected == None:
                 self.arduino_connected = False
-                self.get_logger().error("Failed to open Arduino, retrying...")
+                self.get_logger().error(f"Failed to open Arduino, retrying...1")
 
         else:
             if self.arduino_connected == False or self.arduino_connected == None:
@@ -65,7 +65,7 @@ class ArduinoGatewayNode(Node):
         # so SerialException is caught here
         except serial.SerialException:
             self.arduino_connected = False
-            self.get_logger().error("Failed to open Arduino, retrying...")
+            self.get_logger().error("Failed to open Arduino, retrying...2")
 
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console

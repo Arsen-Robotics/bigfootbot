@@ -151,10 +151,10 @@ class RoboclawControlNode(Node):
             # self.get_logger().info(f"{roboclaw_state.temp1}")
             
             if currents is not None and main_battery_voltage_val is not None and self.last_m1_command is not None and self.last_m2_command is not None and self.last_wheel_speed_kmh is not None:
-                range_km = float(self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage))
+                range_km = self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage)
 
                 if range_km is not None:
-                    roboclaw_state.battery_range_km = range_km
+                    roboclaw_state.battery_range_km = float(range_km)
 
             # Publish roboclaw state
             self.roboclaw_state_publisher.publish(roboclaw_state)

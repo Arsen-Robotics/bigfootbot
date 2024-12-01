@@ -62,9 +62,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   macnet:
-    #     ipv4_address: 192.168.5.70
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.70
 
     command: ros2 run motor_control roboclaw_control_node
 
@@ -96,9 +96,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   macnet:
-    #     ipv4_address: 192.168.5.71
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.71
 
     command: ros2 run motor_control joy_to_twist_node
 
@@ -126,9 +126,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   macnet:
-    #     ipv4_address: 192.168.5.72
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.72
 
     # ports:
       # - "8765:8765"
@@ -172,9 +172,9 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   macnet:
-    #     ipv4_address: 192.168.5.73
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.73
 
     command: ros2 run bfb_gps gps_node
     #command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
@@ -211,12 +211,12 @@ services:
 
     #network_mode: "host"
 
-    # networks:
-    #   macnet:
-    #     ipv4_address: 192.168.5.74
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.74
 
     command: ros2 run bfb_arduino_gateway arduino_gateway_node
 
-# networks:
-#   macnet:
-#     external: true  # Use the existing Macvlan network
+networks:
+  macnet:
+    external: true  # Use the existing Macvlan network

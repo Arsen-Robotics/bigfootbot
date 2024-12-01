@@ -40,7 +40,6 @@ class GpsNode(Node):
         self.track_segment = gpxpy.gpx.GPXTrackSegment()
         self.track.segments.append(self.track_segment)
 
-
     # This function tries to open a serial connection to the GPS module
     # If the connection succeeds or fails, it prints a message to the console
     # The flags self.gps_module_connected and self.gps_module_receiving_data are only for the reason
@@ -90,11 +89,6 @@ class GpsNode(Node):
                     # Parse GPVTG string
                     ground_speed_val = self.parse_gpvtg(line)
 
-                    # Publish ground speed to ROS2 topic
-                    ground_speed = Float32()
-                    ground_speed.data = ground_speed_val
-                    self.ground_speed_publisher.publish(ground_speed)
-
                     got_vtg = True
 
 
@@ -104,12 +98,6 @@ class GpsNode(Node):
 
                     # Convert coordinates in NMEA format to decimals
                     decimal_lat, decimal_lon = self.nmea_to_decimal(nmea_lat, lat_direction, nmea_lon, lon_direction)
-
-                    # Publish decimal latitude and longitude to ROS2 topic
-                    fix = NavSatFix()
-                    fix.latitude = decimal_lat
-                    fix.longitude = decimal_lon
-                    self.gps_fix_publisher.publish(fix)
 
                     got_gga = True
 
@@ -139,12 +127,23 @@ class GpsNode(Node):
                 self.gps_module_receiving_gps_data = True
                 self.get_logger().info("Started receiving GPS data")
 
-                # Append coordinates to GPX
-                self.track_segment.points.append(gpxpy.gpx.GPXTrackPoint(decimal_lat, decimal_lon))
+            # Publish ground speed to ROS2 topic
+            ground_speed = Float32()
+            ground_speed.data = ground_speed_val
+            self.ground_speed_publisher.publish(ground_speed)
 
-                # Write to GPX file every time a new point is added
-                with open("/ros2_ws/src/bfb_gps/gpx/output.gpx", "w") as f:
-                    f.write(self.gpx.to_xml())
+            # Publish decimal latitude and longitude to ROS2 topic
+            fix = NavSatFix()
+            fix.latitude = decimal_lat
+            fix.longitude = decimal_lon
+            self.gps_fix_publisher.publish(fix)
+
+            # Append coordinates to GPX
+            self.track_segment.points.append(gpxpy.gpx.GPXTrackPoint(decimal_lat, decimal_lon))
+
+            # Write to GPX file every time a new point is added
+            with open("/ros2_ws/src/bfb_gps/gpx/output.gpx", "w") as f:
+                f.write(self.gpx.to_xml())
 
     def parse_gpgga(self, line):
         # Split the GPGGA string into its components

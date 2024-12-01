@@ -101,7 +101,7 @@ class JoyToTwistNode(Node):
                 min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
                 dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
 
-                max_angular_scale = self.angular_scale * 0.75 # 75% of the max scale as maximum value
+                max_angular_scale = self.angular_scale * 0.6 # 60% of the max scale as maximum value
                 dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
 
                 # Apply the dynamic angular scale to the angular velocity
@@ -273,7 +273,7 @@ class JoyToTwistNode(Node):
     #         min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
     #         dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
 
-    #         max_angular_scale = self.angular_scale * 0.75 # 75% of the max scale as maximum value
+    #         max_angular_scale = self.angular_scale * 0.6 # 60% of the max scale as maximum value
     #         dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
 
     #         # Apply the dynamic angular scale to the angular velocity

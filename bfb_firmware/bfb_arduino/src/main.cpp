@@ -73,9 +73,9 @@ void setup() {
   pinMode(linActMove1Pin, OUTPUT);
   pinMode(linActMove2Pin, OUTPUT);
 
-  digitalWrite(buzzerPin, HIGH);
-  digitalWrite(headLightPin, HIGH);
-  digitalWrite(beaconLightPin, HIGH);
+  digitalWrite(buzzerPin, HIGH); // Low-level trigger relay
+  digitalWrite(headLightPin, HIGH); // Low-level trigger relay
+  digitalWrite(beaconLightPin, LOW); // High-level trigger relay
 }
 
 void loop() {
@@ -164,12 +164,12 @@ void loop() {
 
     // Linear actuator up
     if (command == "12") {
-      moveLinAct(linActSpeed, HIGH, LOW);
+      moveLinAct(linActSpeed, LOW, HIGH);
     }
 
     // Linear actuator down
     if (command == "13") {
-      moveLinAct(linActSpeed, LOW, HIGH);
+      moveLinAct(linActSpeed, HIGH, LOW);
     }
 
     // Linear actuator stop

@@ -43,14 +43,14 @@ class ArduinoGatewayNode(Node):
 
         return self.arduino_connected
 
-    def destroy_node(self):
-        try:
-            self.get_logger().info("Closing Arduino serial port.")
-            self.serial.close()
-        except Exception as e:
-            self.get_logger().warning(f"Failed to close Arduino serial port: {e}")
-        finally:
-            super().destroy_node()
+    # def destroy_node(self):
+    #     try:
+    #         self.get_logger().info("Closing Arduino serial port.")
+    #         self.serial.close()
+    #     except Exception as e:
+    #         self.get_logger().warning(f"Failed to close Arduino serial port: {e}")
+    #     finally:
+    #         super().destroy_node()
 
     def command_callback(self, msg):
         try:

@@ -3,6 +3,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32
 import serial
+import gpxpy.gpx
 
 class GpsNode(Node):
     def __init__(self):
@@ -32,6 +33,14 @@ class GpsNode(Node):
         # Function reads data from GPS module and publishes GPS data to ROS2 topics
         self.timer = self.create_timer(0.5, self.publish_gps_data)
 
+        # GPX initialization
+        self.gpx = gpxpy.gpx.GPX()
+        self.track = gpxpy.gpx.GPXTrack()
+        self.gpx.tracks.append(self.track)
+        self.track_segment = gpxpy.gpx.GPXTrackSegment()
+        self.track.segments.append(self.track_segment)
+
+
     # This function tries to open a serial connection to the GPS module
     # If the connection succeeds or fails, it prints a message to the console
     # The flags self.gps_module_connected and self.gps_module_receiving_data are only for the reason
@@ -54,14 +63,14 @@ class GpsNode(Node):
 
         return self.gps_module_connected
 
-    def destroy_node(self):
-        try:
-            self.get_logger().info("Closing GPS serial port.")
-            self.serial.close()
-        except Exception as e:
-            self.get_logger().warning(f"Failed to close GPS serial port: {e}")
-        finally:
-            super().destroy_node()
+    # def destroy_node(self):
+    #     try:
+    #         self.get_logger().info("Closing GPS serial port.")
+    #         self.serial.close()
+    #     except Exception as e:
+    #         self.get_logger().warning(f"Failed to close GPS serial port: {e}")
+    #     finally:
+    #         super().destroy_node()
         
     def publish_gps_data(self):
         try:
@@ -129,6 +138,13 @@ class GpsNode(Node):
             if self.gps_module_receiving_gps_data == False or self.gps_module_receiving_gps_data == None:
                 self.gps_module_receiving_gps_data = True
                 self.get_logger().info("Started receiving GPS data")
+
+                # Append coordinates to GPX
+                self.track_segment.points.append(gpxpy.gpx.GPXTrackPoint(decimal_lat, decimal_lon))
+
+                # Write to GPX file every time a new point is added
+                with open("/ros2_ws/src/bfb_gps/gpx/output.gpx", "w") as f:
+                    f.write(self.gpx.to_xml())
 
     def parse_gpgga(self, line):
         # Split the GPGGA string into its components

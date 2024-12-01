@@ -163,6 +163,7 @@ services:
       - ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
 
       - ../../bfb_gps/config:/ros2_ws/src/nmea_navsat_driver/config
+      - ../../bfb_gps/gpx:/ros2_ws/src/bfb_gps/gpx
 
     privileged: true
 

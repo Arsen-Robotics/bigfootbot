@@ -44,8 +44,8 @@ class RoboclawControlNode(Node):
         self.battery_wh = 652.68
 
         # Variables for battery range calculation depending on motors setting
-        self.last_m1_command = None
-        self.last_m2_command = None
+        self.abs_last_m1_command = None
+        self.abs_last_m2_command = None
         self.last_wheel_speed_kmh = None
 
         # Average wattage draw of everything in the robot (without motors)
@@ -150,7 +150,7 @@ class RoboclawControlNode(Node):
 
             # self.get_logger().info(f"{roboclaw_state.temp1}")
             
-            if currents is not None and main_battery_voltage_val is not None and self.last_m1_command is not None and self.last_m2_command is not None and self.last_wheel_speed_kmh is not None:
+            if currents is not None and main_battery_voltage_val is not None and self.abs_last_m1_command is not None and self.abs_last_m2_command is not None and self.last_wheel_speed_kmh is not None:
                 range_km = self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage)
 
                 if range_km is not None:
@@ -188,11 +188,11 @@ class RoboclawControlNode(Node):
         
         # Convert motor currents to battery wattages of motors
         # Note that Roboclaw reads only motor currents
-        battery_wattage_1 = (self.last_m1_command / self.max_motor_command * m1_current) * battery_voltage
-        battery_wattage_2 = (self.last_m2_command / self.max_motor_command * m2_current) * battery_voltage
+        battery_wattage_1 = (self.abs_last_m1_command / self.max_motor_command * m1_current) * battery_voltage # m1_current can be negative
+        battery_wattage_2 = (self.abs_last_m2_command / self.max_motor_command * m2_current) * battery_voltage # m2_current can be negative
 
         # Only append samples if robot is moving
-        if abs(self.last_m1_command) > 0 or abs(self.last_m2_command) > 0:
+        if abs(self.abs_last_m1_command) > 0 or abs(self.abs_last_m2_command) > 0:
             # Maintain max length of motor_wattage_samples
             if len(self.motor_wattage_samples) >= self.max_motor_wattage_speed_samples:
                 self.motor_wattage_samples.pop(0) # Remove oldest sample
@@ -234,8 +234,8 @@ class RoboclawControlNode(Node):
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
             # Update variables for battery range calculation based on motors setting
-            self.last_m1_command = left_motor_command
-            self.last_m2_command = right_motor_command
+            self.abs_last_m1_command = left_motor_command
+            self.abs_last_m2_command = right_motor_command
 
             # self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
 

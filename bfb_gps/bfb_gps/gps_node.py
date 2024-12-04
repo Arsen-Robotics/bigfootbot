@@ -126,7 +126,7 @@ class GpsNode(Node):
             if self.gps_module_receiving_gps_data == False or self.gps_module_receiving_gps_data == None:
                 self.gps_module_receiving_gps_data = True
                 self.get_logger().info("Started receiving GPS data")
-
+            
             # Publish ground speed to ROS2 topic
             ground_speed = Float32()
             ground_speed.data = ground_speed_val

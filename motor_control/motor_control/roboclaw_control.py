@@ -151,7 +151,7 @@ class RoboclawControlNode(Node):
             # self.get_logger().info(f"{roboclaw_state.temp1}")
             
             if currents is not None and main_battery_voltage_val is not None and self.abs_last_m1_command is not None and self.abs_last_m2_command is not None and self.last_wheel_speed_kmh is not None:
-                range_km = self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_1, roboclaw_state.main_battery_voltage)
+                range_km = self.calculate_battery_range(roboclaw_state.current_1, roboclaw_state.current_2, roboclaw_state.main_battery_voltage)
 
                 if range_km is not None:
                     roboclaw_state.battery_range_km = float(range_km)
@@ -188,11 +188,11 @@ class RoboclawControlNode(Node):
         
         # Convert motor currents to battery wattages of motors
         # Note that Roboclaw reads only motor currents
-        battery_wattage_1 = (self.abs_last_m1_command / self.max_motor_command * m1_current) * battery_voltage # m1_current can be negative
-        battery_wattage_2 = (self.abs_last_m2_command / self.max_motor_command * m2_current) * battery_voltage # m2_current can be negative
+        battery_wattage_1 = (self.abs_last_m1_command / self.max_motor_command * m1_current) * battery_voltage
+        battery_wattage_2 = (self.abs_last_m2_command / self.max_motor_command * m2_current) * battery_voltage
 
         # Only append samples if robot is moving
-        if abs(self.abs_last_m1_command) > 0 or abs(self.abs_last_m2_command) > 0:
+        if self.abs_last_m1_command > 0 or self.abs_last_m2_command > 0:
             # Maintain max length of motor_wattage_samples
             if len(self.motor_wattage_samples) >= self.max_motor_wattage_speed_samples:
                 self.motor_wattage_samples.pop(0) # Remove oldest sample
@@ -234,8 +234,8 @@ class RoboclawControlNode(Node):
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
             # Update variables for battery range calculation based on motors setting
-            self.abs_last_m1_command = left_motor_command
-            self.abs_last_m2_command = right_motor_command
+            self.abs_last_m1_command = abs(left_motor_command)
+            self.abs_last_m2_command = abs(right_motor_command)
 
             # self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
 

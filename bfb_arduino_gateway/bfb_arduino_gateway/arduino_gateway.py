@@ -29,12 +29,12 @@ class ArduinoGatewayNode(Node):
     # The function returns the value of self.arduino_connected
     def connect_to_arduino(self):
         try:
-            self.serial = serial.Serial(self.comport, self.baudrate)
+            self.serial = serial.Serial(self.comport, self.baudrate, timeout=0.2)
 
         except Exception as e:
             if self.arduino_connected == True or self.arduino_connected == None:
                 self.arduino_connected = False
-                self.get_logger().error(f"Failed to open Arduino, retrying...1")
+                self.get_logger().error(f"Failed to open Arduino, retrying...1 e: {e}")
 
         else:
             if self.arduino_connected == False or self.arduino_connected == None:

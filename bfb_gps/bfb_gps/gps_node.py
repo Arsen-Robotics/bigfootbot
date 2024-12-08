@@ -47,13 +47,13 @@ class GpsNode(Node):
     # The function returns the value of self.gps_module_connected
     def connect_to_gps_module(self):
         try:
-            self.serial = serial.Serial(self.comport, self.baudrate)
+            self.serial = serial.Serial(self.comport, self.baudrate, timeout=0.2)
 
-        except:
+        except Exception as e:
             if self.gps_module_connected == True or self.gps_module_connected == None:
                 self.gps_module_connected = False
                 self.gps_module_receiving_gps_data = None
-                self.get_logger().error("Failed to open GPS module, retrying...1")
+                self.get_logger().error(f"Failed to open GPS module, retrying...1 e: {e}")
 
         else:
             if self.gps_module_connected == False or self.gps_module_connected == None:

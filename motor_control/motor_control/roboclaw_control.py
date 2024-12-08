@@ -20,15 +20,16 @@ class RoboclawControlNode(Node):
     def __init__(self):
         super().__init__('roboclaw_control_node')
 
+        # Constants
         self.wheel_track = 0.65 # Distance between left and right wheel in meters
         self.wheel_diameter = 0.33 # Wheel diameter in meters
         self.max_rpm = 177.5
         self.max_motor_command = 126
         self.turn_compensation_factor = 0.5
 
+        # Serial
         self.comport = "/dev/ttyAMA0" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
         self.baudrate = 57600
-
         self.rclaw = Roboclaw(self.comport, self.baudrate)
 
         # Address is set in Basicmicro Motion Studio to determine which Roboclaw to talk to,
@@ -57,6 +58,10 @@ class RoboclawControlNode(Node):
 
         self.max_motor_wattage_speed_samples = 100  # Maximum number of samples to keep
         self.min_motor_wattage_speed_samples = 30  # Minimum number of samples to start calculating
+        
+        # Other
+        self.motor_overcurrent = None
+        self.max_motor_current = 30 # A
 
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
@@ -123,6 +128,16 @@ class RoboclawControlNode(Node):
 
                 roboclaw_state.current_1 = m1_current_val
                 roboclaw_state.current_2 = m2_current_val
+
+                if m1_current_val >= self.max_motor_current or m2_current_val >= self.max_motor_current:
+                    if self.motor_overcurrent == None or self.motor_overcurrent == False:
+                        self.motor_overcurrent = True
+                        self.get_logger().warning(f"Motor overcurrent, stopping")
+
+                if m1_current_val <= self.max_motor_current or m2_current_val <= self.max_motor_current:
+                    if self.motor_overcurrent == None or self.motor_overcurrent == True:
+                        self.get_logger().warning(f"Motor current normal")
+                        self.motor_overcurrent = False
 
             # self.get_logger().info(f"{roboclaw_state.current_1} {roboclaw_state.current_2}")
 
@@ -232,6 +247,10 @@ class RoboclawControlNode(Node):
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
             # left_motor_command and right_motor_command [-127, 127]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
+
+            if self.motor_overcurrent:
+                left_motor_command = 0
+                right_motor_command = 0
 
             # Update variables for battery range calculation based on motors setting
             self.abs_last_m1_command = abs(left_motor_command)

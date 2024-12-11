@@ -28,7 +28,7 @@ class RoboclawControlNode(Node):
         self.turn_compensation_factor = 0.5
 
         # Serial
-        self.comport = "/dev/ttyAMA0" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
+        self.comport = "/dev/roboclaw" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
         self.baudrate = 57600
         self.rclaw = Roboclaw(self.comport, self.baudrate)
 
@@ -104,7 +104,7 @@ class RoboclawControlNode(Node):
         else:
             if self.rclaw_connected == True or self.rclaw_connected == None:
                 self.rclaw_connected = False
-                self.get_logger().error("Failed to open Roboclaw, retrying...")
+                self.get_logger().error("Failed to open Roboclaw, retrying...1")
 
         return self.rclaw_connected
 
@@ -179,7 +179,7 @@ class RoboclawControlNode(Node):
         # so OSError exception (usually because of Input/Output error) is caught here
         except OSError:
             self.rclaw_connected = False
-            self.get_logger().error("Failed to open Roboclaw, retrying...")
+            self.get_logger().error("Failed to open Roboclaw, retrying...2")
         
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console
@@ -280,7 +280,7 @@ class RoboclawControlNode(Node):
         # so OSError exception (usually because of Input/Output error) is caught here
         except OSError:
             self.rclaw_connected = False
-            self.get_logger().error("Failed to open Roboclaw, retrying...")
+            self.get_logger().error("Failed to open Roboclaw, retrying...3")
         
         # All known exceptions are caught, but if some unknown exception occurs,
         # it is caught here and printed to the console

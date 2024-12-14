@@ -28,7 +28,7 @@ class RoboclawControlNode(Node):
         self.turn_compensation_factor = 0.5
 
         # Serial
-        self.comport = "/dev/roboclaw" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
+        self.comport = "/dev/ttyAMA0" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
         self.baudrate = 57600
         self.rclaw = Roboclaw(self.comport, self.baudrate)
 

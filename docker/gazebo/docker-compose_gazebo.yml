@@ -19,7 +19,11 @@
 #
 # To run a certain service:
 #   `docker compose up <service_name>`
-# --------------------
+# 
+# To allow the container to access the host's X11 server for GUI applications,
+# you need to run the following command on the host machine:
+#   `xhost +local:root` OR `xhost +`
+# ---------------------------------------
 
 
 #version: '3.5' # version flag is Depricated in Docker compose V2?
@@ -94,8 +98,8 @@ services:
     #command: "ign gazebo /usr/share/ignition/ignition-gazebo6/worlds/empty.sdf"  #/usr/share/gazebo-11/worlds/seesaw.world
     #command: bash -c "rviz2 && joint_state_publisher_gui"
     #command: "ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=empty.sdf"
-    #command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
-    command: "bash"
+    command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
+    #command: "bash"
     
     networks:
       bfb_network:

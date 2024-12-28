@@ -45,14 +45,22 @@ services:
 
       ## Mount launch files to be able to update them inside the container without rebuilding the image
       # launch files from the package bigfootbot_gazebo
-      - ../../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
+      #- ../../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
+      - ../../bigfootbot_gazebo/launch:/ros2_ws/src/bigfootbot_gazebo/launch
 
-       # launch files from the package bigfootbot_description
-      - ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
+      # Mount folder with SDF files to be able to update SDFs on-the-fly in the running container,
+      # without the need to rebuild the image
+      #- ../../bigfootbot_gazebo/worlds:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/worlds
+      - ../../bigfootbot_gazebo/worlds:/ros2_ws/src/bigfootbot_gazebo/worlds
+
+      # launch files from the package bigfootbot_description
+      #- ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
+      - ../../bigfootbot_description/launch:/ros2_ws/src/bigfootbot_description/launch
 
       # Mount folder with URDF files to be able to update URDFs on-the-fly in the running container,
       # without the need to rebuild the image
-      - ../../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf      
+      #- ../../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf
+      - ../../bigfootbot_description/urdf:/ros2_ws/src/bigfootbot_description/urdf
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -86,8 +94,8 @@ services:
     #command: "ign gazebo /usr/share/ignition/ignition-gazebo6/worlds/empty.sdf"  #/usr/share/gazebo-11/worlds/seesaw.world
     #command: bash -c "rviz2 && joint_state_publisher_gui"
     #command: "ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=empty.sdf"
-    command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
-    #command: "bash"
+    #command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
+    command: "bash"
     
     networks:
       bfb_network:

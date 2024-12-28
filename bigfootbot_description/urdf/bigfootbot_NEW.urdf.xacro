@@ -16,11 +16,14 @@
   <!-- IMU (includes Gazebo plugin for sensor) -->
   <xacro:include filename="$(find bigfootbot_description)/urdf/sensors/imu.urdf.xacro"/>
 
-  <!-- LiDAR (includes Gazebo plugin for sensor) -->
+  <!-- LiDAR -->
   <xacro:include filename="$(find bigfootbot_description)/urdf/sensors/lidar.urdf.xacro"/>
 
   <!-- GPS (includes Gazebo plugin for sensor) -->
   <xacro:include filename="$(find bigfootbot_description)/urdf/sensors/gps.urdf.xacro"/>
+
+  <!-- Camera -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/sensors/camera.urdf.xacro"/>
 
   <!-- Drive controller (Arduino + L298N motor driver) for ros2_control -->
   <!--xacro:include filename="$(find bigfootbot_description)/urdf/controllers/bfb_ros2_control.xacro"/-->
@@ -50,13 +53,13 @@
   <xacro:wheel prefix="drivewhl_rr" x_reflect="-1" y_reflect="-1" rotate_yaw="0"/>
 
   <!-- Add IMU -->
-  <xacro:imu/>
+  <!--xacro:imu/-->
 
   <!-- Add LiDAR -->
   <xacro:lidar/>
 
   <!-- Add GPS -->
-  <xacro:gps/>
+  <!--xacro:gps/-->
 
   <!-- Add drive controller (Gazebo plugin) -->
   <xacro:diff_drive_controller

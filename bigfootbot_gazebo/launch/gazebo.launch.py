@@ -1,19 +1,38 @@
 # Made based on the following file:
 # https://github.com/joshnewans/articubot_one/blob/humble/launch/launch_sim.launch.py
 
+# To show all available arguments and their descriptions, run the launch file with the -s or --show-args option:
+# ros2 launch bigfootbot_gazebo gazebo.launch.py -s
+
 import os
 
 # This is a Python function that returns the path to the package share directory
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
 
 def generate_launch_description():
     #package_name='articubot_one'
+
+    default_world = os.path.join(
+        get_package_share_directory('bigfootbot_gazebo'),
+        'worlds',
+        'empty.world'
+        )    
+        
+    world_lc = LaunchConfiguration('world')
+
+    # Declare the 'world' launch argument
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value=default_world,
+        description='World to load'
+        )    
 
     # Launch the sim with and empty world
     # Include the Gazebo launch file, provided by the ros_gz_sim package
@@ -26,9 +45,10 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
         ),
-        launch_arguments={
-            'gz_args': '-r empty.sdf' # -r - simulation should start immediately (not needed to press play in Gazebo)
-        }.items()
+        #launch_arguments={
+        #    'gz_args': '-r empty.sdf' # -r - simulation should start immediately (not needed to press play in Gazebo)
+        #}.items()
+        launch_arguments={'gz_args': ['-r -v4 ', world_lc], 'on_exit_shutdown': 'true'}.items()
     )
     
     # Include the view_robot launch file, provided by the bigfootbot_description package
@@ -86,8 +106,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        world_arg, # Declare the world argument
         gazebo_empty_ld, # Launch Gazebo with an empty world
         bfb_view_robot_ld, # Launch the robot_state_publisher node
         create_node, # Spawn the robot in the world
-        bridge_node # Launch the node that exchanges messages between ROS 2 and Gazebo
+        bridge_node, # Launch the node that exchanges messages between ROS 2 and Gazebo        
     ])

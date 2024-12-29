@@ -62,8 +62,8 @@ def generate_launch_description():
         launch_arguments={
             'use_robot_state_pub': 'True',
             'use_joint_state_pub_gui': 'False',
-            'use_rviz': 'False',
-            'use_sim_time': 'False',
+            'use_rviz': 'True',
+            'use_sim_time': 'True', # TODO! Set to True?
         }.items()
     )
 
@@ -84,25 +84,44 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ROS 2 node that bridges messages between ROS2 and Gazebo.
-    # Overall, this code is defining a ROS2 node that bridges messages between ROS 2 and Gazebo. 
+    # ROS 2 node that bridges messages between ROS 2 and Gazebo.
+    # Overall, this code is defining a ROS 2 node that bridges messages between ROS 2 and Gazebo. 
     # It allows the cmd_vel topic to be used to control the motion of the robot in Gazebo, 
     # and allows the odometry topic to be used to track the position and orientation of the 
     # robot in ROS 2.
     # Source: https://github.com/gazebosim/ros_gz/tree/ros2/ros_gz_bridge
-    bridge_node = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        arguments=[#'/imu@sensor_msgs/msg/Imu@gz.msgs.IMU'],
-                   '/world/empty/model/bigfootbot/link/base_footprint/sensor/imu_sensor/imu@sensor_msgs/msg/Imu@gz.msgs.IMU',
-                   #'/model/bigfootbot/imu@sensor_msgs/msg/Imu@gz.msgs.IMU'],           
-                   #'/model/bigfootbot/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
-                   '/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
-                   '/odom@nav_msgs/msg/Odometry@gz.msgs.Odometry'],
-                   #'/model/bigfootbot/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry'],        
-        #parameters=[{'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
-         #            'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
-        output='screen' # Print the output of the node to the screen
+    # bridge_node = Node(
+    #     package='ros_gz_bridge',
+    #     executable='parameter_bridge',
+    #     arguments=[#'/imu@sensor_msgs/msg/Imu@gz.msgs.IMU'],
+    #                '/world/empty/model/bigfootbot/link/base_footprint/sensor/imu_sensor/imu@sensor_msgs/msg/Imu@gz.msgs.IMU',
+    #                #'/model/bigfootbot/imu@sensor_msgs/msg/Imu@gz.msgs.IMU'],           
+    #                #'/model/bigfootbot/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
+    #                '/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
+    #                '/odom@nav_msgs/msg/Odometry@gz.msgs.Odometry'],
+    #                #'/model/bigfootbot/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry'],        
+    #     #parameters=[{'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
+    #      #            'qos_overrides./model/bigfootbot.subscriber.reliability': 'reliable'}],
+    #     output='screen' # Print the output of the node to the screen
+    # )
+    ros_gz_bridge_params = os.path.join(get_package_share_directory('bigfootbot_gazebo'), 'config', 'gz_bridge.yaml')
+    ros_gz_bridge_node = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            '--ros-args',
+            '-p',
+            f'config_file:={ros_gz_bridge_params}',
+        ]
+    )
+    
+    # This package provides a unidirectional bridge for images from Gazebo to ROS. The bridge subscribes to 
+    # Gazebo image messages (gz::msgs::Image) and republishes them to ROS (topic /camera/image_raw) using image_transport 
+    # GitHub: https://github.com/gazebosim/ros_gz/tree/ros2/ros_gz_image
+    ros_gz_image_bridge_node = Node(
+        package="ros_gz_image",
+        executable="image_bridge",
+        arguments=["/camera/image_raw"]
     )
 
     return LaunchDescription([
@@ -110,5 +129,5 @@ def generate_launch_description():
         gazebo_empty_ld, # Launch Gazebo with an empty world
         bfb_view_robot_ld, # Launch the robot_state_publisher node
         create_node, # Spawn the robot in the world
-        bridge_node, # Launch the node that exchanges messages between ROS 2 and Gazebo        
+        ros_gz_bridge_node, # Launch the node that exchanges messages between ROS 2 and Gazebo        
     ])

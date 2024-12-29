@@ -22,7 +22,10 @@
 # To run a certain service:
 #   `docker compose -f docker-compose_base.yml up <service_name>`
 #   i.e `docker compose -f docker-compose_base.yml up bfb_base`
-# --------------------
+#
+# To connect to a running container: 
+#   `docker exec -it bfb_base_container bash`
+# -------------------------------------------
 
 services:
   # === ROBOT BASE (motor controller) ===

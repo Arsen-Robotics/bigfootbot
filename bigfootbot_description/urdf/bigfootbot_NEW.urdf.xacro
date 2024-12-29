@@ -61,6 +61,9 @@
   <!-- Add GPS -->
   <!--xacro:gps/-->
 
+  <!-- Add camera -->
+  <!--xacro:camera/-->
+
   <!-- Add drive controller (Gazebo plugin) -->
   <xacro:diff_drive_controller
     wheel_separation="${(base_width/2+wheel_ygap) * 2}"

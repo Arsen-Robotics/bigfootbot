@@ -23,6 +23,18 @@
 # To allow the container to access the host's X11 server for GUI applications,
 # you need to run the following command on the host machine:
 #   `xhost +local:root` OR `xhost +`
+#
+# To connect to a running container: 
+#   `docker exec -it humble_gazebo_cntr bash`
+#
+# Move the robot (forward 0.2 m/s) (-1 means publish only one message):
+#   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+# 
+# Move the robot (backward 0.2 m/s):
+#   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: -0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+#
+# Stop the robot:
+#   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
 # ---------------------------------------
 
 
@@ -52,10 +64,13 @@ services:
       #- ../../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
       - ../../bigfootbot_gazebo/launch:/ros2_ws/src/bigfootbot_gazebo/launch
 
-      # Mount folder with SDF files to be able to update SDFs on-the-fly in the running container,
+      # Mount folder with world SDF files to be able to update SDFs on-the-fly in the running container,
       # without the need to rebuild the image
       #- ../../bigfootbot_gazebo/worlds:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/worlds
       - ../../bigfootbot_gazebo/worlds:/ros2_ws/src/bigfootbot_gazebo/worlds
+
+      # Mount folder with configuration files (e.g for gz_bridge) to be able to update them on-the-fly in the running container,
+      - ../../bigfootbot_gazebo/config:/ros2_ws/src/bigfootbot_gazebo/config
 
       # launch files from the package bigfootbot_description
       #- ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch

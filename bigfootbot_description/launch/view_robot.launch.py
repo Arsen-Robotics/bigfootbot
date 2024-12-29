@@ -148,6 +148,7 @@ def generate_launch_description():
             'use_sim_time',
             default_value='False',
             description='Use simulation (Gazebo) clock if true'
+            # Nodes will read time from the /clock topic if use_sim_time is true instead of the system clock
         )
     )
     

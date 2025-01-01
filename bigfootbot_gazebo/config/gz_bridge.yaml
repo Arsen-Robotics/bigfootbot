@@ -1,3 +1,6 @@
+# This is parameter file for the ros_gz_bridge (maps ROS topics to Gazebo topics)
+# Check https://github.com/joshnewans/articubot_one/tree/new_gazebo
+
 - ros_topic_name: "clock"
   gz_topic_name: "clock"
   ros_type_name: "rosgraph_msgs/msg/Clock"

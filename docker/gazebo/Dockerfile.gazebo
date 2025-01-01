@@ -1,7 +1,7 @@
 # --- Docker commands ---
 #
 # Build docker image:
-#   `docker build -f Dockerfile.gazebo -t humble_gazebo:latest ..`
+#   `docker build -f Dockerfile.gazebo -t bfb_gazebo:latest ..`
 #   
 # Run container with GUI support: 
 # Note. Maybe is needed to add next options:
@@ -14,8 +14,8 @@
 # `docker run -it --rm \
 #   -e DISPLAY \
 #   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-#    --name humble_gazebo_cntr \
-#    humble_gazebo:latest \
+#    --name bfb_gazebo_cntr \
+#    bfb_gazebo:latest \
 #    gazebo /usr/share/gazebo-11/worlds/seesaw.world
 # 
 # Run container with NVIDIA GPU support:
@@ -24,11 +24,11 @@
 #   -e NVIDIA_VISIBLE_DEVICES=all \
 #   -e NVIDIA_DRIVER_CAPABILITIES=all \
 #   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-#   --name humble_gazebo_cntr humble_gazebo:latest bash
+#   --name bfb_gazebo_cntr bfb_gazebo:latest bash
 
 #
 # To connect to a running container: 
-#   `docker exec -it humble_gazebo_cntr bash`
+#   `docker exec -it bfb_gazebo_cntr bash`
 # -------------------------
 
 # --- ROS2 launch commands ---
@@ -96,6 +96,29 @@ COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 
 # Copy the bigfootbot_gazebo package to the ROS2 workspace
 COPY bigfootbot_gazebo ${ROS_WS}/src/bigfootbot_gazebo
+
+# Copy the bigfootbot_teleop package to the ROS2 workspace -------------
+COPY bigfootbot_teleop ${ROS_WS}/src/bigfootbot_teleop
+
+# Clone sources of joystick driver (ROS2 package "joy")
+# NB! Repository forked from https://github.com/ros-drivers/joystick_drivers.git
+# Repository ros-drivers/joystick_drivers contains many packages,
+# we use package "joy" only:
+# joy_node, a node that interfaces a generic joystick to ROS 2. This node publishes a 
+# "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
+# NB! package "joy" depends on the package "joystick_drivers/sdl2_vendor"
+# NB! Use branch ros2
+RUN cd ${ROS_WS}/src \
+    && git clone -b ros2 https://github.com/jevgenik/joystick_drivers.git \
+    && cp -r joystick_drivers/joy . \
+    && cp -r joystick_drivers/sdl2_vendor . \
+    && rm -rf ./joystick_drivers/
+
+# Clone sources of ROS2 package 'teleop_twist_joy'
+# 'teleop_node' that republishes sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages.
+RUN cd ${ROS_WS}/src \
+    && git clone -b humble https://github.com/ros2/teleop_twist_joy.git
+# ----------------------------------------------------------------------
 
 RUN apt-get update \    
     && cd ${ROS_WS} \

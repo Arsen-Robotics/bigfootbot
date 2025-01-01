@@ -25,7 +25,7 @@
 #   `xhost +local:root` OR `xhost +`
 #
 # To connect to a running container: 
-#   `docker exec -it humble_gazebo_cntr bash`
+#   `docker exec -it bfb_gazebo_cntr bash`
 #
 # Move the robot (forward 0.2 m/s) (-1 means publish only one message):
 #   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
@@ -40,7 +40,8 @@
 
 #version: '3.5' # version flag is Depricated in Docker compose V2?
 services:
-  humble_gazebo:
+  # === GAZEBO SIMULATOR ===
+  bfb_gazebo:
     #restart: unless-stopped
     
     build: 
@@ -48,10 +49,10 @@ services:
       dockerfile: docker/gazebo/Dockerfile.gazebo
 
     # The name of the Docker image to be created from the Dockerfile.
-    image: humble_gazebo:latest
+    image: bfb_gazebo:latest
 
     # The name to be given to the container created from the image.
-    container_name: humble_gazebo_cntr
+    container_name: bfb_gazebo_cntr
 
     volumes:
       # Forward X socket to container to enable GUI
@@ -120,6 +121,43 @@ services:
       bfb_network:
 
     #network_mode: host
+  
+  # === TELEOPERATION ===
+  bfb_teleop:          
+    build: 
+      context: ../../
+      dockerfile: docker/teleop/Dockerfile.bfb_std_joystick
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
+        
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_teleop:latest
+
+    # The name to be given to the container created from the image.
+    container_name: bfb_teleop_cntr
+
+    volumes:     
+      # Mount launch and config files to be able to update them inside the container without rebuilding the image
+      - ../../bigfootbot_teleop/launch:/ros2_ws/src/bigfootbot_teleop/launch
+
+      - ../../bigfootbot_teleop/config:/ros2_ws/src/bigfootbot_teleop/config 
+
+    # Map all devices from host to container (need to be able to access the joystick)
+    privileged: true
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    command: "ros2 launch bigfootbot_teleop bfb_teleop.launch.py"
+
+    networks:
+      bfb_network:
 
 networks:
   bfb_network:

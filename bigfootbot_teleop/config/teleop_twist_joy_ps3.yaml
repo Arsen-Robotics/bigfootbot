@@ -19,3 +19,4 @@ teleop_twist_joy_node:
 
     enable_button: 4  # L1 shoulder button
     enable_turbo_button: 5  # R1 shoulder button
+    require_enable_button : false

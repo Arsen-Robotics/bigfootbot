@@ -135,5 +135,6 @@ def generate_launch_description():
         gazebo_empty_ld, # Launch Gazebo with an empty world
         bfb_view_robot_ld, # Launch the robot_state_publisher node
         create_node, # Spawn the robot in the world
-        ros_gz_bridge_node, # Launch the node that exchanges messages between ROS 2 and Gazebo        
+        ros_gz_bridge_node, # Start the ROS 2 node that bridges messages between ROS 2 and Gazebo
+        ros_gz_image_bridge_node # Start the ROS 2 node that bridges images from Gazebo to ROS
     ])

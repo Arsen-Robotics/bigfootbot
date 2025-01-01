@@ -97,29 +97,6 @@ COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
 # Copy the bigfootbot_gazebo package to the ROS2 workspace
 COPY bigfootbot_gazebo ${ROS_WS}/src/bigfootbot_gazebo
 
-# Copy the bigfootbot_teleop package to the ROS2 workspace -------------
-COPY bigfootbot_teleop ${ROS_WS}/src/bigfootbot_teleop
-
-# Clone sources of joystick driver (ROS2 package "joy")
-# NB! Repository forked from https://github.com/ros-drivers/joystick_drivers.git
-# Repository ros-drivers/joystick_drivers contains many packages,
-# we use package "joy" only:
-# joy_node, a node that interfaces a generic joystick to ROS 2. This node publishes a 
-# "sensor_msgs/msg/Joy" message, which contains the current state of each one of the joystick's buttons and axes.
-# NB! package "joy" depends on the package "joystick_drivers/sdl2_vendor"
-# NB! Use branch ros2
-RUN cd ${ROS_WS}/src \
-    && git clone -b ros2 https://github.com/jevgenik/joystick_drivers.git \
-    && cp -r joystick_drivers/joy . \
-    && cp -r joystick_drivers/sdl2_vendor . \
-    && rm -rf ./joystick_drivers/
-
-# Clone sources of ROS2 package 'teleop_twist_joy'
-# 'teleop_node' that republishes sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages.
-RUN cd ${ROS_WS}/src \
-    && git clone -b humble https://github.com/ros2/teleop_twist_joy.git
-# ----------------------------------------------------------------------
-
 RUN apt-get update \    
     && cd ${ROS_WS} \
     && source /opt/ros/${ROS_DISTRO}/setup.bash \

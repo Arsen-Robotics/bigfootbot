@@ -145,10 +145,10 @@ services:
       # Pass arguments to Dockerfile to use different base images
       args:
         # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
-        - BASE_IMAGE=ros:humble-ros-base
+        #- BASE_IMAGE=ros:humble-ros-base
         
         # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
-        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
       
     # The name of the Docker image to be created from the Dockerfile
     image: bfb_gps:latest

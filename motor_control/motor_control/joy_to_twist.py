@@ -27,6 +27,8 @@ class JoyToTwistNode(Node):
         self.beacon_light_button = 7
         self.plow_up_button = 2
         self.plow_down_button = 3
+        self.offroad_drive_mode = 9
+        self.normal_drive_mode = 8
 
         # Axes
         self.linear_axis = 2 # 1 for ps3 controller, 2 for logitech yoke
@@ -48,6 +50,11 @@ class JoyToTwistNode(Node):
         self.plow_moving_up = 0
         self.plow_moving_down = 0
         self.reverse_beeper_enabled = 0
+        self.drive_mode = 0 # 0 is normal drive mode, 1 is offroad drive mode
+
+        # Calculations for normal drive mode
+        self.min_angular_scale = self.angular_scale * 0.4 # 40% of the max scale as a minimum
+        self.max_angular_scale = self.angular_scale * 0.7 # 70% of the max scale as maximum value
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -91,24 +98,25 @@ class JoyToTwistNode(Node):
                     twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
                     msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
 
-                # Absolute linear speed
-                abs_linear_speed = abs(twist_msg.linear.x)
+                if self.drive_mode == 0:
+                    # Absolute linear speed
+                    abs_linear_speed = abs(twist_msg.linear.x)
 
-                # Compute dynamic angular scale (inverse relationship with linear speed)
-                dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
+                    # Compute dynamic angular scale (inverse relationship with linear speed)
+                    dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
 
-                # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
-                min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
-                dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
+                    # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
+                    dynamic_angular_scale = max(dynamic_angular_scale, self.min_angular_scale)
+                    dynamic_angular_scale = min(dynamic_angular_scale, self.max_angular_scale)
 
-                max_angular_scale = self.angular_scale * 0.6 # 60% of the max scale as maximum value
-                dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
+                    # Apply the dynamic angular scale to the angular velocity
+                    twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
 
-                # Apply the dynamic angular scale to the angular velocity
-                twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
+                    # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
+                    # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-                # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
-                # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+                elif self.drive_mode == 1:
+                    twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
                 self.twist_publisher.publish(twist_msg)
 
@@ -230,20 +238,27 @@ class JoyToTwistNode(Node):
             elif msg.buttons[self.beacon_light_button] == 0 and self.beacon_light_button_pressed == 1:
                 self.beacon_light_button_pressed = 0
 
-            # When reversing, start beeping for people's awareness
-            if msg.buttons[self.reverse_button] == 1:
-                if self.reverse_beeper_enabled == 0:
-                    string_msg = String()
-                    string_msg.data = "17" # Command to enable reverse beeper
-                    self.arduino_command_publisher.publish(string_msg)
-                    self.reverse_beeper_enabled = 1
+            # # When reversing, start beeping for people's awareness
+            # if msg.buttons[self.reverse_button] == 1:
+            #     if self.reverse_beeper_enabled == 0:
+            #         string_msg = String()
+            #         string_msg.data = "17" # Command to enable reverse beeper
+            #         self.arduino_command_publisher.publish(string_msg)
+            #         self.reverse_beeper_enabled = 1
 
-            # If reverse mode is disabled, disable the reverse beeper
-            if msg.buttons[self.reverse_button] == 0 and self.reverse_beeper_enabled == 1:
-                string_msg = String()
-                string_msg.data = "18" # Command to disable reverse beeper
-                self.arduino_command_publisher.publish(string_msg)
-                self.reverse_beeper_enabled = 0
+            # # If reverse mode is disabled, disable the reverse beeper
+            # if msg.buttons[self.reverse_button] == 0 and self.reverse_beeper_enabled == 1:
+            #     string_msg = String()
+            #     string_msg.data = "18" # Command to disable reverse beeper
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.reverse_beeper_enabled = 0
+
+            # Drive mode
+            if msg.buttons[self.normal_drive_mode] == 1:
+                self.drive_mode = 0
+            
+            if msg.buttons[self.offroad_drive_mode] == 1:
+                self.drive_mode = 1
             
         # If an exception occurs, print the exception to the console
         except Exception as e:

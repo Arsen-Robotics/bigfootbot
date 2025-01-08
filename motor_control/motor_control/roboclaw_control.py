@@ -341,30 +341,8 @@ class RoboclawControlNode(Node):
         right_motor_command = int(right_motor_speed_rpm / self.max_rpm * self.max_motor_command)
 
         # If some of the commands are over 127 or under -127,
-        # modify them to maintain the ratio between the left and right motor commands
-        if left_motor_command != right_motor_command:
-            if left_motor_command > self.max_motor_command or right_motor_command > self.max_motor_command:
-                difference = \
-                (max(left_motor_command, right_motor_command) - self.max_motor_command) * self.turn_compensation_factor
-
-                if left_motor_command > right_motor_command:
-                    right_motor_command = right_motor_command - difference
-
-                elif right_motor_command > left_motor_command:
-                    left_motor_command = left_motor_command - difference
-
-            if left_motor_command < -self.max_motor_command or right_motor_command < -self.max_motor_command:
-                difference = \
-                (min(left_motor_command, right_motor_command) + self.max_motor_command) * self.turn_compensation_factor
-
-                if left_motor_command > right_motor_command:
-                    left_motor_command = left_motor_command - difference
-
-                if right_motor_command > left_motor_command:
-                    right_motor_command = right_motor_command - difference
-
-        left_motor_command = int(left_motor_command)
-        right_motor_command = int(right_motor_command)
+        # modify them to maintain the angular speed but reducing linear speed
+        left_motor_command, right_motor_command = self.adjust_motor_commands(left_motor_command, right_motor_command)
             
         # Ensure the motor commands are within the valid range (-127 to +127)
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)
@@ -375,6 +353,35 @@ class RoboclawControlNode(Node):
 
         # Update variable for battery range calculation
         self.last_wheel_speed_kmh = abs(linear_speed) * 3.6
+
+        return left_motor_command, right_motor_command
+
+    # If some of the commands are over 127 or under -127,
+    # modify them to maintain the angular speed but reducing linear speed
+    def adjust_motor_commands(self, left_motor_command, right_motor_command):
+        if left_motor_command != right_motor_command:
+            if left_motor_command > self.max_motor_command or right_motor_command > self.max_motor_command:
+                difference = \
+                (max(left_motor_command, right_motor_command) - self.max_motor_command) * self.turn_compensation_factor
+
+                if left_motor_command > right_motor_command:
+                    right_motor_command -= difference
+
+                elif left_motor_command < right_motor_command:
+                    left_motor_command -= difference
+
+            if left_motor_command < -self.max_motor_command or right_motor_command < -self.max_motor_command:
+                difference = \
+                (min(left_motor_command, right_motor_command) + self.max_motor_command) * self.turn_compensation_factor
+
+                if left_motor_command > right_motor_command:
+                    left_motor_command -= difference
+
+                if left_motor_command < right_motor_command:
+                    right_motor_command -= difference
+
+        left_motor_command = int(left_motor_command)
+        right_motor_command = int(right_motor_command)
 
         return left_motor_command, right_motor_command
 

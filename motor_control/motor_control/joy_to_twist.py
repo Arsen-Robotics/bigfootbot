@@ -9,7 +9,7 @@ class JoyToTwistNode(Node):
         super().__init__('joy_to_twist_node')
 
         # Buttons related to driving
-        self.enable_button = 21 # 4 for ps3 controller, 21 for Logitech quadrant, if not pressed robot is stopping
+        self.enable_axis = 3 # 4 for ps3 controller, 3 for Logitech quadrant, if not pressed robot is stopping
         self.reverse_button = 20 # Only for Logitech quadrant, this button is used to turn on reverse mode
         
         # Servos control buttons
@@ -53,8 +53,8 @@ class JoyToTwistNode(Node):
         self.drive_mode = 0 # 0 is normal drive mode, 1 is offroad drive mode
 
         # Calculations for normal drive mode
-        self.min_angular_scale = self.angular_scale * 0.4 # 40% of the max scale as a minimum
-        self.max_angular_scale = self.angular_scale * 0.7 # 70% of the max scale as maximum value
+        self.min_angular_scale = self.angular_scale * 0.3 # 30% of the max scale as a minimum
+        self.max_angular_scale = self.angular_scale * 0.6 # 60% of the max scale as maximum value
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -83,7 +83,7 @@ class JoyToTwistNode(Node):
     # while the other is used for the PS3 controller
     def command_callback(self, msg):
         try:
-            if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
+            if msg.axes[self.enable_axis] == 1: # Check if enable button is pressed
                 twist_msg = Twist()
 
                 # Logitech quadrant provides values between -1 and +1,
@@ -259,6 +259,15 @@ class JoyToTwistNode(Node):
             
             if msg.buttons[self.offroad_drive_mode] == 1:
                 self.drive_mode = 1
+
+            # Stop when enable button is off
+            if msg.axes[self.enable_axis] < 1:
+                twist_msg = Twist()
+
+                twist_msg.linear.x = 0.0
+                twist_msg.angular.z = 0.0
+
+                self.twist_publisher.publish(twist_msg)
             
         # If an exception occurs, print the exception to the console
         except Exception as e:

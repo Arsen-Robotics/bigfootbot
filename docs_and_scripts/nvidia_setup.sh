@@ -14,6 +14,11 @@ sudo mount /dev/nvme0n1p1 /mnt/nvme
 echo "Adding entry to FSTAB..."
 echo "/dev/nvme0n1p1  /mnt/nvme  ext4  defaults  0  2" | sudo tee -a /etc/fstab > /dev/null
 
+# Delete existing folders on the SSD to avoid conflicts
+echo "Deleting existing folders on the SSD..."
+sudo rm -rf /mnt/nvme/ros2_ws
+sudo rm -rf /mnt/nvme/docker
+
 # Create ROS2 workspace
 echo "Creating ROS2 workspace..."
 mkdir -p /mnt/nvme/ros2_ws/src

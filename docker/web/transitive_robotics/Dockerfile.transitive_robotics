@@ -12,8 +12,8 @@
 
 # Documentation: https://transitiverobotics.com/docs/guides/installing_in_docker
 
-ARG BASE_IMAGE=ros:humble-ros-base
-# ARG BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+#ARG BASE_IMAGE=ros:humble-ros-base
+ARG BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
 #ARG BASE_IMAGE
 # Use the base image from the argument or default to Ubuntu 20.04
 FROM ${BASE_IMAGE:-'ubuntu:20.04'}
@@ -32,7 +32,7 @@ COPY config.json .
 # -s is for silent mode (not showing progress bar or error messages)
 # -f fail silently on server errors (curl will not output the error message and will return a non-zero 
 # exit status instead)
-RUN curl -sf "https://install.transitiverobotics.com?id=avton&token=u2b6068104b701u6v5a666i&docker=true" | bash    
+RUN curl -sf "https://install.transitiverobotics.com?id=arsen&token=41685n4095vj3g505v2fv&docker=true" | bash    
 
 WORKDIR /root
 COPY entrypoint.sh .

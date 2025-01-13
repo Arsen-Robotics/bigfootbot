@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Confirmation prompt
+read -p "Are you sure you want to run this script? (y/n): " confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Exiting script. No changes were made."
+    exit 1
+fi
+
 # Update and install dependencies
 echo "Updating system and installing dependencies..."
 sudo apt update && sudo apt upgrade -y
@@ -57,7 +64,7 @@ for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker c
 
 # Add Docker's official GPG key:
 sudo apt-get update
-sudo apt-get install ca-certificates curl
+sudo apt-get install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -101,6 +108,7 @@ sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/motor_control/udev/99-roboclaw.rules /e
 sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/bfb_gps/udev/99-gps-module.rules /etc/udev/rules.d
 sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/bfb_arduino_gateway/udev/99-arduino-mega.rules /etc/udev/rules.d
 sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/docker/web/transitive_robotics/udev/99-usb-cameras.rules /etc/udev/rules.d
+# sudo cp ~/ros2_ws/src/bigfootbot/docker/web/transitive_robotics/udev/99-usb-cameras.rules /etc/udev/rules.d
 
 # Reload rules
 sudo udevadm control --reload-rules && sudo udevadm trigger

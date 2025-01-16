@@ -10,7 +10,7 @@ fi
 # Update and install dependencies
 echo "Updating system and installing dependencies..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git-all jq v4l2loopback-dkms
+sudo apt install -y git-all jq v4l-utils v4l2loopback-dkms
 
 # Mount SSD
 echo "Mounting the SSD..."

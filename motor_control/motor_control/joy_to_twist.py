@@ -31,8 +31,8 @@ class JoyToTwistNode(Node):
         self.normal_drive_mode = 8
 
         # Axes
-        self.linear_axis = 2 # 1 for ps3 controller, 2 for logitech yoke
-        self.angular_axis = 0 # 2 for ps3 controller, 0 for logitech yoke
+        self.linear_axis = 1 # 1 for ps3 controller, 2 for logitech yoke
+        self.angular_axis = 2 # 2 for ps3 controller, 0 for logitech yoke
         self.reverse_axis = 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
 
         # Scales
@@ -78,10 +78,8 @@ class JoyToTwistNode(Node):
     # This function is called every time a message is received on the joy topic
     # It reads joy messages and converts them to Twist messages
     # and publishes them to the cmd_vel topic
-
-    # One of the two functions is commented out, because one is used for the Logitech yoke and quadrant,
-    # while the other is used for the PS3 controller
     def command_callback(self, msg):
+        msg.axes[self.enable_axis] = 1
         try:
             if msg.axes[self.enable_axis] == 1: # Check if enable button is pressed
                 twist_msg = Twist()
@@ -89,14 +87,15 @@ class JoyToTwistNode(Node):
                 # Logitech quadrant provides values between -1 and +1,
                 # so it is required to scale them to the range of 0 to +1
                 # because this axis is used only for forward motion
-                twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis] + 1) / 2
+                #twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis] + 1) / 2
+                twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis])
 
                 # If quadrant's most left axis is pushed all the way down (reverse button),
                 # reverse mode is activated and the most right axis is used to control the speed of the robot in reverse
                 # When driving backwards, angular axis should be flipped for realism
-                if msg.buttons[self.reverse_button] == 1:
-                    twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
-                    msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
+                # if msg.buttons[self.reverse_button] == 1:
+                #     twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
+                #     msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
 
                 if self.drive_mode == 0:
                     # Absolute linear speed
@@ -169,74 +168,74 @@ class JoyToTwistNode(Node):
             #     string_msg.data = "6" # Command for camera right
             #     self.arduino_command_publisher.publish(string_msg)
 
-            # Buzzer
-            if msg.buttons[self.buzzer_button] == 1 and self.buzzer_enabled == 0:
-                string_msg = String()
-                string_msg.data = "7" # Command to enable buzzer
-                self.arduino_command_publisher.publish(string_msg)
-                self.buzzer_enabled = 1
-            elif msg.buttons[self.buzzer_button] == 0 and self.buzzer_enabled == 1:
-                string_msg = String()
-                string_msg.data = "8" # Command to disable buzzer
-                self.arduino_command_publisher.publish(string_msg)
-                self.buzzer_enabled = 0
+            # # Buzzer
+            # if msg.buttons[self.buzzer_button] == 1 and self.buzzer_enabled == 0:
+            #     string_msg = String()
+            #     string_msg.data = "7" # Command to enable buzzer
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.buzzer_enabled = 1
+            # elif msg.buttons[self.buzzer_button] == 0 and self.buzzer_enabled == 1:
+            #     string_msg = String()
+            #     string_msg.data = "8" # Command to disable buzzer
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.buzzer_enabled = 0
 
-            # Headlight
-            if msg.buttons[self.headlight_button] == 1 and self.headlight_button_pressed == 0:
-                self.headlight_button_pressed = 1
-                if self.headlight_enabled == 0:
-                    string_msg = String()
-                    string_msg.data = "10"  # Command to enable light
-                    self.arduino_command_publisher.publish(string_msg)
-                    self.headlight_enabled = 1
-                else:
-                    string_msg = String()
-                    string_msg.data = "9"  # Command to disable light
-                    self.arduino_command_publisher.publish(string_msg)
-                    self.headlight_enabled = 0
+            # # Headlight
+            # if msg.buttons[self.headlight_button] == 1 and self.headlight_button_pressed == 0:
+            #     self.headlight_button_pressed = 1
+            #     if self.headlight_enabled == 0:
+            #         string_msg = String()
+            #         string_msg.data = "10"  # Command to enable light
+            #         self.arduino_command_publisher.publish(string_msg)
+            #         self.headlight_enabled = 1
+            #     else:
+            #         string_msg = String()
+            #         string_msg.data = "9"  # Command to disable light
+            #         self.arduino_command_publisher.publish(string_msg)
+            #         self.headlight_enabled = 0
 
-            elif msg.buttons[self.headlight_button] == 0 and self.headlight_button_pressed == 1:
-                self.headlight_button_pressed = 0
+            # elif msg.buttons[self.headlight_button] == 0 and self.headlight_button_pressed == 1:
+            #     self.headlight_button_pressed = 0
 
-            # Snow plow
-            if msg.buttons[self.plow_up_button] == 1 and self.plow_moving_up == 0:
-                string_msg = String()
-                string_msg.data = "12" # Command to raise plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_up = 1
-            elif msg.buttons[self.plow_up_button] == 0 and self.plow_moving_up == 1:
-                string_msg = String()
-                string_msg.data = "14" # Command to stop plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_up = 0
+            # # Snow plow
+            # if msg.buttons[self.plow_up_button] == 1 and self.plow_moving_up == 0:
+            #     string_msg = String()
+            #     string_msg.data = "12" # Command to raise plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_up = 1
+            # elif msg.buttons[self.plow_up_button] == 0 and self.plow_moving_up == 1:
+            #     string_msg = String()
+            #     string_msg.data = "14" # Command to stop plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_up = 0
 
-            if msg.buttons[self.plow_down_button] == 1 and self.plow_moving_down == 0:
-                string_msg = String()
-                string_msg.data = "13" # Command to lower plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_down = 1
-            elif msg.buttons[self.plow_down_button] == 0 and self.plow_moving_down == 1:
-                string_msg = String()
-                string_msg.data = "14" # Command to stop plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_down = 0
+            # if msg.buttons[self.plow_down_button] == 1 and self.plow_moving_down == 0:
+            #     string_msg = String()
+            #     string_msg.data = "13" # Command to lower plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_down = 1
+            # elif msg.buttons[self.plow_down_button] == 0 and self.plow_moving_down == 1:
+            #     string_msg = String()
+            #     string_msg.data = "14" # Command to stop plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_down = 0
 
-            # Beacon light
-            if msg.buttons[self.beacon_light_button] == 1 and self.beacon_light_button_pressed == 0:
-                self.beacon_light_button_pressed = 1
-                if self.beacon_light_enabled == 0:
-                    string_msg = String()
-                    string_msg.data = "15"  # Command to enable beacon light
-                    self.arduino_command_publisher.publish(string_msg)
-                    self.beacon_light_enabled = 1
-                else:
-                    string_msg = String()
-                    string_msg.data = "16"  # Command to disable beacon light
-                    self.arduino_command_publisher.publish(string_msg)
-                    self.beacon_light_enabled = 0
+            # # Beacon light
+            # if msg.buttons[self.beacon_light_button] == 1 and self.beacon_light_button_pressed == 0:
+            #     self.beacon_light_button_pressed = 1
+            #     if self.beacon_light_enabled == 0:
+            #         string_msg = String()
+            #         string_msg.data = "15"  # Command to enable beacon light
+            #         self.arduino_command_publisher.publish(string_msg)
+            #         self.beacon_light_enabled = 1
+            #     else:
+            #         string_msg = String()
+            #         string_msg.data = "16"  # Command to disable beacon light
+            #         self.arduino_command_publisher.publish(string_msg)
+            #         self.beacon_light_enabled = 0
 
-            elif msg.buttons[self.beacon_light_button] == 0 and self.beacon_light_button_pressed == 1:
-                self.beacon_light_button_pressed = 0
+            # elif msg.buttons[self.beacon_light_button] == 0 and self.beacon_light_button_pressed == 1:
+            #     self.beacon_light_button_pressed = 0
 
             # # When reversing, start beeping for people's awareness
             # if msg.buttons[self.reverse_button] == 1:
@@ -253,99 +252,25 @@ class JoyToTwistNode(Node):
             #     self.arduino_command_publisher.publish(string_msg)
             #     self.reverse_beeper_enabled = 0
 
-            # Drive mode
-            if msg.buttons[self.normal_drive_mode] == 1:
-                self.drive_mode = 0
+            # # Drive mode
+            # if msg.buttons[self.normal_drive_mode] == 1:
+            #     self.drive_mode = 0
             
-            if msg.buttons[self.offroad_drive_mode] == 1:
-                self.drive_mode = 1
+            # if msg.buttons[self.offroad_drive_mode] == 1:
+            #     self.drive_mode = 1
 
-            # Stop when enable button is off
-            if msg.axes[self.enable_axis] < 1:
-                twist_msg = Twist()
+            # # Stop when enable button is off
+            # if msg.axes[self.enable_axis] < 1:
+            #     twist_msg = Twist()
 
-                twist_msg.linear.x = 0.0
-                twist_msg.angular.z = 0.0
+            #     twist_msg.linear.x = 0.0
+            #     twist_msg.angular.z = 0.0
 
-                self.twist_publisher.publish(twist_msg)
+            #     self.twist_publisher.publish(twist_msg)
             
         # If an exception occurs, print the exception to the console
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")
-
-    # def command_callback(self, msg):
-    #     try:
-    #         # if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
-    #         twist_msg = Twist()
-
-    #         # When driving backwards, angular axis should be flipped for realism
-    #         if msg.axes[self.linear_axis] < 0:
-    #             msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
-
-    #         # Logitech quadrant provides values between -1 and +1,
-    #         # so it is required to scale them to the range of 0 to +1
-    #         # because this axis is used only for forward motion
-    #         twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
-
-    #         # Absolute linear speed
-    #         abs_linear_speed = abs(twist_msg.linear.x)
-
-    #         # Compute dynamic angular scale (inverse relationship with linear speed)
-    #         dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
-
-    #         # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
-    #         min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
-    #         dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
-
-    #         max_angular_scale = self.angular_scale * 0.6 # 60% of the max scale as maximum value
-    #         dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
-
-    #         # Apply the dynamic angular scale to the angular velocity
-    #         twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
-
-    #         # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
-    #         # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
-
-    #         self.twist_publisher.publish(twist_msg)
-
-    # #         if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "0" # Command for camera reset position
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "1" # Command for camera up
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_down_button] == 1:  # Check if camera down button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "2"  # Command for camera down
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_left_quick_view_button] == 1:  # Check if camera left button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "3"  # Command for camera left quick view
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_right_quick_view_button] == 1:  # Check if camera right button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "4"  # Command for camera right quick view
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_left_button] == 1:
-    # #             string_msg = String()
-    # #             string_msg.data = "5" # Command for camera left
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_right_button] == 1:
-    # #             string_msg = String()
-    # #             string_msg.data = "6" # Command for camera right
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    #     # If an exception occurs, print the exception to the console
-    #     except Exception as e:
-    #         self.get_logger().error(f"Exception: {e}")
 
 def main():
     rclpy.init()

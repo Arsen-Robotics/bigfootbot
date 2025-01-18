@@ -55,6 +55,9 @@ services:
       # Mount Python source files to be able to update them inside the container without rebuilding the image
       - ../../motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
 
+      - ../../motor_control/log:/ros2_ws/src/motor_control/log
+      - ../../motor_control/config:/ros2_ws/src/motor_control/config
+
     privileged: true
 
     stdin_open: true # docker run -i
@@ -66,7 +69,7 @@ services:
       macnet:
         ipv4_address: 192.168.5.70
 
-    command: ros2 run motor_control roboclaw_control_node
+    command: ros2 run motor_control roboclaw_control_node --ros-args --params-file ros2_ws/src/motor_control/config/params.yaml
 
   bfb_joy_to_twist:
     build:
@@ -91,6 +94,8 @@ services:
       # Mount Python source files to be able to update them inside the container without rebuilding the image
       - ../../motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
 
+      - ../../motor_control/config:/ros2_ws/src/motor_control/config
+
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
@@ -100,7 +105,7 @@ services:
       macnet:
         ipv4_address: 192.168.5.71
 
-    command: ros2 run motor_control joy_to_twist_node
+    command: ros2 run motor_control joy_to_twist_node --ros-args --params-file ros2_ws/src/motor_control/config/params.yaml
 
   bfb_foxglove_bridge:
     build:
@@ -162,8 +167,9 @@ services:
       # Mount Python source files to be able to update them inside the container without rebuilding the image
       - ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
 
-      - ../../bfb_gps/config:/ros2_ws/src/nmea_navsat_driver/config
+      # - ../../bfb_gps/config:/ros2_ws/src/nmea_navsat_driver/config
       - ../../bfb_gps/gpx:/ros2_ws/src/bfb_gps/gpx
+      - ../../bfb_gps/config:/ros2_ws/src/bfb_gps/config
 
     privileged: true
 

@@ -9,8 +9,13 @@ class GpsNode(Node):
     def __init__(self):
         super().__init__('gps_node')
 
-        self.comport = "/dev/gps-module"
-        self.baudrate = 9600
+        # Load parameters with default values
+        self.declare_parameter("comport", "/dev/gps-module")
+        self.declare_parameter("baudrate", 9600)
+
+        # Assign parameters to variables
+        self.comport = self.get_parameter("comport").value
+        self.baudrate = self.get_parameter("baudrate").value
 
         # Initially these flags are set to None, because it is not known if the GPS module is connected or not
         # and if it is receiving GPS data or not
@@ -39,6 +44,8 @@ class GpsNode(Node):
         self.gpx.tracks.append(self.track)
         self.track_segment = gpxpy.gpx.GPXTrackSegment()
         self.track.segments.append(self.track_segment)
+
+        self.gpx_file = "/ros2_ws/src/bfb_gps/gpx/output.gpx"
 
     # This function tries to open a serial connection to the GPS module
     # If the connection succeeds or fails, it prints a message to the console
@@ -142,7 +149,7 @@ class GpsNode(Node):
             self.track_segment.points.append(gpxpy.gpx.GPXTrackPoint(decimal_lat, decimal_lon))
 
             # Write to GPX file every time a new point is added
-            with open("/ros2_ws/src/bfb_gps/gpx/output.gpx", "w") as f:
+            with open(self.gpx_file, "w") as f:
                 f.write(self.gpx.to_xml())
 
     def parse_gpgga(self, line):

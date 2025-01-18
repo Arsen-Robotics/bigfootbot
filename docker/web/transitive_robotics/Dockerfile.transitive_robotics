@@ -18,8 +18,11 @@ ARG BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c73
 # Use the base image from the argument or default to Ubuntu 20.04
 FROM ${BASE_IMAGE:-'ubuntu:20.04'}
 
-RUN apt-get update
-RUN apt-get install -y build-essential curl git lsb-release gnupg
+#RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
+#    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
+
+RUN apt update
+RUN apt install -y build-essential curl git lsb-release gnupg
 
 # Optionally: add a custom configuration file
 WORKDIR /root/.transitive

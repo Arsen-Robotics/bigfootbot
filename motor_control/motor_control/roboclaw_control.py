@@ -15,53 +15,75 @@ from bfb_interfaces.msg import RoboclawState
 from sensor_msgs.msg import BatteryState
 from std_msgs.msg import Float32
 import time
+from datetime import datetime
 
 class RoboclawControlNode(Node):
     def __init__(self):
         super().__init__('roboclaw_control_node')
 
-        # Constants
-        self.wheel_track = 0.65 # Distance between left and right wheel in meters
-        self.wheel_diameter = 0.33 # Wheel diameter in meters
-        self.max_rpm = 177.5
-        self.max_motor_command = 126
-        self.turn_compensation_factor = 0.5
+        # Load parameters with default values
+        self.declare_parameter("wheel_track", 0.65)
+        self.declare_parameter("wheel_diameter", 0.33)
+        self.declare_parameter("max_rpm", 177.5)
+        self.declare_parameter("max_motor_command", 126)
+        self.declare_parameter("turn_compensation_factor", 0.5)
 
-        # Serial
-        self.comport = "/dev/ttyAMA0" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
-        self.baudrate = 57600
+        self.declare_parameter("comport", "/dev/ttyAMA0")
+        self.declare_parameter("baudrate", 57600)
+        self.declare_parameter("address", 128)
+
+        self.declare_parameter("max_battery_voltage", 29.4)
+        self.declare_parameter("min_battery_voltage", 21)
+        self.declare_parameter("battery_wh", 652.68)
+        self.declare_parameter("avg_static_wattage_draw", 26)
+        self.declare_parameter("max_motor_wattage_speed_samples", 100)
+        self.declare_parameter("min_motor_wattage_speed_samples", 30)
+
+        self.declare_parameter("max_motor_current", 30)
+
+        self.declare_parameter("motor_overcurrents_log_file", "/ros2_ws/src/motor_control/log/motor_overcurrents.log")
+        self.declare_parameter("motor_wattages_log_file", "/ros2_ws/src/motor_control/log/motor_wattages.log")
+
+        # Assign parameters to variables
+        self.wheel_track = self.get_parameter("wheel_track").value
+        self.wheel_diameter = self.get_parameter("wheel_diameter").value
+        self.max_rpm = self.get_parameter("max_rpm").value
+        self.max_motor_command = self.get_parameter("max_motor_command").value
+        self.turn_compensation_factor = self.get_parameter("turn_compensation_factor").value
+
+        self.comport = self.get_parameter("comport").value
+        self.baudrate = self.get_parameter("baudrate").value
+        self.address = self.get_parameter("address").value
+
+        self.max_battery_voltage = self.get_parameter("max_battery_voltage").value
+        self.min_battery_voltage = self.get_parameter("min_battery_voltage").value
+        self.battery_wh = self.get_parameter("battery_wh").value
+        self.avg_static_wattage_draw = self.get_parameter("avg_static_wattage_draw").value
+        self.max_motor_wattage_speed_samples = self.get_parameter("max_motor_wattage_speed_samples").value
+        self.min_motor_wattage_speed_samples = self.get_parameter("min_motor_wattage_speed_samples").value
+
+        self.max_motor_current = self.get_parameter("max_motor_current").value
+        
+        self.motor_overcurrents_log_file = self.get_parameter("motor_overcurrents_log_file").value
+        self.motor_wattages_log_file = self.get_parameter("motor_wattages_log_file").value
+
+        # RoboClaw object initialization
         self.rclaw = Roboclaw(self.comport, self.baudrate)
-
-        # Address is set in Basicmicro Motion Studio to determine which Roboclaw to talk to,
-        # if multiple Roboclaws are connected to the same serial port
-        self.address = 0x80
 
         # Initially this flag is set to None, because it is not known if the Roboclaw is connected or not
         self.rclaw_connected = None
-
-        # Battery
-        self.max_battery_voltage = 29.4
-        self.min_battery_voltage = 21
-        self.battery_wh = 652.68
 
         # Variables for battery range calculation depending on motors setting
         self.abs_last_m1_command = None
         self.abs_last_m2_command = None
         self.last_wheel_speed_kmh = None
 
-        # Average wattage draw of everything in the robot (without motors)
-        self.avg_static_wattage_draw = 26
-
         # Record motor wattage draw and wheel speed throughout the trip
         self.motor_wattage_samples = []
         self.wheel_speed_samples = []
-
-        self.max_motor_wattage_speed_samples = 100  # Maximum number of samples to keep
-        self.min_motor_wattage_speed_samples = 30  # Minimum number of samples to start calculating
         
-        # Other
+        # Motor overcurrent
         self.motor_overcurrent = None
-        self.max_motor_current = 30 # A
 
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
@@ -130,11 +152,14 @@ class RoboclawControlNode(Node):
                 roboclaw_state.current_2 = m2_current_val
 
                 if m1_current_val >= self.max_motor_current or m2_current_val >= self.max_motor_current:
-                    if self.motor_overcurrent == None or self.motor_overcurrent == False:
-                        self.motor_overcurrent = True
-                        self.get_logger().warning(f"Motor overcurrent, stopping")
+                    #if self.motor_overcurrent == None or self.motor_overcurrent == False:
+                    self.motor_overcurrent = True
+                    self.get_logger().warning(f"Motor overcurrent, stopping. M1: {m1_current_val}; M2: {m2_current_val}")
 
-                if m1_current_val <= self.max_motor_current or m2_current_val <= self.max_motor_current:
+                    with open(self.motor_overcurrents_log_file, 'a') as f:
+                        f.write(f"{datetime.now()} - M1: {m1_current_val} A, M2: {m2_current_val} A\n")
+
+                if m1_current_val < self.max_motor_current or m2_current_val < self.max_motor_current:
                     if self.motor_overcurrent == None or self.motor_overcurrent == True:
                         self.get_logger().warning(f"Motor current normal")
                         self.motor_overcurrent = False
@@ -217,6 +242,10 @@ class RoboclawControlNode(Node):
             # Append wattage and wheel speed samples
             self.motor_wattage_samples.append(battery_wattage_1 + battery_wattage_2)
             self.wheel_speed_samples.append(self.last_wheel_speed_kmh)
+
+            # Log wattages (power consumption)
+            with open(self.motor_wattages_log_file, 'a') as f:
+                f.write(f"{datetime.now()} - M1: {battery_wattage_1} W, M2: {battery_wattage_2} W\n")
 
         # Calculate average motor wattage and average wheel speed if enough samples
         # Then estimate remaining energy and range in km

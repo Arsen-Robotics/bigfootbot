@@ -8,36 +8,62 @@ class JoyToTwistNode(Node):
     def __init__(self):
         super().__init__('joy_to_twist_node')
 
-        # Buttons related to driving
-        self.enable_axis = 3 # 4 for ps3 controller, 3 for Logitech quadrant, if not pressed robot is stopping
-        self.reverse_button = 20 # Only for Logitech quadrant, this button is used to turn on reverse mode
+        # Load parameters with default values
+        self.declare_parameter("enable_axis", 3)
+        self.declare_parameter("reverse_button", 20)
+
+        self.declare_parameter("camera_up_button", 12)
+        self.declare_parameter("camera_down_button", 13)
+        self.declare_parameter("camera_left_button", 2)
+        self.declare_parameter("camera_right_button", 1)
+        self.declare_parameter("camera_left_quick_view_button", 6)
+        self.declare_parameter("camera_right_quick_view_button", 7)
+        self.declare_parameter("camera_reset_position_button", 0)
+
+        self.declare_parameter("buzzer_button", 1)
+        self.declare_parameter("headlight_button", 6)
+        self.declare_parameter("beacon_light_button", 7)
+        self.declare_parameter("plow_up_button", 2)
+        self.declare_parameter("plow_down_button", 3)
+        self.declare_parameter("offroad_drive_mode", 9)
+        self.declare_parameter("normal_drive_mode", 8)
+
+        self.declare_parameter("linear_axis", 2)
+        self.declare_parameter("angular_axis", 0)
+        self.declare_parameter("reverse_axis", 4)
+
+        self.declare_parameter("linear_scale", 3.067)
+        self.declare_parameter("angular_scale", 9.437)
+
+        self.declare_parameter("min_angular_scale", 0.3)
+        self.declare_parameter("max_angular_scale", 0.6)
+
+        # Assign parameters to variables
+        self.enable_axis = self.get_parameter("enable_axis").value
+        self.reverse_button = self.get_parameter("reverse_button").value
+
+        self.camera_up_button = self.get_parameter("camera_up_button").value
+        self.camera_down_button = self.get_parameter("camera_down_button").value
+        self.camera_left_button = self.get_parameter("camera_left_button").value
+        self.camera_right_button = self.get_parameter("camera_right_button").value
+        self.camera_left_quick_view_button = self.get_parameter("camera_left_quick_view_button").value
+        self.camera_right_quick_view_button = self.get_parameter("camera_right_quick_view_button").value
         
-        # Servos control buttons
-        self.camera_up_button = None # 12 for ps3 controller
-        self.camera_down_button = None # 13 for ps3 controller
-        self.camera_left_button = None # 2 for ps3 controller
-        self.camera_right_button = None # 1 for ps3 controller
-        self.camera_left_quick_view_button = 6 # 14 for ps3 controller, 6 for Logitech quadrant
-        self.camera_right_quick_view_button = 7 # 15 for ps3 controller, 7 for Logitech quadrant
-        self.camera_reset_position_button = 0 # 3 for ps3 controller, 0 for Logitech quadrant
-
-        # Other buttons
-        self.buzzer_button = 1
-        self.headlight_button = 6
-        self.beacon_light_button = 7
-        self.plow_up_button = 2
-        self.plow_down_button = 3
-        self.offroad_drive_mode = 9
-        self.normal_drive_mode = 8
-
-        # Axes
-        self.linear_axis = 2 # 1 for ps3 controller, 2 for logitech yoke
-        self.angular_axis = 0 # 2 for ps3 controller, 0 for logitech yoke
-        self.reverse_axis = 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
-
-        # Scales
-        self.linear_scale = 3.067
-        self.angular_scale = 9.437
+        self.camera_reset_position_button = self.get_parameter("camera_reset_position_button").value
+        self.buzzer_button = self.get_parameter("buzzer_button").value
+        self.headlight_button = self.get_parameter("headlight_button").value
+        self.beacon_light_button = self.get_parameter("beacon_light_button").value
+        self.plow_up_button = self.get_parameter("plow_up_button").value
+        self.plow_down_button = self.get_parameter("plow_down_button").value
+        self.offroad_drive_mode = self.get_parameter("offroad_drive_mode").value
+        
+        self.normal_drive_mode = self.get_parameter("normal_drive_mode").value
+        self.linear_axis = self.get_parameter("linear_axis").value
+        self.angular_axis = self.get_parameter("angular_axis").value
+        self.reverse_axis = self.get_parameter("reverse_axis").value
+        
+        self.linear_scale = self.get_parameter("linear_scale").value
+        self.angular_scale = self.get_parameter("angular_scale").value
 
         # Flags
         self.buzzer_enabled = 0
@@ -53,8 +79,8 @@ class JoyToTwistNode(Node):
         self.drive_mode = 0 # 0 is normal drive mode, 1 is offroad drive mode
 
         # Calculations for normal drive mode
-        self.min_angular_scale = self.angular_scale * 0.3 # 30% of the max scale as a minimum
-        self.max_angular_scale = self.angular_scale * 0.6 # 60% of the max scale as maximum value
+        self.min_angular_scale = self.angular_scale * self.get_parameter("min_angular_scale").value
+        self.max_angular_scale = self.angular_scale * self.get_parameter("max_angular_scale").value
 
         # Create a subscription to the joy topic
         self.subscription = self.create_subscription(
@@ -78,10 +104,8 @@ class JoyToTwistNode(Node):
     # This function is called every time a message is received on the joy topic
     # It reads joy messages and converts them to Twist messages
     # and publishes them to the cmd_vel topic
-
-    # One of the two functions is commented out, because one is used for the Logitech yoke and quadrant,
-    # while the other is used for the PS3 controller
     def command_callback(self, msg):
+        #msg.axes[self.enable_axis] = 1
         try:
             if msg.axes[self.enable_axis] == 1: # Check if enable button is pressed
                 twist_msg = Twist()
@@ -90,6 +114,7 @@ class JoyToTwistNode(Node):
                 # so it is required to scale them to the range of 0 to +1
                 # because this axis is used only for forward motion
                 twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis] + 1) / 2
+                #twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis])
 
                 # If quadrant's most left axis is pushed all the way down (reverse button),
                 # reverse mode is activated and the most right axis is used to control the speed of the robot in reverse
@@ -198,28 +223,28 @@ class JoyToTwistNode(Node):
             elif msg.buttons[self.headlight_button] == 0 and self.headlight_button_pressed == 1:
                 self.headlight_button_pressed = 0
 
-            # Snow plow
-            if msg.buttons[self.plow_up_button] == 1 and self.plow_moving_up == 0:
-                string_msg = String()
-                string_msg.data = "12" # Command to raise plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_up = 1
-            elif msg.buttons[self.plow_up_button] == 0 and self.plow_moving_up == 1:
-                string_msg = String()
-                string_msg.data = "14" # Command to stop plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_up = 0
+            # # Snow plow
+            # if msg.buttons[self.plow_up_button] == 1 and self.plow_moving_up == 0:
+            #     string_msg = String()
+            #     string_msg.data = "12" # Command to raise plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_up = 1
+            # elif msg.buttons[self.plow_up_button] == 0 and self.plow_moving_up == 1:
+            #     string_msg = String()
+            #     string_msg.data = "14" # Command to stop plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_up = 0
 
-            if msg.buttons[self.plow_down_button] == 1 and self.plow_moving_down == 0:
-                string_msg = String()
-                string_msg.data = "13" # Command to lower plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_down = 1
-            elif msg.buttons[self.plow_down_button] == 0 and self.plow_moving_down == 1:
-                string_msg = String()
-                string_msg.data = "14" # Command to stop plow
-                self.arduino_command_publisher.publish(string_msg)
-                self.plow_moving_down = 0
+            # if msg.buttons[self.plow_down_button] == 1 and self.plow_moving_down == 0:
+            #     string_msg = String()
+            #     string_msg.data = "13" # Command to lower plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_down = 1
+            # elif msg.buttons[self.plow_down_button] == 0 and self.plow_moving_down == 1:
+            #     string_msg = String()
+            #     string_msg.data = "14" # Command to stop plow
+            #     self.arduino_command_publisher.publish(string_msg)
+            #     self.plow_moving_down = 0
 
             # Beacon light
             if msg.buttons[self.beacon_light_button] == 1 and self.beacon_light_button_pressed == 0:
@@ -272,80 +297,6 @@ class JoyToTwistNode(Node):
         # If an exception occurs, print the exception to the console
         except Exception as e:
             self.get_logger().error(f"Exception: {e}")
-
-    # def command_callback(self, msg):
-    #     try:
-    #         # if msg.buttons[self.enable_button] == 1: # Check if enable button is pressed
-    #         twist_msg = Twist()
-
-    #         # When driving backwards, angular axis should be flipped for realism
-    #         if msg.axes[self.linear_axis] < 0:
-    #             msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
-
-    #         # Logitech quadrant provides values between -1 and +1,
-    #         # so it is required to scale them to the range of 0 to +1
-    #         # because this axis is used only for forward motion
-    #         twist_msg.linear.x = self.linear_scale * msg.axes[self.linear_axis]
-
-    #         # Absolute linear speed
-    #         abs_linear_speed = abs(twist_msg.linear.x)
-
-    #         # Compute dynamic angular scale (inverse relationship with linear speed)
-    #         dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
-
-    #         # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
-    #         min_angular_scale = self.angular_scale * 0.3  # 30% of the max scale as a minimum
-    #         dynamic_angular_scale = max(dynamic_angular_scale, min_angular_scale)
-
-    #         max_angular_scale = self.angular_scale * 0.6 # 60% of the max scale as maximum value
-    #         dynamic_angular_scale = min(dynamic_angular_scale, max_angular_scale)
-
-    #         # Apply the dynamic angular scale to the angular velocity
-    #         twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
-
-    #         # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
-    #         # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
-
-    #         self.twist_publisher.publish(twist_msg)
-
-    # #         if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera up button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "0" # Command for camera reset position
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_up_button] == 1: # Check if camera up button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "1" # Command for camera up
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_down_button] == 1:  # Check if camera down button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "2"  # Command for camera down
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_left_quick_view_button] == 1:  # Check if camera left button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "3"  # Command for camera left quick view
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_right_quick_view_button] == 1:  # Check if camera right button is pressed
-    # #             string_msg = String()
-    # #             string_msg.data = "4"  # Command for camera right quick view
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_left_button] == 1:
-    # #             string_msg = String()
-    # #             string_msg.data = "5" # Command for camera left
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    # #         if msg.buttons[self.camera_right_button] == 1:
-    # #             string_msg = String()
-    # #             string_msg.data = "6" # Command for camera right
-    # #             self.arduino_command_publisher.publish(string_msg)
-
-    #     # If an exception occurs, print the exception to the console
-    #     except Exception as e:
-    #         self.get_logger().error(f"Exception: {e}")
 
 def main():
     rclpy.init()

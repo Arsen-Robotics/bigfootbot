@@ -1,0 +1,4 @@
+bfb_gps_node:
+  ros__parameters:
+    comport: "/dev/gps-module"
+    baudrate: 9600

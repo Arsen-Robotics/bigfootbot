@@ -42,8 +42,8 @@ RUN apt-get update \
     && python3 get-pip.py \
     && rm get-pip.py
 
-# Install Python pyserial library
-RUN pip install pyserial
+# Install Python pyserial and gpxpy library (for writing to .gpx file)
+RUN pip install pyserial gpxpy
 
 # Install dependencies for all packages in the workspace
 RUN apt-get update \

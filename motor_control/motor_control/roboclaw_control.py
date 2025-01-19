@@ -88,7 +88,7 @@ class RoboclawControlNode(Node):
         # Create a subscription to the cmd_vel topic
         self.subscription = self.create_subscription(
             Twist,
-            'cmd_vel',
+            'cmd_vel_tracker',
             self.command_callback,
             10) # 10 is the queue size (how many messages to store in memory)
 

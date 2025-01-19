@@ -266,6 +266,10 @@ services:
 
     #command: ros2 run bfb_arduino_gateway arduino_gateway_node
 
+    # ros2 run realsense2_camera realsense2_camera_node
+    # ros2 run ball_tracker detect_ball --ros-args -p tuning_mode:=true -r image_in:=/color/image_raw
+    # ros2 run ball_tracker follow_ball --ros-args -r cmd_vel:=cmd_vel_tracker
+
 networks:
   macnet:
     external: true  # Use the existing Macvlan network

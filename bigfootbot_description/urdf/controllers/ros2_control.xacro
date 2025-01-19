@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:unless value="$(arg sim_mode)">
+    <ros2_control name="RealRobot" type="system">
+      <hardware>
+        <plugin>diffdrive_arduino/DiffDriveArduinoHardware</plugin>
+        <param name="left_wheel_name">left_wheel_joint</param>
+        <param name="right_wheel_name">right_wheel_joint</param>
+        <param name="loop_rate">30</param>
+        <param name="device">/dev/ttyUSB0</param>
+        <param name="baud_rate">57600</param>
+        <param name="timeout_ms">1000</param>
+        <param name="enc_counts_per_rev">3436</param>
+      </hardware>
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-10</param>
+          <param name="max">10</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-10</param>
+          <param name="max">10</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:unless>
+
+  <xacro:if value="$(arg sim_mode)">
+    <ros2_control name="GazeboSystem" type="system">
+      <hardware>
+          <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <!-- All joints defined in the <ros2_control>-tag have to be present in the URDF 
+      received by the controller manager.
+
+      State interfaces of joints can be published as a ROS topic by means of the joint_state_broadcaster -->
+      <joint name="drivewhl_fl_joint">
+        <command_interface name="velocity">
+          <param name="min">-18.5</param>
+          <param name="max">18.5</param>
+        </command_interface>
+        <state_interface name="velocity"/>
+        <state_interface name="position"/>
+      </joint>
+      <joint name="drivewhl_fr_joint">
+        <command_interface name="velocity">
+          <param name="min">-18.5</param>
+          <param name="max">18.5</param>
+        </command_interface>
+        <state_interface name="velocity"/>
+        <state_interface name="position"/>
+      </joint>
+      <joint name="drivewhl_rl_joint">
+        <command_interface name="velocity">
+          <param name="min">-18.5</param>
+          <param name="max">18.5</param>
+        </command_interface>
+        <state_interface name="velocity"/>
+        <state_interface name="position"/>
+      </joint>
+      <joint name="drivewhl_rr_joint">
+        <command_interface name="velocity">
+          <param name="min">-18.5</param>
+          <param name="max">18.5</param>
+        </command_interface>
+        <state_interface name="velocity"/>
+        <state_interface name="position"/>
+      </joint>
+    </ros2_control>
+  </xacro:if>
+    
+  <!-- gz_ros2_control is a ROS 2 package for integrating the ros2_control controller 
+  architecture with the Gazebo simulator. More information about ros2_control: https://control.ros.org/rolling/index.html
+  and https://control.ros.org/rolling/doc/gz_ros2_control/doc/index.html
+  This package provides a Gazebo-Sim system plugin which instantiates a ros2_control controller manager 
+  and connects it to a Gazebo model. GirHub: https://github.com/ros-controls/gz_ros2_control -->
+  <gazebo>
+    <plugin name="gz_ros2_control::GazeboSimROS2ControlPlugin" filename="libgz_ros2_control-system.so">
+      <parameters>$(find bigfootbot_description)/config/my_controllers.yaml</parameters>
+      <!--parameters>$(find bigfootbot_description)/config/gaz_ros2_ctl_use_sim.yaml</parameters-->
+    </plugin>
+  </gazebo>
+
+</robot>

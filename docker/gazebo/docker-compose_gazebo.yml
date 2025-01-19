@@ -72,6 +72,9 @@ services:
 
       # Mount folder with configuration files (e.g for gz_bridge) to be able to update them on-the-fly in the running container,
       - ../../bigfootbot_gazebo/config:/ros2_ws/src/bigfootbot_gazebo/config
+      
+      # Config files for ros2_control controllers
+      - ../../bigfootbot_description/config:/ros2_ws/src/bigfootbot_description/config
 
       # launch files from the package bigfootbot_description
       #- ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch

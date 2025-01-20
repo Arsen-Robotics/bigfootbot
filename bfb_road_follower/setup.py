@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'edge_detection_node = bfb_road_follower.edge_detection:main',
         ],
     },
 )

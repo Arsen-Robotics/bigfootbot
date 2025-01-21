@@ -182,7 +182,7 @@ services:
       macnet:
         ipv4_address: 192.168.5.73
 
-    command: ros2 run bfb_gps gps_node
+    command: ros2 run bfb_gps gps_node --ros-args --params-file ros2_ws/src/bfb_gps/config/params.yaml
     #command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
 
   bfb_arduino_gateway:
@@ -299,6 +299,7 @@ services:
       - ../../bfb_road_follower/bfb_road_follower:/ros2_ws/src/bfb_road_follower/bfb_road_follower
 
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
+      - ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
 
     privileged: true
 

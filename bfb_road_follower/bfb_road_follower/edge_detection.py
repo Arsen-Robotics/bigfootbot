@@ -9,8 +9,8 @@ class EdgeDetectionNode(Node):
     def __init__(self):
         super().__init__('edge_detection_node')
         self.sub_rgb = self.create_subscription(Image, '/color/image_raw', self.edge_detection_callback, 10)
-        self.pub_edge = self.create_publisher(Image, 'road_edge', 10)
-        self.pub_image_out = self.create_publisher(Image, 'image_out', 10)  # New publisher for highlighted edge
+        self.pub_lines = self.create_publisher(Image, 'road_lines', 10)  # Replacing road_edge
+        self.pub_image_out = self.create_publisher(Image, 'image_out', 10)  # Overlayed road lines
         self.bridge = CvBridge()
 
     def edge_detection_callback(self, msg):
@@ -20,20 +20,33 @@ class EdgeDetectionNode(Node):
         # Convert to grayscale
         gray_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
 
-        # Apply edge detection (Canny, Sobel, etc.)
-        edges = cv2.Canny(gray_image, threshold1=100, threshold2=200)
+        # Apply Gaussian blur
+        blur_image = cv2.GaussianBlur(gray_image, (7, 7), 10)
 
-        # Highlight the edges in red on the original image
-        highlighted_image = rgb_image.copy()
-        highlighted_image[edges == 255] = [0, 0, 255]  # Set edge pixels to red (BGR: [0, 0, 255])
+        # Apply edge detection (Canny)
+        edges = cv2.Canny(blur_image, 75, 150)
 
-        # Publish the processed edge-detected image
-        edge_msg = self.bridge.cv2_to_imgmsg(edges, encoding='mono8')
-        self.pub_edge.publish(edge_msg)
+        # Detect lines using Hough Line Transform
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 30, maxLineGap=30)
 
-        # Publish the image with highlighted edges
-        highlighted_edge_msg = self.bridge.cv2_to_imgmsg(highlighted_image, encoding='bgr8')
-        self.pub_image_out.publish(highlighted_edge_msg)
+        # Create a blank image to draw lines
+        line_image = np.zeros_like(rgb_image)
+
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green lines
+
+        # Overlay road lines on the original image
+        overlayed_image = cv2.addWeighted(rgb_image, 0.8, line_image, 1, 0)
+
+        # Publish the road lines image
+        line_msg = self.bridge.cv2_to_imgmsg(line_image, encoding='bgr8')
+        self.pub_lines.publish(line_msg)
+
+        # Publish the image with overlaid road lines
+        overlayed_msg = self.bridge.cv2_to_imgmsg(overlayed_image, encoding='bgr8')
+        self.pub_image_out.publish(overlayed_msg)
 
 def main(args=None):
     rclpy.init(args=args)

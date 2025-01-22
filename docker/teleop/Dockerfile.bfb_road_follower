@@ -32,7 +32,7 @@ RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/nul
 
 # Install dependencies
 RUN apt-get update \
-    && apt-get install -y wget python3-opencv ros-humble-image-transport-plugins ros-humble-v4l2-camera ros-humble-realsense2-* \
+    && apt-get install -y wget python3-opencv ros-humble-realsense2-* \
     && cd / \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python3 get-pip.py \

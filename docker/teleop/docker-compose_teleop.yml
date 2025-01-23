@@ -286,11 +286,23 @@ services:
     # The name of the Docker image to be created from the Dockerfile
     image: bfb_road_follower:latest
 
+    # NVIDIA GPU-accelerated container
+    runtime: nvidia
+
     # The name to be given to the container created from the image
     container_name: bfb_road_follower_cntr
 
     environment:
       - DISPLAY=:0
+      - NVIDIA_VISIBLE_DEVICES=all
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
     # Map all devices from host to container
     volumes:
@@ -314,7 +326,7 @@ services:
 
     #command: ros2 run
 
-    # ros2 run realsense2_camera realsense2_camera_node --ros-args -p rgb_camera.color_profile:=848x480x15
+    # ros2 run realsense2_camera realsense2_camera_node --ros-args -p rgb_camera.power_line_frequency:=0 -p rgb_camera.profile:=848x480x15
     # ros2 run ball_tracker detect_ball --ros-args -p tuning_mode:=true -r image_in:=/color/image_raw
     # ros2 run ball_tracker follow_ball --ros-args -r cmd_vel:=cmd_vel_tracker
 

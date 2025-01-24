@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create virtual device
-sudo modprobe v4l2loopback exclusive_caps=1 video_nr=20 card_label="CSI Camera"
+sudo modprobe v4l2loopback exclusive_caps=1 video_nr=20,21 card_label="CSI Camera","Road Detection Camera"
 #sudo ln -sf /dev/video20 /dev/video21
 
 # GStreamer pipeline

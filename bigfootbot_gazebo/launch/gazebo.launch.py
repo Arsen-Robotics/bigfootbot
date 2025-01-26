@@ -146,7 +146,8 @@ def generate_launch_description():
         arguments=["diff_cont"],
     )
 
-    # joint_state_broadcaster
+    # joint_state_broadcaster (NOTE in the sense of ros2_control, broadcasters are still controllers
+    # using the same controller interface as the other controllers)
     # It reads the current state of the robot's joints and publishes them to the 
     # /joint_states topic
     joint_broad_spawner_node = Node(

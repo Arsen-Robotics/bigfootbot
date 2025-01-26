@@ -34,6 +34,7 @@
 
   <xacro:if value="$(arg sim_mode)">
     <ros2_control name="GazeboSystem" type="system">
+      <!-- GazeboSystem name will be shown running `ros2 control list_hardware_components` -->
       <hardware>
           <!-- This is the hardware interface plugin. Tells ros2_control that we're using 
           simulated hardware in Gazebo. Handles the low-level communication with Gazebo's physics engine-->

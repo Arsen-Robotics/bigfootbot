@@ -11,6 +11,8 @@ controller_manager:
     # There can be several controllers for one robot 
     # They can share the same hardware interface (e.g. State interfaces)
     # because state interfaces just read data from the hardware
+    # NOTE To see status of the controllers run command:
+    # `ros2 control list_controllers`
     diff_cont:
       type: diff_drive_controller/DiffDriveController
 

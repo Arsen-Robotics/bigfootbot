@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Create virtual device
-sudo modprobe v4l2loopback exclusive_caps=1 video_nr=20,21 card_label="CSI Camera","Road Detection Camera"
-#sudo ln -sf /dev/video20 /dev/video21
+# Create virtual video devices for CSI camera and road detection overlay
+sudo modprobe v4l2loopback video_nr=20,21 card_label=,"CSI Camera","Road Detection Overlay" exclusive_caps=1,1
 
 # GStreamer pipeline
 gst-launch-1.0 nvarguscamerasrc sensor-mode=4 ! 'video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1' ! nvvidconv ! 'video/x-raw,format=I420' ! queue ! videoconvert ! 'video/x-raw,format=YUY2' ! v4l2sink device=/dev/video20

@@ -326,9 +326,8 @@ services:
 
     #command: ros2 run
 
-    # ros2 run realsense2_camera realsense2_camera_node --ros-args -p rgb_camera.power_line_frequency:=0 -p rgb_camera.profile:=848x480x15
-    # ros2 run ball_tracker detect_ball --ros-args -p tuning_mode:=true -r image_in:=/color/image_raw
-    # ros2 run ball_tracker follow_ball --ros-args -r cmd_vel:=cmd_vel_tracker
+    # ros2 run realsense2_camera realsense2_camera_node --ros-args -p rgb_camera.power_line_frequency:=0 -p rgb_camera.profile:=1280x720x30
+    # ros2 run bfb_road_follower edge_detection_node
 
 networks:
   macnet:

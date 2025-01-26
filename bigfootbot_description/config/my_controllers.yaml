@@ -3,7 +3,9 @@
 # Doc: https://control.ros.org/rolling/doc/ros2_control/controller_manager/doc/userdoc.html#subscribers
 controller_manager:
   ros__parameters:
-    update_rate: 30
+    # The frequency of controller manager’s real-time update loop. This loop reads states 
+    # from hardware, updates controllers and writes commands to hardware.
+    update_rate: 30 # Default: 100
     # use_sim_time: true
     
     # There can be several controllers for one robot 

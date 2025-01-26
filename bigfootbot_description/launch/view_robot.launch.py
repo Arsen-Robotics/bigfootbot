@@ -232,27 +232,6 @@ def generate_launch_description():
     # `LaunchDescription` serves as a container that holds the various actions (launch arguments) and nodes that you want 
     # to launch when you run a launch file
     return LaunchDescription(declared_arguments + nodes) # `+` is used to concatenate lists
-    
-    # --- Create the launch description and populate
-    ##ld = LaunchDescription()
-
-    # Add the actions to the launch description
-    ##ld.add_action(model_path_la)
-    #ld.add_action(use_robot_model_pub_la)
-    ##ld.add_action(use_robot_state_pub_la)
-    #ld.add_action(use_joint_state_publisher_la)
-    #ld.add_action(use_joint_state_pub_gui_la)
-    ##ld.add_action(rviz_config_file_la)
-    ##ld.add_action(use_rviz_la)
-    ##ld.add_action(use_sim_time_la)
-
-    #ld.add_action(robot_model_publisher_node)
-    ##ld.add_action(robot_state_publisher_node)
-    #ld.add_action(joint_state_publisher_node)
-    #ld.add_action(joint_state_publisher_gui_node)
-    ##ld.add_action(rviz_node)
-
-    ##return ld
 
     
     

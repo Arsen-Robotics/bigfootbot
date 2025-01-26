@@ -35,9 +35,11 @@
   <xacro:if value="$(arg sim_mode)">
     <ros2_control name="GazeboSystem" type="system">
       <hardware>
+          <!-- This is the hardware interface plugin. Tells ros2_control that we're using 
+          simulated hardware in Gazebo. Handles the low-level communication with Gazebo's physics engine-->
           <plugin>gz_ros2_control/GazeboSimSystem</plugin>
       </hardware>
-      <!-- All joints defined in the <ros2_control>-tag have to be present in the URDF 
+      <!-- All joints defined in the <ros2_control>-tag have to be present in the URDF of the robot
       received by the controller manager.
 
       State interfaces of joints can be published as a ROS topic by means of the joint_state_broadcaster -->

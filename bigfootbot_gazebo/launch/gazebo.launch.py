@@ -128,7 +128,33 @@ def generate_launch_description():
         package="ros_gz_image",
         executable="image_bridge",
         arguments=["/camera/image_raw"]
+    )  
+
+    # ===== ros2_control =====
+    # Load and start the controllers
+
+    # NOTE. We don't need to start the controller_manager node because gz_ros2_control package 
+    # provides a Gazebo-Sim system plugin which instantiates a ros2_control controller manager 
+    # and connects it to a Gazebo model. 
+    # Check the bigfootbot_description/urdf/controllers/ros2_control.xacro file for more info.
+    
+    # diff_drive_controller
+    # This controller is used to control the differential drive robot.
+    diff_drive_spawner_node = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["diff_cont"],
     )
+
+    # joint_state_broadcaster
+    # It reads the current state of the robot's joints and publishes them to the 
+    # /joint_states topic
+    joint_broad_spawner_node = Node(
+        package="controller_manager",
+        executable="spawner", 
+        arguments=["joint_broad"],
+    )
+    # ===== ros2_control END =====
 
     return LaunchDescription([
         world_arg, # Declare the world argument
@@ -136,5 +162,8 @@ def generate_launch_description():
         bfb_view_robot_ld, # Launch the robot_state_publisher node
         create_node, # Spawn the robot in the world
         ros_gz_bridge_node, # Start the ROS 2 node that bridges messages between ROS 2 and Gazebo
-        ros_gz_image_bridge_node # Start the ROS 2 node that bridges images from Gazebo to ROS
+        ros_gz_image_bridge_node, # Start the ROS 2 node that bridges images from Gazebo to ROS
+        #controller_manager, # Start the controller manager
+        diff_drive_spawner_node, # Start the diff_drive_controller
+        joint_broad_spawner_node # Start the joint_state_broadcaster
     ])

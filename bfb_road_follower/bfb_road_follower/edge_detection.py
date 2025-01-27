@@ -19,10 +19,10 @@ class EdgeDetectionNode(Node):
         # GStreamer pipeline for BGR output with reduced latency (sync=false to reduce buffering)
         self.gst_pipeline = (
             "appsrc is-live=true block=false format=GST_FORMAT_TIME ! "
-            "videoconvert ! video/x-raw,format=BGR,width=1280,height=720 ! "
+            "videoconvert ! video/x-raw,format=BGR,width=640,height=480 ! "
             "v4l2sink device=/dev/video21 sync=false"
         )
-        self.out = cv2.VideoWriter(self.gst_pipeline, cv2.CAP_GSTREAMER, 0, 30, (1280, 720))
+        self.out = cv2.VideoWriter(self.gst_pipeline, cv2.CAP_GSTREAMER, 0, 30, (640, 480))
 
         if not self.out.isOpened():
             self.get_logger().error("Failed to open video pipeline.")
@@ -59,8 +59,11 @@ class EdgeDetectionNode(Node):
         # Overlay detected lines on the original image
         overlayed_image = cv2.addWeighted(rgb_image, 0.8, line_image, 1, 0)
 
-        # Write overlayed image to GStreamer pipeline (this is the video that will appear on the virtual device)
-        self.out.write(overlayed_image)
+        # Resize the output image to 640x480 to match GStreamer resolution
+        resized_image_640x480 = cv2.resize(overlayed_image, (640, 480))
+
+        # Write the resized image to GStreamer pipeline (this is the video that will appear on /dev/video21)
+        self.out.write(resized_image_640x480)
 
         # Publish both images to ROS (RViz and other subscribers)
         self.pub_image_out.publish(self.bridge.cv2_to_imgmsg(overlayed_image, 'bgr8'))

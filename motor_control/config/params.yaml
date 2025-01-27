@@ -61,5 +61,5 @@ joy_to_twist_node:
     angular_scale: 9.437
 
     # Angular speed limiting with linear speed
-    min_angular_scale: 0.3
-    max_angular_scale: 0.6
+    min_angular_scale: 0.4
+    max_angular_scale: 0.7

@@ -35,8 +35,8 @@ class JoyToTwistNode(Node):
         self.declare_parameter("linear_scale", 3.067)
         self.declare_parameter("angular_scale", 9.437)
 
-        self.declare_parameter("min_angular_scale", 0.3)
-        self.declare_parameter("max_angular_scale", 0.6)
+        self.declare_parameter("min_angular_scale", 0.4)
+        self.declare_parameter("max_angular_scale", 0.7)
 
         # Assign parameters to variables
         self.enable_axis = self.get_parameter("enable_axis").value

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Unload the V4L2 loopback module to prevent conflicts
+sudo rmmod v4l2loopback
+
 # Create virtual video devices for CSI camera and road detection overlay
 sudo modprobe v4l2loopback video_nr=20,21 card_label=,"CSI Camera","Road Detection Overlay" exclusive_caps=1,1
 

@@ -1,0 +1,63 @@
+services:
+  bfb_road_follower:
+      build:
+        context: ../..
+        dockerfile: docker/web/Dockerfile.webrtc
+
+        # Pass arguments to Dockerfile to use different base images
+        args:
+          # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+          #- BASE_IMAGE=ros:humble-ros-base
+          
+          # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+          - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+      
+      # The name of the Docker image to be created from the Dockerfile
+      image: bfb_webrtc:latest
+
+      # NVIDIA GPU-accelerated container
+      runtime: nvidia
+
+      # The name to be given to the container created from the image
+      container_name: bfb_webrtc_cntr
+
+      environment:
+        - DISPLAY=:0
+        - NVIDIA_VISIBLE_DEVICES=all
+
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: all
+                capabilities: [gpu]
+
+      # Map all devices from host to container
+      volumes:
+        - '/dev:/dev'
+        # Mount Python source files to be able to update them inside the container without rebuilding the image
+        #- ../../bfb_road_follower/bfb_road_follower:/ros2_ws/src/bfb_road_follower/bfb_road_follower
+
+        - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
+        #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
+
+      privileged: true
+
+      stdin_open: true # docker run -i
+      tty: true        # docker run -t
+
+      ports:
+        - "8080:8080"  # WebSocket server
+      
+      #network_mode: "host"
+
+      networks:
+        macnet:
+          ipv4_address: 192.168.5.77
+
+      command: gst-launch-1.0 v4l2src device=/dev/video0 ! videoconvert ! vp8enc ! rtpvp8pay ! webrtcbin bundle-policy=max-bundle name=sendrecv stun-server=stun://stun.l.google.com:19302
+
+  networks:
+    macnet:
+      external: true  # Use the existing Macvlan network

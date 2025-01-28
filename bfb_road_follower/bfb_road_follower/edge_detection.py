@@ -37,24 +37,28 @@ class EdgeDetectionNode(Node):
         edges = cv2.Canny(blur, 100, 200)
 
         # Region of interest (ROI): focus on the bottom half of the image where road edges typically appear
-        height, width = edges.shape
-        roi = edges[int(height / 2):height, 0:width]
+        # height, width = edges.shape
+        # roi = edges[int(height / 2):height, 0:width]
 
         # Detect lines using Hough Transform
-        lines = cv2.HoughLinesP(roi, 1, np.pi / 180, 50, minLineLength=100, maxLineGap=40)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50, minLineLength=100, maxLineGap=40)
         line_image = np.zeros_like(rgb_image)
 
         if lines is not None:
             for x1, y1, x2, y2 in lines[:, 0]:
-                # Calculate the slope of the line
-                if x2 != x1:  # Prevent division by zero
-                    slope = (y2 - y1) / (x2 - x1)
-                else:
-                    slope = float('inf')  # For vertical lines
+                cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Draw all detected lines
+
+        # if lines is not None:
+        #     for x1, y1, x2, y2 in lines[:, 0]:
+        #         # Calculate the slope of the line
+        #         if x2 != x1:  # Prevent division by zero
+        #             slope = (y2 - y1) / (x2 - x1)
+        #         else:
+        #             slope = float('inf')  # For vertical lines
                 
-                # Filter out lines that don't meet the slope criteria
-                if abs(slope) > self.slope_threshold:  # Adjust this threshold to your needs
-                    cv2.line(line_image, (x1, y1 + int(height / 2)), (x2, y2 + int(height / 2)), (0, 255, 0), 2)
+        #         # Filter out lines that don't meet the slope criteria
+        #         if abs(slope) > self.slope_threshold:  # Adjust this threshold to your needs
+        #             cv2.line(line_image, (x1, y1 + int(height / 2)), (x2, y2 + int(height / 2)), (0, 255, 0), 2)
 
         # Overlay detected lines on the original image
         overlayed_image = cv2.addWeighted(rgb_image, 0.8, line_image, 1, 0)
@@ -67,7 +71,7 @@ class EdgeDetectionNode(Node):
 
         # Publish both images to ROS (RViz and other subscribers)
         self.pub_image_out.publish(self.bridge.cv2_to_imgmsg(overlayed_image, 'bgr8'))
-        self.pub_lines.publish(self.bridge.cv2_to_imgmsg(roi, 'mono8'))
+        #self.pub_lines.publish(self.bridge.cv2_to_imgmsg(roi, 'mono8'))
 
     def destroy_node(self):
         self.out.release()  # Release GStreamer pipeline on shutdown

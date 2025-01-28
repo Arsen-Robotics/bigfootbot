@@ -52,8 +52,8 @@ joy_to_twist_node:
     normal_drive_mode: 8
 
     # Axes
-    linear_axis: 2 # 1 for ps3 controller, 2 for logitech yoke
-    angular_axis: 0 # 2 for ps3 controller, 0 for logitech yoke
+    linear_axis: 1 # 1 for ps3 controller, 2 for logitech yoke
+    angular_axis: 2 # 2 for ps3 controller, 0 for logitech yoke
     reverse_axis: 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
 
     # Scales

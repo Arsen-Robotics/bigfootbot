@@ -295,6 +295,8 @@ services:
     environment:
       - DISPLAY=:0
       - NVIDIA_VISIBLE_DEVICES=all
+      - STUN_SERVER=stun.l.google.com:19302  # Use Google STUN server
+      - SIGNALING_SERVER=ws://192.168.5.15:8765  # Replace with your signaling server URL
 
     deploy:
       resources:
@@ -317,6 +319,10 @@ services:
 
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+
+    ports:
+      - "50000-60000:50000-60000/udp"  # Expose WebRTC UDP ports (media)
+      - "8765:8765"  # Expose WebSocket port because signaling server is running locally
 
     #network_mode: "host"
 

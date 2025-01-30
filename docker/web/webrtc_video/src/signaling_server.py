@@ -13,7 +13,8 @@ async def handler(websocket, path):
     finally:
         clients.remove(websocket)
 
-start_server = websockets.serve(handler, "0.0.0.0", 8765)
+async def main():
+    async with websockets.serve(handler, "0.0.0.0", 8765):
+        await asyncio.Future()  # Keeps the server running
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+asyncio.run(main())  # Correct for Python 3.10+

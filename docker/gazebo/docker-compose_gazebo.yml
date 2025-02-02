@@ -46,13 +46,16 @@ services:
     
     build: 
       context: ../../
-      dockerfile: docker/gazebo/Dockerfile.gazebo
+      dockerfile: docker/gazebo/Dockerfile.gazebo # ROS 2 Jazzy + Gazebo Harmonic
+      #dockerfile: docker/gazebo/Dockerfile.gazebo_Humble_Fortress # ROS 2 Humble + Gazebo Harmonic
 
     # The name of the Docker image to be created from the Dockerfile.
     image: bfb_gazebo:latest
+    #image: bfb_gazebo_fortress:latest
 
     # The name to be given to the container created from the image.
     container_name: bfb_gazebo_cntr
+    #container_name: bfb_gazebo_fortress_cntr
 
     volumes:
       # Forward X socket to container to enable GUI
@@ -95,6 +98,8 @@ services:
                                         # Controls which driver libraries/binaries will be mounted inside the container.
 
     # Enable GPU access for the container NB! Only for NVIDIA GPUs
+    # NOTE To be sure that Nvidia GPU is used for rendering run `prime-select nvidia`
+    # prime-select is a utility to switch between Intel and Nvidia GPUs
     deploy:
       resources:
         reservations:
@@ -137,7 +142,8 @@ services:
         #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
         
         # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
-        - BASE_IMAGE=ros:humble-ros-base
+        #- BASE_IMAGE=ros:humble-ros-base
+        - BASE_IMAGE=ros:jazzy-ros-base
 
     # The name of the Docker image to be created from the Dockerfile.
     image: bfb_teleop:latest

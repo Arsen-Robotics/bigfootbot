@@ -68,7 +68,7 @@ def generate_launch_description():
         launch_arguments={
             'use_robot_state_pub': 'True',
             'use_joint_state_pub_gui': 'False',
-            'use_rviz': 'True',
+            'use_rviz': 'False',
             'use_sim_time': 'True', # TODO! Set to True?
         }.items()
     )

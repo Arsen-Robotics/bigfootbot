@@ -84,6 +84,9 @@ RUN apt-get update \
     # Install ROS Gazebo
     && apt-get install -y \
     ros-${ROS_DISTRO}-ros-gz \
+    ros-${ROS_DISTRO}-ros2-control \
+    ros-${ROS_DISTRO}-ros2-controllers \
+    ros-${ROS_DISTRO}-ign-ros2-control \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

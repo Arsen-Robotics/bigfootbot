@@ -1,0 +1,7 @@
+realsense2_camera_node:
+  ros__parameters:
+    depth_module:
+      depth_profile: 640x480x30
+      infra_profile: 640x480x30
+    rgb_camera:
+      color_profile: 640x480x30

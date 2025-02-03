@@ -1,0 +1,47 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive
+# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
+# The reason is that the environment variable persists after the build
+# ARG is only available during the build of the image
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"]
+
+RUN mkdir /src
+COPY docker/web/webrtc_video/src /src
+
+# Workaround as of 19.01.2025 there was a GPG error ONLY with nvcr base image
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
+    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
+
+# Install dependencies
+RUN apt-get update \
+    && apt install -y gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev libsoup2.4-dev libjson-glib-dev libnice-dev autoconf libtool gtk-doc-tools libglib2.0-dev gstreamer1.0-nice libssl-dev libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio \
+    && cd / \
+    && wget https://bootstrap.pypa.io/get-pip.py \
+    && python3 get-pip.py \
+    && rm get-pip.py
+
+# Install WebSocket Python package
+RUN pip3 install websockets
+
+# Install libnice for GStreamer WebRTC
+RUN git clone https://github.com/libnice/libnice.git && \
+    cd libnice && \
+    git checkout 0.1.15 && \
+    ./autogen.sh --prefix /usr/ --libdir /usr/lib/aarch64-linux-gnu/ ; make -j$(nproc) ; sudo make install ; cd ..
+
+#CMD ["ros2", "launch", "bfb_arduino_gateway", "arduino_gateway_node.py"]
+CMD ["bash"]

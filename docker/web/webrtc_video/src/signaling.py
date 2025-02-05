@@ -5,10 +5,10 @@ import json
 # Store connected clients
 clients = set()
 
-SERVER_IP = "127.0.0.1"
+SERVER_IP = "0.0.0.0"
 SERVER_PORT = 8765
 
-async def signaling_handler(websocket, path):
+async def signaling_handler(websocket):
     clients.add(websocket)
     print("Client connected")
     try:

@@ -14,13 +14,15 @@ class WebRTCSend:
         self.webrtcbin = None
         self.pipeline = None
 
-    async def connect_to_server(self):
+    async def connect(self):
         """Establish WebSocket connection to the signaling server."""
         try:
             self.websocket = await websockets.connect(self.SIGNALING_SERVER)
             print("Connected to signaling server")
         except Exception as e:
             print(f"Failed to connect to signaling server: {e}")
+
+        #await self.websocket.send(json.dumps('HELLO'))
 
     def on_negotiation_needed(self, _):
         """Triggered when WebRTC negotiation is needed."""
@@ -62,7 +64,14 @@ class WebRTCSend:
     def start_pipeline(self):
         """Sets up and starts the GStreamer pipeline with WebRTC."""
         # Create the GStreamer pipeline
-        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true pattern=ball ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv.')
+        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle \
+            stun-server=stun://stun.l.google.com:19302 latency=30 \
+            v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! videoconvert ! queue max-size-buffers=1 leaky=downstream \
+            ! x264enc tune=zerolatency speed-preset=superfast bitrate=4000 key-int-max=1 qp-min=20 qp-max=30 \
+            ! h264parse ! rtph264pay config-interval=-1 pt=96 ! queue max-size-buffers=1 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 \
+            ! sendrecv.')
 
         # Get the webrtcbin element
         self.webrtcbin = self.pipeline.get_by_name('sendrecv')
@@ -75,25 +84,28 @@ class WebRTCSend:
         # Start the pipeline (this is where the negotiation would kick off)
         self.pipeline.set_state(Gst.State.PLAYING)
 
-    def handle_sdp(self, message):
+    def handle_sdp(self, msg):
         """Handle incoming SDP answer."""
-        msg = json.loads(message)
-        if 'sdp' in msg:
-            sdp = msg['sdp']
-            assert(sdp['type'] == 'answer')
-            sdp = sdp['sdp']
-            print ('Received answer:\n%s' % sdp)
-            res, sdpmsg = GstSdp.SDPMessage.new()
-            GstSdp.sdp_message_parse_buffer(bytes(sdp.encode()), sdpmsg)
-            answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
-            promise = Gst.Promise.new()
-            self.webrtcbin.emit('set-remote-description', answer, promise)
-            promise.interrupt()
-        elif 'ice' in msg:
-            ice = msg['ice']
-            candidate = ice['candidate']
-            sdpmlineindex = ice['sdpMLineIndex']
-            self.webrtcbin.emit('add-ice-candidate', sdpmlineindex, candidate)
+        sdp = msg['sdp']
+        assert(sdp['type'] == 'answer')
+        sdp = sdp['sdp']
+        print ('Received answer:\n%s' % sdp)
+
+        # Process the answer into a WebRTCSessionDescription
+        res, sdpmsg = GstSdp.SDPMessage.new()
+        GstSdp.sdp_message_parse_buffer(bytes(sdp.encode()), sdpmsg)
+        answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
+
+        # Set the remote description (the answer)
+        promise = Gst.Promise.new()
+        self.webrtcbin.emit('set-remote-description', answer, promise)
+        promise.interrupt()
+    
+    def handle_ice(self, msg):
+        ice = msg['ice']
+        candidate = ice['candidate']
+        sdpmlineindex = ice['sdpMLineIndex']
+        self.webrtcbin.emit('add-ice-candidate', sdpmlineindex, candidate)
 
     def send_ice_candidate(self, _, mlineindex, candidate):
         """Send ICE candidate to the remote peer over WebSocket."""
@@ -110,9 +122,9 @@ class WebRTCSend:
 
         decodebin = Gst.ElementFactory.make('decodebin')
         decodebin.connect('pad-added', self.on_incoming_decodebin_stream)
-        self.pipe.add(decodebin)
+        self.pipeline.add(decodebin)
         decodebin.sync_state_with_parent()
-        self.webrtc.link(decodebin)
+        self.webrtcbin.link(decodebin)
 
     def on_incoming_decodebin_stream(self, _, pad):
         """Handle incoming decodebin stream."""
@@ -128,8 +140,8 @@ class WebRTCSend:
             q = Gst.ElementFactory.make('queue')
             conv = Gst.ElementFactory.make('videoconvert')
             sink = Gst.ElementFactory.make('autovideosink')
-            self.pipe.add(q, conv, sink)
-            self.pipe.sync_children_states()
+            self.pipeline.add(q, conv, sink)
+            self.pipeline.sync_children_states()
             pad.link(q.get_static_pad('sink'))
             q.link(conv)
             conv.link(sink)
@@ -138,27 +150,33 @@ class WebRTCSend:
             conv = Gst.ElementFactory.make('audioconvert')
             resample = Gst.ElementFactory.make('audioresample')
             sink = Gst.ElementFactory.make('autoaudiosink')
-            self.pipe.add(q, conv, resample, sink)
-            self.pipe.sync_children_states()
+            self.pipeline.add(q, conv, resample, sink)
+            self.pipeline.sync_children_states()
             pad.link(q.get_static_pad('sink'))
             q.link(conv)
             conv.link(resample)
             resample.link(sink)
     
-    async def loop(self):
+    async def listen(self):
         """Main loop to handle incoming messages."""
         async for message in self.websocket:
-            if message.startswith('ERROR'):
-                print (message)
+            msg = json.loads(message)
+            if msg == 'HELLO':
+                print("Received HELLO from RECV peer")
+                await self.websocket.send(json.dumps('OK'))
+                self.start_pipeline()
+            elif 'sdp' in msg:
+                self.handle_sdp(msg)
+            elif 'ice' in msg:
+                self.handle_ice(msg)
+            elif msg.startswith('ERROR'):
+                print(msg)
                 return 1
-            else:
-                self.handle_sdp(message)
         return 0
 
 if __name__ == "__main__":
     Gst.init(None)
     webrtc_send = WebRTCSend()
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(webrtc_send.connect_to_server())
-    webrtc_send.start_pipeline()
-    loop.run_until_complete(webrtc_send.loop())
+    loop.run_until_complete(webrtc_send.connect())
+    loop.run_until_complete(webrtc_send.listen())

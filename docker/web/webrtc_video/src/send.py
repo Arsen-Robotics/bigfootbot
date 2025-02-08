@@ -65,13 +65,14 @@ class WebRTCSend:
         """Sets up and starts the GStreamer pipeline with WebRTC."""
         # Create the GStreamer pipeline
         self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle \
-            stun-server=stun://stun.l.google.com:19302 latency=30 \
+            stun-server=stun://stun.l.google.com:19302 latency=0 \
             v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! videoconvert ! queue max-size-buffers=1 leaky=downstream \
-            ! x264enc tune=zerolatency speed-preset=superfast bitrate=4000 key-int-max=1 qp-min=20 qp-max=30 \
-            ! h264parse ! rtph264pay config-interval=-1 pt=96 ! queue max-size-buffers=1 \
-            ! application/x-rtp,media=video,encoding-name=H264,payload=96 \
+            ! videoconvert ! x264enc tune=zerolatency speed-preset=ultrafast bitrate=350 key-int-max=10 qp-min=18 qp-max=30 \
+            ! h264parse ! rtph264pay config-interval=-1 pt=96 ! application/x-rtp,media=video,encoding-name=H264,payload=96 \
             ! sendrecv.')
+        
+        # self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
+        # videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv.')
 
         # Get the webrtcbin element
         self.webrtcbin = self.pipeline.get_by_name('sendrecv')

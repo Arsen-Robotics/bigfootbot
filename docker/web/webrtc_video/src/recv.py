@@ -80,10 +80,10 @@ class WebRTCRecv:
     def start_pipeline(self):
         """Sets up and starts the GStreamer pipeline with WebRTC."""
         # Create the GStreamer pipeline
-        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true pattern=ball ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv.')
+        self.pipeline = Gst.parse_launch('webrtcbin name=recvonly bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 audiotestsrc ! audioconvert ! fakesink')
 
         # Get the webrtcbin element
-        self.webrtcbin = self.pipeline.get_by_name('sendrecv')
+        self.webrtcbin = self.pipeline.get_by_name('recvonly')
 
         # Connect to signals
         #self.webrtcbin.connect('on-negotiation-needed', self.on_negotiation_needed)

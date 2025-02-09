@@ -35,7 +35,10 @@ class WebRTCSend:
         print("Offer created, setting local description...")
         promise.wait()
         reply = promise.get_reply()
-        offer = reply['offer']
+
+        # Because of older GStreamer version on NVIDIA, using second variant
+        #offer = reply['offer']
+        offer = reply.get_value('offer')
 
         # Set the local description
         promise = Gst.Promise.new()
@@ -66,9 +69,14 @@ class WebRTCSend:
         # Create the GStreamer pipeline
         self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/video0 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
-            ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=500 key-int-max=30 qp-min=18 qp-max=25 \
+            ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            v4l2src device=/dev/video5 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
+            ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
         
@@ -78,7 +86,8 @@ class WebRTCSend:
         # Get the webrtcbin element
         self.webrtcbin = self.pipeline.get_by_name('sendrecv')
 
-        self.webrtcbin.set_property("latency", 0)
+        # Can't use latency property on NVIDIA because of old GStreamer version
+        #self.webrtcbin.set_property("latency", 0)
         self.webrtcbin.set_property("bundle-policy", "max-bundle")
         self.webrtcbin.set_property("stun-server", "stun://stun.l.google.com:19302")
 

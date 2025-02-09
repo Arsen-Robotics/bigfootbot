@@ -37,7 +37,7 @@ services:
       volumes:
         - '/dev:/dev'
         # Mount Python source files to be able to update them inside the container without rebuilding the image
-        #- ./src:/src
+        - ./src:/src
 
         - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
         #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
@@ -48,15 +48,13 @@ services:
       tty: true        # docker run -t
 
       ports:
-        - "8080:8080"  # WebSocket server
-      
-      #network_mode: "host"
+        - "8765:8765"  # WebSocket server
 
       networks:
         macnet:
           ipv4_address: 192.168.5.77
 
-      #command: gst-launch-1.0 v4l2src device=/dev/video0 ! videoconvert ! vp8enc ! rtpvp8pay ! webrtcbin bundle-policy=max-bundle name=sendrecv stun-server=stun://stun.l.google.com:19302
+      #command:
 
 networks:
   macnet:

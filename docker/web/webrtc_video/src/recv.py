@@ -5,11 +5,11 @@ import gi
 
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GLib, GstWebRTC, GstSdp
+from gi.repository import Gst, GstWebRTC, GstSdp
 
 class WebRTCRecv:
     def __init__(self):
-        self.SIGNALING_SERVER = 'ws://192.168.5.156:8765'
+        self.SIGNALING_SERVER = 'ws://213.101.194.166:8765'
         self.websocket = None
         self.webrtcbin = None
         self.pipeline = None
@@ -85,6 +85,11 @@ class WebRTCRecv:
         # Get the webrtcbin element
         self.webrtcbin = self.pipeline.get_by_name('recvonly')
 
+        self.webrtcbin.set_property("latency", 0)
+        self.webrtcbin.set_property("bundle-policy", "max-bundle")
+        self.webrtcbin.set_property("stun-server", "stun://stun.l.google.com:19302")
+
+
         # Connect to signals
         #self.webrtcbin.connect('on-negotiation-needed', self.on_negotiation_needed)
         self.webrtcbin.connect('on-ice-candidate', self.send_ice_candidate)
@@ -157,27 +162,46 @@ class WebRTCRecv:
     def on_incoming_decodebin_stream(self, _, pad):
         """Handle incoming decodebin stream."""
         if not pad.has_current_caps():
-            print (pad, 'has no caps, ignoring')
+            print(pad, 'has no caps, ignoring')
             return
 
         caps = pad.get_current_caps()
-        assert (len(caps))
+        assert len(caps)
         s = caps[0]
         name = s.get_name()
+
         if name.startswith('video'):
             q = Gst.ElementFactory.make('queue')
             conv = Gst.ElementFactory.make('videoconvert')
             sink = Gst.ElementFactory.make('autovideosink')
+            
+            # Minimize latency in queue (reduce buffering)
+            q.set_property("max-size-buffers", 1)
+            q.set_property("max-size-time", 0)
+            q.set_property("max-size-bytes", 0)
+            q.set_property("leaky", "downstream")  # Allow data to drop if too much buffering happens
+            
+            # Disable sync on autovideosink for lower latency
+            sink.set_property("sync", False)
+
             self.pipeline.add(q, conv, sink)
             self.pipeline.sync_children_states()
             pad.link(q.get_static_pad('sink'))
             q.link(conv)
             conv.link(sink)
+
         elif name.startswith('audio'):
             q = Gst.ElementFactory.make('queue')
             conv = Gst.ElementFactory.make('audioconvert')
             resample = Gst.ElementFactory.make('audioresample')
             sink = Gst.ElementFactory.make('autoaudiosink')
+            
+            # Same low-latency settings for audio queue
+            q.set_property("max-size-buffers", 1)
+            q.set_property("max-size-time", 0)
+            q.set_property("max-size-bytes", 0)
+            q.set_property("leaky", "downstream")
+
             self.pipeline.add(q, conv, resample, sink)
             self.pipeline.sync_children_states()
             pad.link(q.get_static_pad('sink'))

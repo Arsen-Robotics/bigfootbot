@@ -5,7 +5,7 @@ import gi
 
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GLib, GstWebRTC, GstSdp
+from gi.repository import Gst, GstWebRTC, GstSdp
 
 class WebRTCSend:
     def __init__(self):
@@ -64,18 +64,24 @@ class WebRTCSend:
     def start_pipeline(self):
         """Sets up and starts the GStreamer pipeline with WebRTC."""
         # Create the GStreamer pipeline
-        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle \
-            stun-server=stun://stun.l.google.com:19302 latency=0 \
+        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+            stun-server=stun://stun.l.google.com:19302 \
             v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! videoconvert ! x264enc tune=zerolatency speed-preset=ultrafast bitrate=350 key-int-max=10 qp-min=18 qp-max=30 \
-            ! h264parse ! rtph264pay config-interval=-1 pt=96 ! application/x-rtp,media=video,encoding-name=H264,payload=96 \
-            ! sendrecv.')
+            ! videoconvert ! queue max-size-buffers=1 max-size-time=0 max-size-bytes=0 leaky=downstream \
+            ! x264enc tune=zerolatency speed-preset=ultrafast bitrate=1000 key-int-max=1 qp-min=18 qp-max=25 \
+            ! h264parse ! rtph264pay config-interval=-1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
         
         # self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
         # videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv.')
 
         # Get the webrtcbin element
         self.webrtcbin = self.pipeline.get_by_name('sendrecv')
+
+        self.webrtcbin.set_property("latency", 0)
+        self.webrtcbin.set_property("bundle-policy", "max-bundle")
+        self.webrtcbin.set_property("stun-server", "stun://stun.l.google.com:19302")
+
 
         # Connect to signals
         self.webrtcbin.connect('on-negotiation-needed', self.on_negotiation_needed)
@@ -130,27 +136,46 @@ class WebRTCSend:
     def on_incoming_decodebin_stream(self, _, pad):
         """Handle incoming decodebin stream."""
         if not pad.has_current_caps():
-            print (pad, 'has no caps, ignoring')
+            print(pad, 'has no caps, ignoring')
             return
 
         caps = pad.get_current_caps()
-        assert (len(caps))
+        assert len(caps)
         s = caps[0]
         name = s.get_name()
+
         if name.startswith('video'):
             q = Gst.ElementFactory.make('queue')
             conv = Gst.ElementFactory.make('videoconvert')
             sink = Gst.ElementFactory.make('autovideosink')
+            
+            # Minimize latency in queue (reduce buffering)
+            q.set_property("max-size-buffers", 1)
+            q.set_property("max-size-time", 0)
+            q.set_property("max-size-bytes", 0)
+            q.set_property("leaky", "downstream")  # Allow data to drop if too much buffering happens
+            
+            # Disable sync on autovideosink for lower latency
+            sink.set_property("sync", False)
+
             self.pipeline.add(q, conv, sink)
             self.pipeline.sync_children_states()
             pad.link(q.get_static_pad('sink'))
             q.link(conv)
             conv.link(sink)
+
         elif name.startswith('audio'):
             q = Gst.ElementFactory.make('queue')
             conv = Gst.ElementFactory.make('audioconvert')
             resample = Gst.ElementFactory.make('audioresample')
             sink = Gst.ElementFactory.make('autoaudiosink')
+            
+            # Same low-latency settings for audio queue
+            q.set_property("max-size-buffers", 1)
+            q.set_property("max-size-time", 0)
+            q.set_property("max-size-bytes", 0)
+            q.set_property("leaky", "downstream")
+
             self.pipeline.add(q, conv, resample, sink)
             self.pipeline.sync_children_states()
             pad.link(q.get_static_pad('sink'))

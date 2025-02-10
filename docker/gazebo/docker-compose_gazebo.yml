@@ -15,7 +15,7 @@
 #   `docker compose -f docker-compose_gazebo.yml up --build`
 #
 # To rebuild a certain service:
-#   `docker compose up --build <service_name>`
+#   `docker compose -f docker-compose_gazebo.yml up --build <service_name>`
 #
 # To run a certain service:
 #   `docker compose up <service_name>`
@@ -35,6 +35,10 @@
 #
 # Stop the robot:
 #   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+#
+# GPU access:
+#   `prime-select nvidia` - use Nvidia GPU
+#   `prime-select on-demand` - use AMD GPU
 # ---------------------------------------
 
 
@@ -66,27 +70,27 @@ services:
       ## Mount launch files to be able to update them inside the container without rebuilding the image
       # launch files from the package bigfootbot_gazebo
       #- ../../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
-      - ../../bigfootbot_gazebo/launch:/ros2_ws/src/bigfootbot_gazebo/launch
+      - ../../bigfootbot_gazebo/launch:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/launch
 
       # Mount folder with world SDF files to be able to update SDFs on-the-fly in the running container,
       # without the need to rebuild the image
       #- ../../bigfootbot_gazebo/worlds:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/worlds
-      - ../../bigfootbot_gazebo/worlds:/ros2_ws/src/bigfootbot_gazebo/worlds
+      - ../../bigfootbot_gazebo/worlds:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/worlds
 
       # Mount folder with configuration files (e.g for gz_bridge) to be able to update them on-the-fly in the running container,
-      - ../../bigfootbot_gazebo/config:/ros2_ws/src/bigfootbot_gazebo/config
+      - ../../bigfootbot_gazebo/config:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/config
       
       # Config files for ros2_control controllers
-      - ../../bigfootbot_description/config:/ros2_ws/src/bigfootbot_description/config
+      - ../../bigfootbot_description/config:/home/ubuntu/ros2_ws/src/bigfootbot_description/config
 
       # launch files from the package bigfootbot_description
       #- ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
-      - ../../bigfootbot_description/launch:/ros2_ws/src/bigfootbot_description/launch
+      - ../../bigfootbot_description/launch:/home/ubuntu/ros2_ws/src/bigfootbot_description/launch
 
       # Mount folder with URDF files to be able to update URDFs on-the-fly in the running container,
       # without the need to rebuild the image
       #- ../../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf
-      - ../../bigfootbot_description/urdf:/ros2_ws/src/bigfootbot_description/urdf
+      - ../../bigfootbot_description/urdf:/home/ubuntu/ros2_ws/src/bigfootbot_description/urdf
 
     environment:
       - DISPLAY=$DISPLAY  # To allow the container to access the host's 
@@ -153,9 +157,11 @@ services:
 
     volumes:     
       # Mount launch and config files to be able to update them inside the container without rebuilding the image
-      - ../../bigfootbot_teleop/launch:/ros2_ws/src/bigfootbot_teleop/launch
+      - ../../bigfootbot_teleop/launch:/home/ubuntu/ros2_ws/src/bigfootbot_teleop/launch
 
-      - ../../bigfootbot_teleop/config:/ros2_ws/src/bigfootbot_teleop/config 
+      - ../../bigfootbot_teleop/config:/home/ubuntu/ros2_ws/src/bigfootbot_teleop/config
+
+      - ../../bigfootbot_teleop/script:/home/ubuntu/ros2_ws/src/bigfootbot_teleop/script
 
     # Map all devices from host to container (need to be able to access the joystick)
     privileged: true

@@ -1,7 +1,7 @@
 # --- Docker commands ---
 #
 # Build docker image:
-#   `docker build -f Dockerfile.gazebo -t bfb_gazebo:latest ..`
+#   `docker build -f Dockerfile.gazebo -t bfb_gazebo:latest ../../`
 #   
 # Run container with GUI support: 
 # Note. Maybe is needed to add next options:
@@ -52,12 +52,39 @@ ARG BASE_IMAGE="ros:jazzy-ros-base"
 
 FROM ${BASE_IMAGE}
 
+# Create a non-root user
+# NOTE We use 'ubuntu' user instead of 'ros', because 'ros' user is already created in the base image
+# and it has UID 1000 and GID 1000 that match (presumably) the UID and GID of the user on the host machine
+# UID and GID should match the user and group ids on the host machine to be able to create 
+# and edit files mounted from the host to the container    
+ARG USERNAME=ubuntu
+# NOTE 1000 is already used by the ubuntu user in the base image, so we use 1001
+#ARG USERNAME=ros
+#ARG USER_UID=1001
+#ARG USER_GID=1001
+
+# ROS 2 workspace name
+ARG ROS_WS_NAME=ros2_ws
+
+# Create a non-root user and a home directory for him/her
+# It is commented out, because we use the ubuntu user from the base image
+#RUN groupadd --gid ${USER_GID} ${USERNAME} \
+#    && useradd -s /bin/bash --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} 
+    #&& mkdir /home/${USERNAME}/.config && chown ${USER_UID}:${USER_GID} /home/${USERNAME}/.config
+
+# Set up sudo for the user (so that it can run commands 'sudo <command>'
+# without password)
+RUN apt-get update \
+    && apt-get install -y sudo \
+    && echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
+    && chmod 0440 /etc/sudoers.d/${USERNAME} \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
 # Zero interaction while installing or upgrading the system via apt. 
 # It accepts the default answer for all questions.
 ENV DEBIAN_FRONTEND=noninteractive
-
-# ROS2 workspace
-ENV ROS_WS=/ros2_ws
+ENV ROS_WS=/home/${USERNAME}/${ROS_WS_NAME}
 
 # If you only need to set the SHELL environment variable for other purposes, such as in a 
 # script that will be run inside the container
@@ -75,13 +102,7 @@ SHELL ["/bin/bash", "-c"]
 # ROS Gazebo repository: https://github.com/gazebosim/ros_gz
 # Pair ROS 2 Jazzy + Gazebo Harmonic (https://gazebosim.org/docs/latest/ros_installation/)
 # We install binaries ros-jazzy-ros-gz (Gazebo Harmonic version is automatically installed)
-RUN apt-get update \
-    # Bug/problem fix with gazebo gui black screen (dated July 2023)
-    # software-properties-common - for `add-apt-repository` command
-    #&& apt-get install -y \     
-    #software-properties-common \     
-    #&& add-apt-repository ppa:kisak/kisak-mesa \
-    #&& apt upgrade -y \    
+RUN apt-get update \    
     # Install ROS Gazebo
     && apt-get install -y \
     ros-${ROS_DISTRO}-ros-gz \
@@ -91,44 +112,55 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# ---- Install ROS2 packages from sources ----
-# Create ROS2 working directory
-RUN mkdir -p ${ROS_WS}/src
+# Switch to non-root user
+USER ${USERNAME}
 
-# Copy the bigfootbot_description package to the ROS2 workspace
-COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
+# Create ROS 2 working directory and switch to it
+# e.g. /home/ros/ros2_ws
+WORKDIR ${ROS_WS}
 
-# Copy the bigfootbot_gazebo package to the ROS2 workspace
-COPY bigfootbot_gazebo ${ROS_WS}/src/bigfootbot_gazebo
+# ---- Install ROS 2 packages from sources ----
 
-RUN apt-get update \    
-    && cd ${ROS_WS} \
+# NOTE As COPY instruction is always run as root, so folder src and its contents are 
+# owned by the root. 
+# Change ownership of the copied packages to the user ${USERNAME}
+COPY --chown=${USERNAME}:${USERNAME} bigfootbot_description ${ROS_WS}/src/bigfootbot_description
+COPY --chown=${USERNAME}:${USERNAME} bigfootbot_gazebo ${ROS_WS}/src/bigfootbot_gazebo
+
+# Install ROS 2 dependencies and build the workspace
+# NOTE sudo is added to apt-get update, because user ${USERNAME} is not root
+RUN sudo apt-get update \    
     && source /opt/ros/${ROS_DISTRO}/setup.bash \
     && rosdep update \
     && rosdep install -y \
       --ignore-src \
-      --from-path src \ 
+      --from-path src \
       --rosdistro ${ROS_DISTRO} \
     #  --skip-keys "bigfootbot_teleop bigfootbot_description" \        
-    ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     # with --symlink-install you don't have to rebuild the package when launch or URDF file is changed
     # NB! package needs to be rebuilt if a new file is added to the package
     && colcon build --symlink-install \  
     # colcon build --symlink-install --packages-select xacro # build only xacro package
     #&& rm -rf src logs build \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && sudo rm -rf /var/lib/apt/lists/* \
+    && sudo apt-get clean
 
 ##### Setup entrypoint
+# NOTE COPY instruction is always run as root
 COPY docker/ros_entrypoint.sh /
 
 # [] - is exec form
 # exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
 # Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
 # So shell process with PID 1 is replaced by the process of running program in exec mode
+# NOTE Is run as user ${USERNAME}
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
 # run ros2 launch command
 # Open gazebo with spawned seesaw model
 #CMD ["gazebo", "/usr/share/gazebo-11/worlds/seesaw.world"]
+# NOTE Is run as user ${USERNAME}
 CMD ["bash"]
+
+
+# NOTE For reference check https://github.com/joshnewans/dockerfile_example/blob/main/Dockerfile

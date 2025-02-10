@@ -54,6 +54,8 @@ def generate_launch_description():
         #launch_arguments={
         #    'gz_args': '-r empty.sdf' # -r - simulation should start immediately (not needed to press play in Gazebo)
         #}.items()
+        # -r - simulation should start immediately (not needed to press play in Gazebo)
+        # -v4 sets verbosity level to 4 (4 is max verbosity level, default is 1).
         launch_arguments={'gz_args': ['-r -v4 ', world_lc], 'on_exit_shutdown': 'true'}.items()
     )
     
@@ -86,7 +88,10 @@ def generate_launch_description():
             #'-name', 'my_custom_model', # How to name the robot in Gazebo (if omitted, the 
                                          # name is taken from the URDF)
             '-world', 'empty', # The name of the world to spawn the robot in
-            '-topic', '/robot_description'], # The topic where the robot URDF is published
+            '-topic', '/robot_description', # The topic where the robot URDF is published
+            '--ros-args', 
+            #'--log-level', 'debug' # Print debug messages to the screen (default level is info)
+        ],
         output='screen'
     )
 

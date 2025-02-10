@@ -27,6 +27,15 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+# This node subscribes to the 'cmd_vel_unstamped' topic, converts geometry_msgs/msg/Twist to
+# geometry_msgs/msg/TwistStamped and republishes it as a 'cmd_vel' topic
+# It should be here so it could be accessed in the bfb_teleop.launch.py
+install(
+  PROGRAMS
+    script/twist_stamper.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

@@ -54,7 +54,7 @@ services:
         macnet:
           ipv4_address: 192.168.5.77
 
-      #command:
+      command: python3 /src/signaling.py
 
 networks:
   macnet:

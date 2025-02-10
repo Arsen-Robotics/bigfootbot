@@ -2,6 +2,8 @@ import asyncio
 import json
 import websockets
 import gi
+from Xlib import X, Xutil, display
+import ctypes
 
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
@@ -13,6 +15,10 @@ class WebRTCRecv:
         self.websocket = None
         self.webrtcbin = None
         self.pipeline = None
+
+        # Initialize X11 threading
+        libX11 = ctypes.cdll.LoadLibrary("libX11.so")
+        libX11.XInitThreads()
 
     async def connect(self):
         """Establish WebSocket connection to the signaling server."""
@@ -161,6 +167,35 @@ class WebRTCRecv:
 
     def on_incoming_decodebin_stream(self, _, pad):
         """Handle incoming decodebin stream."""
+        # if not pad.has_current_caps():
+        #     print (pad, 'has no caps, ignoring')
+        #     return
+
+        # caps = pad.get_current_caps()
+        # assert (len(caps))
+        # s = caps[0]
+        # name = s.get_name()
+        # if name.startswith('video'):
+        #     q = Gst.ElementFactory.make('queue')
+        #     conv = Gst.ElementFactory.make('videoconvert')
+        #     sink = Gst.ElementFactory.make('xvimagesink')
+        #     self.pipeline.add(q, conv, sink)
+        #     self.pipeline.sync_children_states()
+        #     pad.link(q.get_static_pad('sink'))
+        #     q.link(conv)
+        #     conv.link(sink)
+        # elif name.startswith('audio'):
+        #     q = Gst.ElementFactory.make('queue')
+        #     conv = Gst.ElementFactory.make('audioconvert')
+        #     resample = Gst.ElementFactory.make('audioresample')
+        #     sink = Gst.ElementFactory.make('autoaudiosink')
+        #     self.pipeline.add(q, conv, resample, sink)
+        #     self.pipeline.sync_children_states()
+        #     pad.link(q.get_static_pad('sink'))
+        #     q.link(conv)
+        #     conv.link(resample)
+        #     resample.link(sink)
+
         if not pad.has_current_caps():
             print(pad, 'has no caps, ignoring')
             return
@@ -173,7 +208,7 @@ class WebRTCRecv:
         if name.startswith('video'):
             q = Gst.ElementFactory.make('queue')
             conv = Gst.ElementFactory.make('videoconvert')
-            sink = Gst.ElementFactory.make('autovideosink')
+            sink = Gst.ElementFactory.make('xvimagesink')
             
             # Minimize latency in queue (reduce buffering)
             q.set_property("max-size-buffers", 1)
@@ -208,7 +243,7 @@ class WebRTCRecv:
             q.link(conv)
             conv.link(resample)
             resample.link(sink)
-    
+
     async def listen(self):
         """Main loop to handle incoming messages."""
         async for message in self.websocket:

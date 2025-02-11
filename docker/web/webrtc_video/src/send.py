@@ -74,12 +74,12 @@ class WebRTCSend:
             ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            v4l2src device=/dev/video9 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
             ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            v4l2src device=/dev/video11 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
             ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
@@ -169,43 +169,45 @@ class WebRTCSend:
         name = s.get_name()
 
         if name.startswith('video'):
-            q = Gst.ElementFactory.make('queue')
-            conv = Gst.ElementFactory.make('videoconvert')
-            sink = Gst.ElementFactory.make('autovideosink')
+            pass
+            # q = Gst.ElementFactory.make('queue')
+            # conv = Gst.ElementFactory.make('videoconvert')
+            # sink = Gst.ElementFactory.make('autovideosink')
             
-            # Minimize latency in queue (reduce buffering)
-            q.set_property("max-size-buffers", 1)
-            q.set_property("max-size-time", 0)
-            q.set_property("max-size-bytes", 0)
-            q.set_property("leaky", "downstream")  # Allow data to drop if too much buffering happens
+            # # Minimize latency in queue (reduce buffering)
+            # q.set_property("max-size-buffers", 1)
+            # q.set_property("max-size-time", 0)
+            # q.set_property("max-size-bytes", 0)
+            # q.set_property("leaky", "downstream")  # Allow data to drop if too much buffering happens
             
-            # Disable sync on autovideosink for lower latency
-            sink.set_property("sync", False)
+            # # Disable sync on autovideosink for lower latency
+            # sink.set_property("sync", False)
 
-            self.pipeline.add(q, conv, sink)
-            self.pipeline.sync_children_states()
-            pad.link(q.get_static_pad('sink'))
-            q.link(conv)
-            conv.link(sink)
+            # self.pipeline.add(q, conv, sink)
+            # self.pipeline.sync_children_states()
+            # pad.link(q.get_static_pad('sink'))
+            # q.link(conv)
+            # conv.link(sink)
 
         elif name.startswith('audio'):
-            q = Gst.ElementFactory.make('queue')
-            conv = Gst.ElementFactory.make('audioconvert')
-            resample = Gst.ElementFactory.make('audioresample')
-            sink = Gst.ElementFactory.make('autoaudiosink')
+            pass
+            # q = Gst.ElementFactory.make('queue')
+            # conv = Gst.ElementFactory.make('audioconvert')
+            # resample = Gst.ElementFactory.make('audioresample')
+            # sink = Gst.ElementFactory.make('autoaudiosink')
             
-            # Same low-latency settings for audio queue
-            q.set_property("max-size-buffers", 1)
-            q.set_property("max-size-time", 0)
-            q.set_property("max-size-bytes", 0)
-            q.set_property("leaky", "downstream")
+            # # Same low-latency settings for audio queue
+            # q.set_property("max-size-buffers", 1)
+            # q.set_property("max-size-time", 0)
+            # q.set_property("max-size-bytes", 0)
+            # q.set_property("leaky", "downstream")
 
-            self.pipeline.add(q, conv, resample, sink)
-            self.pipeline.sync_children_states()
-            pad.link(q.get_static_pad('sink'))
-            q.link(conv)
-            conv.link(resample)
-            resample.link(sink)
+            # self.pipeline.add(q, conv, resample, sink)
+            # self.pipeline.sync_children_states()
+            # pad.link(q.get_static_pad('sink'))
+            # q.link(conv)
+            # conv.link(resample)
+            # resample.link(sink)
     
     async def listen(self):
         """Main loop to handle incoming messages."""

@@ -10,7 +10,7 @@ from gi.repository import Gst, GstWebRTC, GstSdp, GLib
 
 class WebRTCRecv:
     def __init__(self):
-        self.SIGNALING_SERVER = 'ws://213.101.194.166:8765'
+        self.SIGNALING_SERVER = 'ws://87.119.173.184:8765'
         self.websocket = None
         self.webrtcbin = None
         self.pipeline = None

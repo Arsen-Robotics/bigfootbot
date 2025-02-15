@@ -29,7 +29,7 @@ def generate_launch_description():
         get_package_share_directory('bigfootbot_gazebo'),
         'worlds',
         'empty.world'
-        )    
+        )  # returns /home/ubuntu/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/worlds/empty.world
         
     world_lc = LaunchConfiguration('world')
 

@@ -69,156 +69,21 @@
       <pose>0 0 0 0 0 0</pose>
       <self_collide>false</self_collide>
     </model>
+    <!--include>
+      <uri>file:///home/ubuntu/.gz/fuel/fuel.gazebosim.org/openrobotics/models/breakfast menu decomposed/1</uri>
+      <name>breakfast_menu_decomposed</name>
+      <pose>0.2295810387811158 -0.84486711584706864 0.00096372751728358787 1.6338745829316115e-08 -1.174072024768845e-08 -5.4762454117500097e-15</pose>
+    </include-->
     <include>
-      <uri>file://<urdf-string></uri>
-      <name>bigfootbot</name>
-      <pose>-3.1067481161555116e-14 -3.3335057192200032e-22 -4.5885579384730146e-11 1.1040491277736099e-21 1.4728706601780436e-13 -3.5012736115043471e-23</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Bathtub</uri>
+      <pose>2 3 0 0 0 1.57</pose>  <!-- x y z roll pitch yaw -->
+      <name>Bathtub</name>
     </include>
-    <model name='box'>
-      <pose>1.5689435803644765 2.0418223439811758 0.49999999990199806 6.2287739151293738e-22 9.3279666454713669e-22 -3.6315533669320137e-22</pose>
-      <link name='box_link'>
-        <inertial>
-          <inertia>
-            <ixx>0.16666</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.16666</iyy>
-            <iyz>0</iyz>
-            <izz>0.16666</izz>
-          </inertia>
-          <mass>1</mass>
-          <pose>0 0 0 0 0 0</pose>
-        </inertial>
-        <collision name='box_collision'>
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-          <surface>
-            <friction>
-              <ode/>
-            </friction>
-            <bounce/>
-            <contact/>
-          </surface>
-        </collision>
-        <visual name='box_visual'>
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.300000012 0.300000012 0.300000012 1</ambient>
-            <diffuse>0.699999988 0.699999988 0.699999988 1</diffuse>
-            <specular>1 1 1 1</specular>
-          </material>
-        </visual>
-        <pose>0 0 0 0 0 0</pose>
-        <enable_wind>false</enable_wind>
-      </link>
-      <static>false</static>
-      <self_collide>false</self_collide>
-    </model>
-    <model name='cylinder'>
-      <pose>1.5111459843596471 -1.8569263557798863 0.49999942638036005 1.2578532238930553e-19 -2.5744156583494212e-19 -2.3162053365223531e-20</pose>
-      <link name='cylinder_link'>
-        <inertial>
-          <inertia>
-            <ixx>0.14580000000000001</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.14580000000000001</iyy>
-            <iyz>0</iyz>
-            <izz>0.125</izz>
-          </inertia>
-          <mass>1</mass>
-          <pose>0 0 0 0 0 0</pose>
-        </inertial>
-        <collision name='cylinder_collision'>
-          <geometry>
-            <cylinder>
-              <radius>0.5</radius>
-              <length>1</length>
-            </cylinder>
-          </geometry>
-          <surface>
-            <friction>
-              <ode/>
-            </friction>
-            <bounce/>
-            <contact/>
-          </surface>
-        </collision>
-        <visual name='cylinder_visual'>
-          <geometry>
-            <cylinder>
-              <radius>0.5</radius>
-              <length>1</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>0.300000012 0.300000012 0.300000012 1</ambient>
-            <diffuse>0.699999988 0.699999988 0.699999988 1</diffuse>
-            <specular>1 1 1 1</specular>
-          </material>
-        </visual>
-        <pose>0 0 0 0 0 0</pose>
-        <enable_wind>false</enable_wind>
-      </link>
-      <static>false</static>
-      <self_collide>false</self_collide>
-    </model>
-    <model name='capsule'>
-      <pose>-1.1293697985101738 1.146831171398881 0.499999999902001 0 0 0</pose>
-      <link name='capsule_link'>
-        <inertial>
-          <inertia>
-            <ixx>0.074153999999999998</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.074153999999999998</iyy>
-            <iyz>0</iyz>
-            <izz>0.018769000000000001</izz>
-          </inertia>
-          <mass>1</mass>
-          <pose>0 0 0 0 0 0</pose>
-        </inertial>
-        <collision name='capsule_collision'>
-          <geometry>
-            <capsule>
-              <radius>0.20000000000000001</radius>
-              <length>0.59999999999999998</length>
-            </capsule>
-          </geometry>
-          <surface>
-            <friction>
-              <ode/>
-            </friction>
-            <bounce/>
-            <contact/>
-          </surface>
-        </collision>
-        <visual name='capsule_visual'>
-          <geometry>
-            <capsule>
-              <radius>0.20000000000000001</radius>
-              <length>0.59999999999999998</length>
-            </capsule>
-          </geometry>
-          <material>
-            <ambient>0.300000012 0.300000012 0.300000012 1</ambient>
-            <diffuse>0.699999988 0.699999988 0.699999988 1</diffuse>
-            <specular>1 1 1 1</specular>
-          </material>
-        </visual>
-        <pose>0 0 0 0 0 0</pose>
-        <enable_wind>false</enable_wind>
-      </link>
-      <static>false</static>
-      <self_collide>false</self_collide>
-    </model>
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Standard Toilet</uri>
+      <pose>3 3 0 0 0 0</pose>  <!-- x y z roll pitch yaw -->
+      <name>Standard Toilet</name>
+    </include>
     <light name='sun' type='directional'>
       <pose>0 0 10 0 0 0</pose>
       <cast_shadows>true</cast_shadows>

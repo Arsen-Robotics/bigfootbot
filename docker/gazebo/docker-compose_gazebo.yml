@@ -5,6 +5,11 @@
 # including the Dockerfile, and automatically rebuilds the corresponding images if necessary
 #   `docker compose -f docker-compose_gazebo.yml up'
 #
+# To pass the world file name to the container, use the following command:
+# world_file_name.sdf must be located in the container's 
+# /home/ubuntu/ros2_ws/src/bigfootbot_gazebo/worlds folder
+# `WORLD_FILE=<world_file_name.sdf> docker compose -f docker-compose_gazebo.yml up`
+#
 # Stop and remove containers that were created based on the 
 # configuration specified in the compose file.
 #   `docker compose -f docker-compose_gazebo.yml down'
@@ -60,6 +65,9 @@ services:
     # The name to be given to the container created from the image.
     container_name: bfb_gazebo_cntr
     #container_name: bfb_gazebo_fortress_cntr
+    
+    #user: "1000:1000"  # Set the user to the host user so newly mapped volumes are owned 
+                       # by the host user
 
     volumes:
       # Forward X socket to container to enable GUI
@@ -76,6 +84,16 @@ services:
       # without the need to rebuild the image
       #- ../../bigfootbot_gazebo/worlds:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/worlds
       - ../../bigfootbot_gazebo/worlds:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/worlds
+
+      # Persist Gazebo Fuel models 
+      # use this when you want to persist downloaded Gazebo Fuel models
+      # and use them in .sdf files
+      # Alternative to downloading models and use files locally would be to use links to the models
+      # located on the fuel.gazebosim.org website
+      #- ../../bigfootbot_gazebo/worlds/.gz/fuel:/home/ubuntu/.gz/fuel
+
+      # Use a named volume for .gz directory
+      #- gazebo_home:/home/ubuntu/.gz
 
       # Mount folder with configuration files (e.g for gz_bridge) to be able to update them on-the-fly in the running container,
       - ../../bigfootbot_gazebo/config:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/config
@@ -126,7 +144,13 @@ services:
     #command: "ign gazebo /usr/share/ignition/ignition-gazebo6/worlds/empty.sdf"  #/usr/share/gazebo-11/worlds/seesaw.world
     #command: bash -c "rviz2 && joint_state_publisher_gui"
     #command: "ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=empty.sdf"
-    command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
+    #command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
+
+    # Add command to launch with specified world
+    # ${WORLD_FILE} is environment variable that will be replaced with the actual world file name at runtime
+    # To pass the world file name to the container, use the following command:
+    # `WORLD_FILE=my_test_world.sdf docker compose -f docker-compose_gazebo.yml up`
+    command: ros2 launch bigfootbot_gazebo gazebo.launch.py world:=/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/worlds/${WORLD_FILE}
     #command: "bash"
     
     networks:
@@ -154,7 +178,7 @@ services:
 
     # The name to be given to the container created from the image.
     container_name: bfb_teleop_cntr
-
+    
     volumes:     
       # Mount launch and config files to be able to update them inside the container without rebuilding the image
       - ../../bigfootbot_teleop/launch:/home/ubuntu/ros2_ws/src/bigfootbot_teleop/launch
@@ -173,6 +197,11 @@ services:
 
     networks:
       bfb_network:
+
+#volumes:
+  # Define the named volume
+#  gazebo_home:
+#    name: gazebo_home  # This ensures the same volume name across different projects
 
 networks:
   bfb_network:

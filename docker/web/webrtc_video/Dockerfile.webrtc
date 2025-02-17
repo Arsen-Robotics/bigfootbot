@@ -21,6 +21,7 @@ SHELL ["/bin/bash", "-c"]
 
 RUN mkdir /src
 COPY docker/web/webrtc_video/src /src
+COPY docker/web/webrtc_video/CMakeLists.txt /
 
 # Workaround as of 19.01.2025 there was a GPG error ONLY with nvcr base image
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
@@ -33,7 +34,7 @@ RUN apt-get update \
     libnice-dev autoconf libtool gtk-doc-tools libglib2.0-dev gstreamer1.0-nice libssl-dev \
     libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good \
     gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
-    gstreamer1.0-qt5 gstreamer1.0-pulseaudio \
+    gstreamer1.0-qt5 gstreamer1.0-pulseaudio nlohmann-json3-dev \
     && cd / \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python3 get-pip.py \

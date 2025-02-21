@@ -179,7 +179,6 @@ class WebRTCRecv:
 
     def on_incoming_stream(self, _, pad):
         """Handle incoming stream from the remote peer."""
-        print("Received incoming stream")
         if pad.direction != Gst.PadDirection.SRC:
             return
         
@@ -194,7 +193,6 @@ class WebRTCRecv:
 
     def on_incoming_decodebin_stream(self, _, pad):
         """Handle incoming decodebin stream."""
-        print("Received pad")
         # Ensure caps are available before continuing
         caps = pad.get_current_caps()
         if not caps:
@@ -204,105 +202,7 @@ class WebRTCRecv:
         # Process the pad asynchronously
         asyncio.run(self.process_pad(pad))
 
-        # caps = pad.get_current_caps()
-        # assert len(caps)
-        # s = caps[0]
-        # name = s.get_name()
-
-        # if name.startswith('video'):
-        #     q = Gst.ElementFactory.make('queue')
-        #     conv = Gst.ElementFactory.make('videoconvert')            
-        #     sink = Gst.ElementFactory.make('xvimagesink')
-            
-        #     # Minimize latency in queue (reduce buffering)
-        #     q.set_property("max-size-buffers", 1)
-        #     q.set_property("max-size-time", 0)
-        #     q.set_property("max-size-bytes", 0)
-        #     q.set_property("leaky", "downstream")  # Allow data to drop if too much buffering happens
-            
-        #     # Disable sync on autovideosink for lower latency
-        #     sink.set_property("sync", False)
-
-        #     self.pipeline.add(q, conv, sink)
-        #     self.pipeline.sync_children_states()
-        #     pad.link(q.get_static_pad('sink'))
-        #     q.link(conv)
-        #     conv.link(sink)
-
-        # elif name.startswith('audio'):
-        #     q = Gst.ElementFactory.make('queue')
-        #     conv = Gst.ElementFactory.make('audioconvert')
-        #     resample = Gst.ElementFactory.make('audioresample')
-        #     sink = Gst.ElementFactory.make('autoaudiosink')
-            
-        #     # Same low-latency settings for audio queue
-        #     q.set_property("max-size-buffers", 1)
-        #     q.set_property("max-size-time", 0)
-        #     q.set_property("max-size-bytes", 0)
-        #     q.set_property("leaky", "downstream")
-
-        #     self.pipeline.add(q, conv, resample, sink)
-        #     self.pipeline.sync_children_states()
-        #     pad.link(q.get_static_pad('sink'))
-        #     q.link(conv)
-        #     conv.link(resample)
-        #     resample.link(sink)
-        # """Handle incoming video streams and merge them into one output using compositor."""
-        
-        # if not pad.has_current_caps():
-        #     print("Pad has no caps, ignoring")
-        #     return
-
-        # caps = pad.get_current_caps()
-        # assert len(caps)
-        # s = caps[0]
-        # name = s.get_name()
-
-        # if name.startswith("video"):
-        #     print("Processing incoming video stream...")
-
-        #     # Create queue and videoconvert elements
-        #     q = Gst.ElementFactory.make("queue", None)
-        #     conv = Gst.ElementFactory.make("videoconvert", None)
-
-        #     if not q or not conv:
-        #         print("ERROR: Could not create queue or videoconvert")
-        #         return
-
-        #     # Add queue and converter to pipeline
-        #     self.pipeline.add(q, conv)
-        #     q.sync_state_with_parent()
-        #     conv.sync_state_with_parent()
-
-        #     # Link pad -> queue -> converter
-        #     pad.link(q.get_static_pad("sink"))
-        #     q.link(conv)
-
-        #     # Make sure the compositor is part of the pipeline before linking
-        #     if not self.pipeline.contains(self.compositor):
-        #         self.pipeline.add(self.compositor)
-
-        #     # Request a sink pad from the compositor
-        #     sink_pad = self.compositor.get_request_pad("sink_%u")
-
-        #     if not sink_pad:
-        #         print("ERROR: Could not get compositor sink pad")
-        #         return
-
-        #     # Set position in compositor (adjust based on camera count)
-        #     pad_index = len(self.compositor.sinkpads)
-        #     xpos = (pad_index % 3) * 640  # Arrange in 3 columns
-        #     ypos = (pad_index // 3) * 480  # Arrange in rows
-        #     sink_pad.set_property("xpos", xpos)
-        #     sink_pad.set_property("ypos", ypos)
-
-        #     # Link video converter -> compositor
-        #     conv.get_static_pad("src").link(sink_pad)
-
-        #     print(f"Linked video stream to compositor pad: {sink_pad.get_name()}")
-
     async def process_pad(self, pad):
-        print("Processing incoming stream...")
         caps = pad.get_current_caps()
         assert len(caps)
         s = caps[0]

@@ -10,7 +10,7 @@ from gi.repository import Gst, GstWebRTC, GstSdp, GLib
 
 class WebRTCRecv:
     def __init__(self):
-        self.SIGNALING_SERVER = 'ws://87.119.173.184:8765'
+        self.SIGNALING_SERVER = 'ws://0.0.0.0:8765'
         self.websocket = None
         self.webrtcbin = None
         self.pipeline = None
@@ -51,7 +51,7 @@ class WebRTCRecv:
         except Exception as e:
             print(f"Failed to connect to signaling server: {e}")
 
-        await self.websocket.send(json.dumps('HELLO'))
+        await self.websocket.send(json.dumps({"status": "HELLO"}))
 
     def on_negotiation_needed(self, _):
         """Triggered when WebRTC negotiation is needed."""
@@ -251,7 +251,7 @@ class WebRTCRecv:
         """Main loop to handle incoming messages."""
         async for message in self.websocket:
             msg = json.loads(message)
-            if msg == 'OK':
+            if msg == {"status": "OK"}:
                 print("Received OK from SEND peer")
                 self.start_pipeline()
             elif 'sdp' in msg:

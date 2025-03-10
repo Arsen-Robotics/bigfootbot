@@ -81,11 +81,13 @@ public:
             }
 
             if (jsonMsg.isMember("status") && jsonMsg["status"].asString() == "OK") {
-                std::cout << "Received OK message from SEND peer." << std::endl;
+                std::cout << "Received OK status." << std::endl;
                 setup_pipeline();
             } else if (jsonMsg.isMember("ice")) {
+                std::cout << "Received ICE candidate." << std::endl;
                 handle_ice(payload);
             } else if (jsonMsg.isMember("sdp")) {
+                std::cout << "Received SDP offer." << std::endl;
                 handle_sdp(payload);
             } else {
                 std::cout << "Unknown JSON message type" << std::endl;
@@ -131,7 +133,7 @@ public:
 
         // Connect to signals
         g_signal_connect(webrtcbin, "on-ice-candidate", G_CALLBACK(&WebRTCRecv::send_ice_candidate), this);
-        g_signal_connect(webrtcbin, "pad-added", G_CALLBACK(&WebRTCRecv::on_incoming_stream), this);
+        //g_signal_connect(webrtcbin, "pad-added", G_CALLBACK(&WebRTCRecv::on_incoming_stream), this);
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
@@ -155,7 +157,68 @@ public:
     }
 
     void handle_sdp(const std::string& sdp) {
-        // Handle SDP message
+        std::cout << "Handling SDP offer." << std::endl;
+        
+        Json::CharReaderBuilder reader;
+        Json::Value jsonMsg;
+        std::string errs;
+        std::istringstream s(sdp);
+
+        if (Json::parseFromStream(reader, s, &jsonMsg, &errs)) {
+            std::string sdpType = jsonMsg["sdp"]["type"].asString();
+            std::string sdpDescription = jsonMsg["sdp"]["sdp"].asString();
+
+            if (sdpType == "offer") {
+                GstSDPMessage* sdpMsg;
+                gst_sdp_message_new(&sdpMsg);
+                gst_sdp_message_parse_buffer((guint8*)sdpDescription.c_str(), sdpDescription.size(), sdpMsg);
+
+                GstWebRTCSessionDescription* offer = gst_webrtc_session_description_new(GST_WEBRTC_SDP_TYPE_OFFER, sdpMsg);
+                g_signal_emit_by_name(webrtcbin, "set-remote-description", offer, nullptr);
+
+                GstPromise *promise = gst_promise_new_with_change_func([](GstPromise *promise, gpointer user_data) {
+                    GstElement* webrtcbin = static_cast<GstElement*>(user_data);
+                    GstWebRTCSessionDescription* answer;
+                    gst_promise_get_reply(promise);
+                    g_signal_emit_by_name(webrtcbin, "create-answer", nullptr, &answer);
+                    g_signal_emit_by_name(webrtcbin, "set-local-description", answer, nullptr);
+                    gchar* sdpStr = gst_sdp_message_as_text(answer->sdp);
+                    Json::Value answerMsg;
+                    answerMsg["sdp"]["type"] = "answer";
+                    answerMsg["sdp"]["sdp"] = sdpStr;
+                    Json::StreamWriterBuilder writer;
+                    std::string answerStr = Json::writeString(writer, answerMsg);
+                    WebRTCRecv* self = static_cast<WebRTCRecv*>(user_data);
+                    self->send_ws(answerStr);
+                    g_free(sdpStr);
+                }, webrtcbin, nullptr);
+            } else {
+                std::cerr << "Unsupported SDP type: " << sdpType << std::endl;
+            }
+        } else {
+            std::cerr << "Failed to parse SDP: " << errs << std::endl;
+        }
+    }
+
+    void on_answer_created(GstElement* webrtcbin, GstWebRTCSessionDescription* answer, gpointer user_data) {
+        std::cout << "Answer created." << std::endl;
+
+        WebRTCRecv* self = static_cast<WebRTCRecv*>(user_data);
+
+        g_signal_emit_by_name(webrtcbin, "set-local-description", answer, nullptr);
+
+        gchar* sdpStr;
+        sdpStr = gst_sdp_message_as_text(answer->sdp);
+
+        Json::Value answerMsg;
+        answerMsg["sdp"]["type"] = "answer";
+        answerMsg["sdp"]["sdp"] = sdpStr;
+
+        Json::StreamWriterBuilder writer;
+        std::string answerStr = Json::writeString(writer, answerMsg);
+
+        self->send_ws(answerStr);
+        g_free(sdpStr);
     }
 
     void handle_ice(const std::string& ice) {

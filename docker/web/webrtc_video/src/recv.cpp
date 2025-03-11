@@ -98,7 +98,7 @@ public:
     }
 
     void send_ws(const std::string& msg) {
-        if (global_client) {
+        if (global_client && global_client->get_con_from_hdl(global_hdl)->get_state() == websocketpp::session::state::open) {
             websocketpp::lib::error_code ec;
             global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
             if (ec) {
@@ -107,7 +107,7 @@ public:
                 std::cout << "Sent message over WebSocket: " << msg << std::endl;
             }
         } else {
-            std::cerr << "WebSocket client is not initialized!" << std::endl;
+            std::cerr << "WebSocket client is not initialized or connection is not open!" << std::endl;
         }
     }
 
@@ -169,29 +169,32 @@ public:
             std::string sdpDescription = jsonMsg["sdp"]["sdp"].asString();
 
             if (sdpType == "offer") {
-                GstSDPMessage* sdpMsg;
+                GstSDPMessage* sdpMsg = nullptr;
                 gst_sdp_message_new(&sdpMsg);
                 gst_sdp_message_parse_buffer((guint8*)sdpDescription.c_str(), sdpDescription.size(), sdpMsg);
 
                 GstWebRTCSessionDescription* offer = gst_webrtc_session_description_new(GST_WEBRTC_SDP_TYPE_OFFER, sdpMsg);
                 g_signal_emit_by_name(webrtcbin, "set-remote-description", offer, nullptr);
 
+                // Create answer immediately
                 GstPromise *promise = gst_promise_new_with_change_func([](GstPromise *promise, gpointer user_data) {
-                    GstElement* webrtcbin = static_cast<GstElement*>(user_data);
-                    GstWebRTCSessionDescription* answer;
-                    gst_promise_get_reply(promise);
-                    g_signal_emit_by_name(webrtcbin, "create-answer", nullptr, &answer);
-                    g_signal_emit_by_name(webrtcbin, "set-local-description", answer, nullptr);
-                    gchar* sdpStr = gst_sdp_message_as_text(answer->sdp);
-                    Json::Value answerMsg;
-                    answerMsg["sdp"]["type"] = "answer";
-                    answerMsg["sdp"]["sdp"] = sdpStr;
-                    Json::StreamWriterBuilder writer;
-                    std::string answerStr = Json::writeString(writer, answerMsg);
                     WebRTCRecv* self = static_cast<WebRTCRecv*>(user_data);
-                    self->send_ws(answerStr);
-                    g_free(sdpStr);
-                }, webrtcbin, nullptr);
+                    GstStructure const *reply = gst_promise_get_reply(promise);
+                    
+                    GstWebRTCSessionDescription *answer = nullptr;
+                    gst_structure_get(reply, "answer", GST_TYPE_WEBRTC_SESSION_DESCRIPTION, &answer, nullptr);
+                    gst_promise_unref(promise);
+
+                    if (!answer) {
+                        std::cerr << "Failed to create SDP answer." << std::endl;
+                        return;
+                    }
+
+                    self->on_answer_created(answer);
+                }, this, nullptr);
+
+                g_signal_emit_by_name(webrtcbin, "create-answer", nullptr, promise);
+
             } else {
                 std::cerr << "Unsupported SDP type: " << sdpType << std::endl;
             }
@@ -200,15 +203,13 @@ public:
         }
     }
 
-    void on_answer_created(GstElement* webrtcbin, GstWebRTCSessionDescription* answer, gpointer user_data) {
-        std::cout << "Answer created." << std::endl;
 
-        WebRTCRecv* self = static_cast<WebRTCRecv*>(user_data);
+    void on_answer_created(GstWebRTCSessionDescription* answer) {
+        std::cout << "Answer created, setting local description and sending..." << std::endl;
 
         g_signal_emit_by_name(webrtcbin, "set-local-description", answer, nullptr);
 
-        gchar* sdpStr;
-        sdpStr = gst_sdp_message_as_text(answer->sdp);
+        gchar* sdpStr = gst_sdp_message_as_text(answer->sdp);
 
         Json::Value answerMsg;
         answerMsg["sdp"]["type"] = "answer";
@@ -217,8 +218,9 @@ public:
         Json::StreamWriterBuilder writer;
         std::string answerStr = Json::writeString(writer, answerMsg);
 
-        self->send_ws(answerStr);
+        send_ws(answerStr);
         g_free(sdpStr);
+        gst_webrtc_session_description_free(answer);
     }
 
     void handle_ice(const std::string& ice) {

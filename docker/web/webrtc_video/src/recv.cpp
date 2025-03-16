@@ -4,6 +4,7 @@
 #include <jsoncpp/json/json.h>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
+#include <X11/Xlib.h>
 
 class WebRTCRecv {
 public:
@@ -15,6 +16,11 @@ public:
     }
 
     ~WebRTCRecv() {
+        ws_running = false;
+        ws_cv.notify_all();
+        if (ws_thread.joinable()) {
+            ws_thread.join();
+        }
         if (pipeline) {
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_object_unref(pipeline);
@@ -53,6 +59,8 @@ public:
 
         global_hdl = hdl;
         global_client = c;
+
+        //ws_thread = std::thread(&WebRTCRecv::process_ws_queue, this);
 
         // Create a JSON object to send "HELLO" message
         Json::Value msg;
@@ -96,24 +104,51 @@ public:
             std::cout << "Failed to parse JSON: " << errs << std::endl;
         }
     }
+    
+    // void process_ws_queue() {
+    //     while (ws_running) {
+    //         std::unique_lock<std::mutex> lock(ws_mutex);
+    //         ws_cv.wait(lock, [this] { return !msg_queue.empty() || !ws_running; });
+
+    //         std::string msg = msg_queue.front();
+    //         msg_queue.pop();
+    //         lock.unlock();
+
+    //         websocketpp::lib::error_code ec;
+    //         global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
+    //         if (ec) {
+    //             std::cerr << "Error sending WebSocket message: " << ec.message() << std::endl;
+    //         } else {
+    //             std::cout << "Sent message over WebSocket: " << msg << std::endl;
+    //         }
+    //     }
+    // }
 
     void send_ws(const std::string& msg) {
-        if (global_client && global_client->get_con_from_hdl(global_hdl)->get_state() == websocketpp::session::state::open) {
-            websocketpp::lib::error_code ec;
-            global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
-            if (ec) {
-                std::cerr << "Error sending WebSocket message: " << ec.message() << std::endl;
-            } else {
-                std::cout << "Sent message over WebSocket: " << msg << std::endl;
-            }
+        websocketpp::lib::error_code ec;
+        global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
+        if (ec) {
+            std::cerr << "Error sending WebSocket message: " << ec.message() << std::endl;
         } else {
-            std::cerr << "WebSocket client is not initialized or connection is not open!" << std::endl;
+            std::cout << "Sent message over WebSocket: " << msg << std::endl;
         }
     }
 
+    // void queue_ws(const std::string& msg) {
+    //     std::lock_guard<std::mutex> lock(ws_mutex);
+    //     msg_queue.push(msg);
+    //     ws_cv.notify_one();
+    // }
+
     void setup_pipeline() {
         // Create GStreamer pipeline
-        pipeline = gst_parse_launch("webrtcbin name=recvonly stun-server=stun://stun.l.google.com:19302 audiotestsrc ! audioconvert ! fakesink", nullptr);
+        GError* error = nullptr;
+        pipeline = gst_parse_launch("webrtcbin name=recvonly stun-server=stun://stun.l.google.com:19302 audiotestsrc ! audioconvert ! fakesink", &error);
+        if (error) {
+            std::cerr << "ERROR: Could not create GStreamer pipeline: " << error->message << std::endl;
+            g_error_free(error);
+            return;
+        }
 
         if (!pipeline) {
             std::cerr << "ERROR: Could not create GStreamer pipeline." << std::endl;
@@ -133,13 +168,13 @@ public:
 
         // Connect to signals
         g_signal_connect(webrtcbin, "on-ice-candidate", G_CALLBACK(&WebRTCRecv::send_ice_candidate), this);
-        //g_signal_connect(webrtcbin, "pad-added", G_CALLBACK(&WebRTCRecv::on_incoming_stream), this);
+        g_signal_connect(webrtcbin, "pad-added", G_CALLBACK(&WebRTCRecv::on_incoming_stream), this);
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
     }
     
-    void send_ice_candidate(GstElement* webrtcbin, guint mlineindex, gchar* candidate, gpointer user_data) {
+    static void send_ice_candidate(GstElement* webrtcbin, guint mlineindex, gchar* candidate, gpointer user_data) {
         std::cout << "Sending ICE candidate: " << candidate << std::endl;
 
         // Create a JSON message to send over WebSocket
@@ -151,9 +186,29 @@ public:
         Json::StreamWriterBuilder writer;
         std::string icemsg_str = Json::writeString(writer, icemsg);
 
-        // Send the ICE candidate over WebSocket (this part would need to use your WebSocket client)
-        // Example of sending over WebSocket (using an async WebSocket library like websocketpp)
-        send_ws(icemsg_str);
+        // Send the ICE candidate over WebSocket
+        static_cast<WebRTCRecv*>(user_data)->send_ws(icemsg_str);
+    }
+
+    void handle_ice(const std::string& ice) {
+        Json::CharReaderBuilder reader;
+        Json::Value jsonMsg;
+        std::string errs;
+        std::istringstream s(ice);
+
+        if (Json::parseFromStream(reader, s, &jsonMsg, &errs)) {
+            std::string candidate = jsonMsg["ice"]["candidate"].asString();
+            int sdpMLineIndex = jsonMsg["ice"]["sdpMLineIndex"].asInt();
+
+            if (!webrtcbin) {
+                std::cerr << "ERROR: Could not get WebRTC element." << std::endl;
+                return;
+            }
+
+            g_signal_emit_by_name(webrtcbin, "add-ice-candidate", sdpMLineIndex, candidate.c_str());
+        } else {
+            std::cerr << "Failed to parse ICE candidate: " << errs << std::endl;
+        }
     }
 
     void handle_sdp(const std::string& sdp) {
@@ -223,25 +278,54 @@ public:
         gst_webrtc_session_description_free(answer);
     }
 
-    void handle_ice(const std::string& ice) {
-        Json::CharReaderBuilder reader;
-        Json::Value jsonMsg;
-        std::string errs;
-        std::istringstream s(ice);
+    static void on_incoming_stream(GstElement* webrtcbin, GstPad* pad, WebRTCRecv* self) {
+        std::cout << "Received incoming stream." << std::endl;
 
-        if (Json::parseFromStream(reader, s, &jsonMsg, &errs)) {
-            std::string candidate = jsonMsg["ice"]["candidate"].asString();
-            int sdpMLineIndex = jsonMsg["ice"]["sdpMLineIndex"].asInt();
+        GstPad* sinkpad;
+        GstElement* decodebin = gst_element_factory_make("decodebin", nullptr);
+        gst_bin_add(GST_BIN(self->pipeline), decodebin);
+        gst_element_sync_state_with_parent(decodebin);
 
-            if (!webrtcbin) {
-                std::cerr << "ERROR: Could not get WebRTC element." << std::endl;
-                return;
-            }
+        g_signal_connect(decodebin, "pad-added", G_CALLBACK(on_decodebin_pad_added), self);
 
-            g_signal_emit_by_name(webrtcbin, "add-ice-candidate", sdpMLineIndex, candidate.c_str());
-        } else {
-            std::cerr << "Failed to parse ICE candidate: " << errs << std::endl;
+        sinkpad = gst_element_get_static_pad(decodebin, "sink");
+        gst_pad_link(pad, sinkpad);
+        gst_object_unref(sinkpad);
+    }
+
+    static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCRecv* self) {
+        GstCaps* caps = gst_pad_get_current_caps(pad);
+        const GstStructure* str = gst_caps_get_structure(caps, 0);
+        const gchar* name = gst_structure_get_name(str);
+
+        GstElement* conv = nullptr;
+        GstElement* sink = nullptr;
+
+        if (g_str_has_prefix(name, "video")) {
+            conv = gst_element_factory_make("videoconvert", nullptr);
+            sink = gst_element_factory_make("autovideosink", nullptr);
+        } else if (g_str_has_prefix(name, "audio")) {
+            conv = gst_element_factory_make("audioconvert", nullptr);
+            sink = gst_element_factory_make("autoaudiosink", nullptr);
         }
+
+        if (conv && sink) {
+            gst_bin_add_many(GST_BIN(self->pipeline), conv, sink, nullptr);
+            gst_element_sync_state_with_parent(conv);
+            gst_element_sync_state_with_parent(sink);
+
+            GstPad* sinkpad = gst_element_get_static_pad(conv, "sink");
+            gst_pad_link(pad, sinkpad);
+            gst_object_unref(sinkpad);
+
+            GstPad* srcpad = gst_element_get_static_pad(conv, "src");
+            GstPad* sinkpad2 = gst_element_get_static_pad(sink, "sink");
+            gst_pad_link(srcpad, sinkpad2);
+            gst_object_unref(srcpad);
+            gst_object_unref(sinkpad2);
+        }
+
+        gst_caps_unref(caps);
     }
 
 private:
@@ -249,9 +333,21 @@ private:
     GstElement* webrtcbin;
     websocketpp::connection_hdl global_hdl;
     websocketpp::client<websocketpp::config::asio_client>* global_client;
+
+    std::queue<std::string> msg_queue;
+    std::mutex ws_mutex;
+    std::condition_variable ws_cv;
+    std::thread ws_thread;
+    std::atomic<bool> ws_running{true};
 };
 
 int main() {
+    // Call XInitThreads() to enable thread safety in X11
+    if (!XInitThreads()) {
+        std::cerr << "Failed to initialize X11 threading!" << std::endl;
+        return 1;
+    }
+
     WebRTCRecv recv;
     recv.connect();
 

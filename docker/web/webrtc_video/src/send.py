@@ -96,8 +96,8 @@ class WebRTCSend:
         #     ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.
         
         self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
-        videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv.')
-
+        videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
+        audiotestsrc is-live=true ! audioconvert ! audioresample ! opusenc ! rtpopuspay ! application/x-rtp,media=audio,encoding-name=OPUS,payload=96 ! sendrecv.')
         # Get the webrtcbin element
         self.webrtcbin = self.pipeline.get_by_name('sendrecv')
 

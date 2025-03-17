@@ -140,12 +140,21 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/video4 ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
-            ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
+            v4l2src device=/dev/video20 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
+            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv.", &error);
+            v4l2src device=/dev/video3 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
+            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            v4l2src device=/dev/video1 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
+            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.", &error);
         if (error) {
             std::cerr << "ERROR: Could not create GStreamer pipeline: " << error->message << std::endl;
             g_error_free(error);
@@ -166,7 +175,7 @@ public:
         }
 
         // Set WebRTC properties
-        g_object_set(G_OBJECT(webrtcbin), "latency", 0, "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", nullptr);
+        g_object_set(G_OBJECT(webrtcbin), "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", nullptr);
 
         // Connect to signals
         g_signal_connect(webrtcbin, "on-negotiation-needed", G_CALLBACK(&WebRTCSend::on_negotiation_needed), this);

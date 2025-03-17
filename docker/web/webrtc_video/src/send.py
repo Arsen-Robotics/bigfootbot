@@ -67,33 +67,33 @@ class WebRTCSend:
     def start_pipeline(self):
         """Sets up and starts the GStreamer pipeline with WebRTC."""
         # Create the GStreamer pipeline
-        # self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
-        #     stun-server=stun://stun.l.google.com:19302 \
-        #     v4l2src device=/dev/video20 ! video/x-raw,width=640,height=480,framerate=30/1 \
-        #     ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
-        #     ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
-        #     ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        #     ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-        #     v4l2src device=/dev/video9 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
-        #     ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
-        #     ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
-        #     ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        #     ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-        #     v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
-        #     ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
-        #     ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
-        #     ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        #     ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
+        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+            stun-server=stun://stun.l.google.com:19302 \
+            v4l2src device=/dev/video20 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
+            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            v4l2src device=/dev/video3 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
+            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            v4l2src device=/dev/video1 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
+            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
 
         # Working pipeline for CPU encoding (x264enc)
 
-        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
-            stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
-            ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
-            ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
+        # self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+        #     stun-server=stun://stun.l.google.com:19302 \
+        #     v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 \
+        #     ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
+        #     ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
+        #     ! h264parse ! rtph264pay config-interval=1 pt=96 \
+        #     ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
         
         # self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
         # videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \

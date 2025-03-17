@@ -37,7 +37,7 @@ services:
       volumes:
         - '/dev:/dev'
         # Mount Python source files to be able to update them inside the container without rebuilding the image
-        - ./src:/src
+        - ./src:/webrtc_video/src
 
         - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
         #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config

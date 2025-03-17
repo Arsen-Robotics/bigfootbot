@@ -138,8 +138,13 @@ public:
     void setup_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
-        pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
-            videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
+        pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+            stun-server=stun://stun.l.google.com:19302 \
+            v4l2src device=/dev/video4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
+            ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
             videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv.", &error);
         if (error) {
             std::cerr << "ERROR: Could not create GStreamer pipeline: " << error->message << std::endl;

@@ -21,7 +21,6 @@ SHELL ["/bin/bash", "-c"]
 
 RUN mkdir /src
 COPY docker/web/webrtc_video/src /src
-COPY docker/web/webrtc_video/CMakeLists.txt /
 
 # Workaround as of 19.01.2025 there was a GPG error ONLY with nvcr base image
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \

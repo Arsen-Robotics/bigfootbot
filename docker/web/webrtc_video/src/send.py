@@ -87,18 +87,19 @@ class WebRTCSend:
 
         # Working pipeline for CPU encoding (x264enc)
 
-        # webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
-        #     stun-server=stun://stun.l.google.com:19302 \
-        #     v4l2src device=/dev/video5 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
-        #     ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
-        #     ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
-        #     ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        #     ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.
+        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+            stun-server=stun://stun.l.google.com:19302 \
+            v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! videoconvert ! video/x-raw,format=I420 ! queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream \
+            ! x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 key-int-max=30 qp-min=18 qp-max=25 \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
         
-        self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
-        videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
-        audiotestsrc is-live=true ! audioconvert ! audioresample ! opusenc ! rtpopuspay ! application/x-rtp,media=audio,encoding-name=OPUS,payload=96 ! sendrecv.')
+        # self.pipeline = Gst.parse_launch('webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
+        # videotestsrc is-live=true ! videoconvert ! queue ! vp8enc deadline=1 ! rtpvp8pay ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=97 ! sendrecv. \
+        # audiotestsrc is-live=true ! audioconvert ! audioresample ! opusenc ! rtpopuspay ! application/x-rtp,media=audio,encoding-name=OPUS,payload=96 ! sendrecv.')
         # Get the webrtcbin element
+        
         self.webrtcbin = self.pipeline.get_by_name('sendrecv')
 
         # Can't use latency property on NVIDIA because of old GStreamer version

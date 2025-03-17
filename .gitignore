@@ -7,3 +7,4 @@ docker/husarnet-config
 *.pyc
 
 *.log
+bin/

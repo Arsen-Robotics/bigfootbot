@@ -40,7 +40,7 @@ public:
             client.set_message_handler(std::bind(&WebRTCRecv::on_msg, this, std::placeholders::_1, std::placeholders::_2));
 
             websocketpp::lib::error_code ec;
-            websocketpp::client<websocketpp::config::asio_client>::connection_ptr con = client.get_connection("ws://0.0.0.0:8765", ec);
+            websocketpp::client<websocketpp::config::asio_client>::connection_ptr con = client.get_connection("ws://87.119.173.184:8765", ec);
 
             if (ec) {
                 std::cout << "Connection error: " << ec.message() << std::endl;

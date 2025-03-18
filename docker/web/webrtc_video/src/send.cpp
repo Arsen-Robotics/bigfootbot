@@ -6,6 +6,10 @@
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
 #include <X11/Xlib.h>
+#include <glib.h>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
 class WebRTCSend {
 public:
@@ -14,6 +18,7 @@ public:
         gst_init(nullptr, nullptr);
         this->pipeline = nullptr;
         this->webrtcbin = nullptr;
+        ws_running = true;
     }
 
     ~WebRTCSend() {
@@ -61,7 +66,7 @@ public:
         global_hdl = hdl;
         global_client = c;
 
-        //ws_thread = std::thread(&WebRTCSend::process_ws_queue, this);
+        ws_thread = std::thread(&WebRTCSend::process_ws_queue, this);
     }
 
     void on_msg(websocketpp::connection_hdl, websocketpp::client<websocketpp::config::asio_client>::message_ptr msg) {
@@ -84,7 +89,7 @@ public:
                 msg["status"] = "OK";
                 Json::StreamWriterBuilder writer;
                 std::string message = Json::writeString(writer, msg);
-                send_ws(message);
+                queue_ws(message);
                 setup_pipeline();
             } else if (jsonMsg.isMember("ice")) {
                 std::cout << "Received ICE candidate." << std::endl;
@@ -100,40 +105,40 @@ public:
         }
     }
 
-    // void process_ws_queue() {
-    //     while (ws_running) {
-    //         std::unique_lock<std::mutex> lock(ws_mutex);
-    //         ws_cv.wait(lock, [this] { return !msg_queue.empty() || !ws_running; });
+    void process_ws_queue() {
+        while (ws_running) {
+            std::unique_lock<std::mutex> lock(ws_mutex);
+            ws_cv.wait(lock, [this] { return !msg_queue.empty() || !ws_running; });
 
-    //         std::string msg = msg_queue.front();
-    //         msg_queue.pop();
-    //         lock.unlock();
+            std::string msg = msg_queue.front();
+            msg_queue.pop();
+            lock.unlock();
 
-    //         websocketpp::lib::error_code ec;
-    //         global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
-    //         if (ec) {
-    //             std::cerr << "Error sending WebSocket message: " << ec.message() << std::endl;
-    //         } else {
-    //             std::cout << "Sent message over WebSocket: " << msg << std::endl;
-    //         }
-    //     }
-    // }
-
-    void send_ws(const std::string& msg) {
-        websocketpp::lib::error_code ec;
-        global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
-        if (ec) {
-            std::cerr << "Error sending WebSocket message: " << ec.message() << std::endl;
-        } else {
-            std::cout << "Sent message over WebSocket: " << msg << std::endl;
+            websocketpp::lib::error_code ec;
+            global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
+            if (ec) {
+                std::cerr << "Error sending WebSocket message: " << ec.message() << std::endl;
+            } else {
+                std::cout << "Sent message over WebSocket: " << msg << std::endl;
+            }
         }
     }
 
-    // void queue_ws(const std::string& msg) {
-    //     std::lock_guard<std::mutex> lock(ws_mutex);
-    //     msg_queue.push(msg);
-    //     ws_cv.notify_one();
+    // void send_ws(const std::string& msg) {
+    //     websocketpp::lib::error_code ec;
+    //     global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
+    //     if (ec) {
+    //         std::cerr << "Error sending WebSocket message: " << ec.message() << std::endl;
+    //     } else {
+    //         std::cout << "Sent message over WebSocket: " << msg << std::endl;
+    //     }
     // }
+
+    void queue_ws(const std::string& msg) {
+        std::lock_guard<std::mutex> lock(ws_mutex);
+        msg_queue.push(msg);
+        ws_cv.notify_one();
+    }
 
     void setup_pipeline() {
         // Create GStreamer pipeline
@@ -145,12 +150,12 @@ public:
             ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            v4l2src device=/dev/video3 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            v4l2src device=/dev/video9 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
             ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            v4l2src device=/dev/video1 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
             ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
@@ -199,7 +204,7 @@ public:
         std::string icemsg_str = Json::writeString(writer, icemsg);
 
         // Send the ICE candidate over WebSocket
-        static_cast<WebRTCSend*>(user_data)->send_ws(icemsg_str);
+        static_cast<WebRTCSend*>(user_data)->queue_ws(icemsg_str);
     }
 
     void handle_ice(const std::string& ice) {
@@ -251,7 +256,7 @@ public:
         Json::StreamWriterBuilder writer;
         std::string sdpmsg_str = Json::writeString(writer, sdpmsg);
 
-        static_cast<WebRTCSend*>(user_data)->send_ws(sdpmsg_str);
+        static_cast<WebRTCSend*>(user_data)->queue_ws(sdpmsg_str);
 
         g_signal_emit_by_name(static_cast<WebRTCSend*>(user_data)->webrtcbin, "set-local-description", offer, nullptr);
 
@@ -361,7 +366,13 @@ int main() {
     }
 
     WebRTCSend recv;
-    recv.connect();
+    std::thread t([&]() { recv.connect(); });
+
+    GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
+    g_main_loop_run(loop);
+    g_main_loop_unref(loop);
+
+    t.join();
 
     return 0;
 }

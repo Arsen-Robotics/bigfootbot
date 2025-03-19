@@ -1,5 +1,5 @@
 services:
-  bfb_road_follower:
+  bfb_webrtc:
       build:
         context: ../../..
         dockerfile: docker/web/webrtc_video/Dockerfile.webrtc
@@ -24,6 +24,8 @@ services:
       environment:
         - DISPLAY=:0
         - NVIDIA_VISIBLE_DEVICES=all
+        - XAUTHORITY=/root/.Xauthority
+        - QT_X11_NO_MITSHM=1
 
       deploy:
         resources:
@@ -39,8 +41,10 @@ services:
         # Mount Python source files to be able to update them inside the container without rebuilding the image
         - ./src:/webrtc_video/src
 
-        - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
+        - /tmp/.X11-unix:/tmp/.X11-unix  # Allow access to X11
         #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
+        - $HOME/.Xauthority:/root/.Xauthority  # Allow access to X11
+        - /var/run:/var/run
 
       privileged: true
 

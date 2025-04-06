@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements a WebRTC-based video streaming system for the Bigfootbot robot. It provides real-time video streaming capabilities with low latency using GStreamer and NVIDIA GPU acceleration.
+This project implements a WebRTC-based video streaming system for the Bigfootbot robot. It provides real-time video streaming capabilities with low latency using GStreamer and NVIDIA GPU acceleration. The system is available in both Python and C++ implementations.
 
 ```mermaid
 graph TD
@@ -15,7 +15,7 @@ graph TD
 
 ## Components
 
-### Signaling Server (signaling.py)
+### Signaling Server
 A simple WebSocket server that handles the WebRTC signaling process:
 - Manages client connections
 - Forwards SDP offers/answers
@@ -39,26 +39,22 @@ sequenceDiagram
     Signaling->>Sender: Forward ICE
 ```
 
-### Video Sender (send.py)
-Captures video from multiple cameras and streams it via WebRTC:
+### Video Sender
+Captures video from a camera and streams it via WebRTC:
 - Uses NVIDIA GPU for video encoding
-- Supports multiple camera inputs
 - Implements low-latency streaming
 
 ```mermaid
 graph LR
-    A[Camera 1] -->|Raw Video| B[GStreamer Pipeline]
-    C[Camera 2] -->|Raw Video| B
-    D[Camera 3] -->|Raw Video| B
-    B -->|H.264| E[WebRTC Sender]
-    E -->|RTP| F[Network]
+    A[Camera] -->|Raw Video| B[GStreamer Pipeline]
+    B -->|H.264| C[WebRTC Sender]
+    C -->|RTP| D[Network]
 ```
 
-### Video Receiver (recv.py)
+### Video Receiver
 Receives and displays the video stream:
-- Uses NVIDIA GPU for video decoding
 - Implements low-latency display
-- Supports multiple video streams
+- Uses CPU-based video decoding
 
 ```mermaid
 graph LR
@@ -70,9 +66,10 @@ graph LR
 ## Installation
 
 ### Prerequisites
-- NVIDIA GPU with CUDA support
+- NVIDIA GPU with CUDA support (for sender)
 - GStreamer 1.0
-- Python 3.x
+- Python 3.x (for Python version)
+- C++ compiler (for C++ version)
 - WebSocket support
 
 ### Dependencies
@@ -85,15 +82,22 @@ sudo apt-get install -y \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly \
     libgstreamer1.0-dev \
-    libgstreamer-plugins-base1.0-dev
+    libgstreamer-plugins-base1.0-dev \
+    libgstreamer-sdp-1.0-dev \
+    libgstreamer-webrtc-1.0-dev
 
-# Install Python packages
+# Install Python packages (for Python version)
 pip install websockets
+
+# Install C++ dependencies (for C++ version)
+sudo apt-get install -y \
+    libjsoncpp-dev \
+    libx11-dev
 ```
 
 ## Usage
 
-### Starting the System
+### Python Version
 ```bash
 # Start signaling server
 python3 src/signaling.py
@@ -103,6 +107,21 @@ python3 src/send.py
 
 # Start video receiver (on client)
 python3 src/recv.py
+```
+
+### C++ Version
+```bash
+# Build the C++ components
+./build.sh
+
+# Start signaling server
+./bin/signaling
+
+# Start video sender (on robot)
+./bin/send
+
+# Start video receiver (on client)
+./bin/recv
 ```
 
 ### Configuration
@@ -150,6 +169,15 @@ decodebin ! videoconvert ! xvimagesink
    ```bash
    # Check network connectivity
    ping stun.l.google.com
+   ```
+
+4. Build issues (C++ version)
+   ```bash
+   # Check GStreamer installation
+   pkg-config --modversion gstreamer-1.0
+   
+   # Check JSON-CPP installation
+   pkg-config --modversion jsoncpp
    ```
 
 ## License

@@ -1,0 +1,32 @@
+# Use Ubuntu as base image
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    libjsoncpp-dev \
+    libwebsocketpp-dev \
+    libboost-all-dev \
+    libasio-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy source files
+COPY src/signaling.cpp .
+
+# Build the signaling server
+RUN g++ -o signaling signaling.cpp -ljsoncpp -lpthread -lboost_system -lboost_thread
+
+# Expose the WebSocket port
+EXPOSE 8765
+
+# Run the signaling server
+CMD ["./signaling"] 

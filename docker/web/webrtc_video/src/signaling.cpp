@@ -125,7 +125,7 @@ private:
             if (message->get_opcode() == websocketpp::frame::opcode::text) {
                 // Forward the message to all other clients
                 for (const auto& conn : m_connections) {
-                    if (conn.lock() != connectionHandle.lock()) {
+                    if (conn.lock() != connectionHandle.lock()) { // Prevent sending the message back to the sender
                         try {
                             m_server.send(conn, payload, message->get_opcode());
                         } catch (const std::exception& e) {

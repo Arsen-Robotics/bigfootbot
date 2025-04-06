@@ -1,7 +1,7 @@
 # BFB Arduino Gateway
 
 ## Overview
-The BFB Arduino Gateway package provides a bridge between ROS 2 and Arduino hardware on the BigFootBot. It handles serial communication with an Arduino Mega, enabling control of various hardware components such as servos, lights, and actuators.
+The BFB Arduino Gateway package provides a bridge between ROS 2 and Arduino hardware on the BigFootBot. It handles serial communication with an Arduino Mega, enabling control of various hardware components.
 
 ## Features
 - Automatic Arduino connection management
@@ -14,6 +14,14 @@ The BFB Arduino Gateway package provides a bridge between ROS 2 and Arduino hard
 - Python 3.8+
 - pyserial library
 - Arduino Mega board
+
+## Hardware Setup
+1. Connect Arduino Mega to the computer
+2. Ensure proper udev rules are installed:
+   ```bash
+   # /etc/udev/rules.d/99-arduino-mega.rules
+   ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0010", MODE="0666", SYMLINK+="arduino-mega"
+   ```
 
 ## Installation
 ```bash
@@ -42,17 +50,52 @@ colcon build --packages-select bfb_arduino_gateway
    ros2 topic pub /arduino_gateway std_msgs/msg/String "data: '<command>'"
    ```
 
-## Documentation
-- [Design Documentation](docs/design/design.md)
-- [Usage Guide](docs/usage/usage.md)
-- [API Reference](docs/api/api.md)
+## Node: arduino_gateway_node
 
-## Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+### Subscribed Topics
+- `/arduino_gateway` (std_msgs/String)
+  - Commands to be sent to Arduino
+  - Each command should be a string followed by newline
+  - Queue size: 10 messages
+
+### Parameters
+- `comport` (string, default: "/dev/arduino-mega")
+  - Serial port for Arduino communication
+- `baudrate` (int, default: 9600)
+  - Serial communication baud rate
+
+### Error Handling
+The node implements comprehensive error handling:
+1. Serial connection errors
+2. Communication errors
+3. General exceptions
+
+### Logging
+The node provides detailed logging:
+- Connection status changes
+- Error messages
+- Command processing status
+
+## Troubleshooting
+
+### Common Issues
+1. **Arduino Not Found**
+   ```bash
+   # Check if Arduino device is present
+   ls -l /dev/arduino-mega
+   
+   # Check serial port permissions
+   sudo chmod 666 /dev/arduino-mega
+   ```
+
+2. **Communication Errors**
+   ```bash
+   # Monitor node output
+   ros2 topic echo /arduino_gateway
+   
+   # Check node status
+   ros2 node info /arduino_gateway_node
+   ```
 
 ## License
 [Add License Information]

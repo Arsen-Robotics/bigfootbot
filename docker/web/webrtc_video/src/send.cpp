@@ -1,3 +1,4 @@
+// Required headers
 #include <iostream>
 #include <gst/gst.h>
 #include <gst/webrtc/webrtc.h>
@@ -11,8 +12,17 @@
 #include <atomic>
 #include <mutex>
 
+/**
+ * @brief Main class handling WebRTC video streaming
+ * 
+ * This class manages the WebRTC connection, GStreamer pipeline,
+ * and WebSocket signaling to stream video from multiple cameras
+ */
 class WebRTCSend {
 public:
+    /**
+     * @brief Constructor - initializes GStreamer and member variables
+     */
     WebRTCSend() {
         // Initialize GStreamer
         gst_init(nullptr, nullptr);
@@ -21,6 +31,9 @@ public:
         ws_running = true;
     }
 
+    /**
+     * @brief Destructor - cleans up resources
+     */
     ~WebRTCSend() {
         ws_running = false;
         ws_cv.notify_all();
@@ -36,6 +49,9 @@ public:
         }
     }
 
+    /**
+     * @brief Establishes WebSocket connection to signaling server
+     */
     void connect() {
         try {
             // Set up WebSocket connection using websocketpp
@@ -60,6 +76,12 @@ public:
         }
     }
 
+    /**
+     * @brief Handler called when WebSocket connection is established
+     * 
+     * @param hdl Connection handle
+     * @param c Pointer to WebSocket client
+     */
     void on_open(websocketpp::connection_hdl hdl, websocketpp::client<websocketpp::config::asio_client>* c) {
         std::cout << "Connected! Waiting for HELLO message..." << std::endl;
 
@@ -69,6 +91,14 @@ public:
         ws_thread = std::thread(&WebRTCSend::process_ws_queue, this);
     }
 
+    /**
+     * @brief Handler for incoming WebSocket messages
+     * 
+     * Processes different types of messages including:
+     * - HELLO handshake
+     * - ICE candidates
+     * - SDP offers/answers
+     */
     void on_msg(websocketpp::connection_hdl, websocketpp::client<websocketpp::config::asio_client>::message_ptr msg) {
         std::string payload = msg->get_payload();
 
@@ -105,6 +135,11 @@ public:
         }
     }
 
+    /**
+     * @brief Processes queued WebSocket messages
+     * 
+     * Runs in a separate thread to handle outgoing WebSocket messages
+     */
     void process_ws_queue() {
         while (ws_running) {
             std::unique_lock<std::mutex> lock(ws_mutex);
@@ -124,6 +159,7 @@ public:
         }
     }
 
+    // Commented out direct send method in favor of queued approach
     // void send_ws(const std::string& msg) {
     //     websocketpp::lib::error_code ec;
     //     global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
@@ -134,12 +170,25 @@ public:
     //     }
     // }
 
+    /**
+     * @brief Queues a message to be sent over WebSocket
+     * 
+     * @param msg Message to be queued
+     */
     void queue_ws(const std::string& msg) {
         std::lock_guard<std::mutex> lock(ws_mutex);
         msg_queue.push(msg);
         ws_cv.notify_one();
     }
 
+    /**
+     * @brief Sets up the GStreamer pipeline for video streaming
+     * 
+     * Creates and configures a pipeline with:
+     * - Multiple v4l2src sources for different cameras
+     * - NVIDIA video conversion and H264 encoding
+     * - WebRTC transmission
+     */
     void setup_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
@@ -191,6 +240,11 @@ public:
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
     }
 
+    /**
+     * @brief Callback for sending ICE candidates
+     * 
+     * Called when a new ICE candidate is discovered
+     */
     static void send_ice_candidate(GstElement* webrtcbin, guint mlineindex, gchar* candidate, gpointer user_data) {
         std::cout << "Sending ICE candidate: " << candidate << std::endl;
 
@@ -207,6 +261,11 @@ public:
         static_cast<WebRTCSend*>(user_data)->queue_ws(icemsg_str);
     }
 
+    /**
+     * @brief Handles incoming ICE candidates
+     * 
+     * @param ice JSON string containing ICE candidate information
+     */
     void handle_ice(const std::string& ice) {
         Json::CharReaderBuilder reader;
         Json::Value jsonMsg;
@@ -228,6 +287,9 @@ public:
         }
     }
 
+    /**
+     * @brief Callback when WebRTC negotiation is needed
+     */
     static void on_negotiation_needed(GstElement* webrtcbin, gpointer user_data) {
         std::cout << "Negotiation needed" << std::endl;
 
@@ -235,6 +297,9 @@ public:
         g_signal_emit_by_name(webrtcbin, "create-offer", nullptr, promise);
     }
 
+    /**
+     * @brief Callback when SDP offer is created
+     */
     static void on_offer_created(GstPromise* promise, gpointer user_data) {
         GstWebRTCSessionDescription* offer = nullptr;
         const GstStructure* reply = gst_promise_get_reply(promise);
@@ -264,6 +329,11 @@ public:
         gst_webrtc_session_description_free(offer);
     }
 
+    /**
+     * @brief Handles incoming SDP messages
+     * 
+     * @param sdp JSON string containing SDP information
+     */
     void handle_sdp(const std::string& sdp) {
         Json::CharReaderBuilder reader;
         Json::Value jsonMsg;
@@ -295,6 +365,9 @@ public:
         }
     }
 
+    /**
+     * @brief Callback for handling incoming media streams
+     */
     static void on_incoming_stream(GstElement* webrtcbin, GstPad* pad, WebRTCSend* self) {
         std::cout << "Received incoming stream." << std::endl;
 
@@ -310,6 +383,11 @@ public:
         gst_object_unref(sinkpad);
     }
 
+    /**
+     * @brief Callback when decodebin creates a new pad
+     * 
+     * Sets up appropriate elements for handling decoded audio/video streams
+     */
     static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCSend* self) {
         GstCaps* caps = gst_pad_get_current_caps(pad);
         const GstStructure* str = gst_caps_get_structure(caps, 0);
@@ -346,18 +424,24 @@ public:
     }
 
 private:
-    GstElement* pipeline;
-    GstElement* webrtcbin;
-    websocketpp::connection_hdl global_hdl;
-    websocketpp::client<websocketpp::config::asio_client>* global_client;
+    GstElement* pipeline;                // Main GStreamer pipeline
+    GstElement* webrtcbin;              // WebRTC element
+    websocketpp::connection_hdl global_hdl;  // WebSocket connection handle
+    websocketpp::client<websocketpp::config::asio_client>* global_client;  // WebSocket client
 
-    std::queue<std::string> msg_queue;
-    std::mutex ws_mutex;
-    std::condition_variable ws_cv;
-    std::thread ws_thread;
-    std::atomic<bool> ws_running{true};
+    std::queue<std::string> msg_queue;   // Queue for outgoing WebSocket messages
+    std::mutex ws_mutex;                 // Mutex for thread safety
+    std::condition_variable ws_cv;       // Condition variable for message queue
+    std::thread ws_thread;               // Thread for processing WebSocket messages
+    std::atomic<bool> ws_running{true};  // Flag to control WebSocket thread
 };
 
+/**
+ * @brief Main entry point
+ * 
+ * Initializes X11 threading, creates WebRTCSend instance,
+ * and runs the main loop
+ */
 int main() {
     // Call XInitThreads() to enable thread safety in X11
     if (!XInitThreads()) {

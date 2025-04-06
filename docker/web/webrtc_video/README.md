@@ -2,61 +2,82 @@
 
 ## Overview
 
-This project implements a WebRTC-based video streaming system for the Bigfootbot robot. It provides real-time video streaming capabilities with low latency and high performance using GStreamer and NVIDIA GPU acceleration.
+This project implements a WebRTC-based video streaming system for the Bigfootbot robot. It provides real-time video streaming capabilities with low latency using GStreamer and NVIDIA GPU acceleration.
 
 ```mermaid
 graph TD
-    A[Bigfootbot Camera] -->|Video Stream| B[GStreamer Pipeline]
+    A[Camera] -->|Video Stream| B[GStreamer Pipeline]
     B -->|Encoded Video| C[WebRTC Sender]
     C -->|Signaling| D[Signaling Server]
     D -->|Signaling| E[WebRTC Receiver]
-    E -->|Decoded Video| F[GStreamer Pipeline]
-    F -->|Display| G[Client Screen]
+    E -->|Decoded Video| F[Display]
 ```
 
-## Features
+## Components
 
-- Real-time video streaming
-- Low latency using NVIDIA GPU acceleration
-- WebRTC-based peer-to-peer communication
-- Secure signaling server
-- Adaptive bitrate streaming
-- Multiple client support
-- Cross-platform compatibility
+### Signaling Server (signaling.py)
+A simple WebSocket server that handles the WebRTC signaling process:
+- Manages client connections
+- Forwards SDP offers/answers
+- Forwards ICE candidates
 
-## Prerequisites
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Signaling
+    participant Receiver
+    
+    Sender->>Signaling: Connect
+    Receiver->>Signaling: Connect
+    Sender->>Signaling: SDP Offer
+    Signaling->>Receiver: Forward Offer
+    Receiver->>Signaling: SDP Answer
+    Signaling->>Sender: Forward Answer
+    Sender->>Signaling: ICE Candidates
+    Signaling->>Receiver: Forward ICE
+    Receiver->>Signaling: ICE Candidates
+    Signaling->>Sender: Forward ICE
+```
 
-### Hardware Requirements
-- NVIDIA GPU with CUDA support
-- Camera device (USB or network)
-- Network interface with sufficient bandwidth
+### Video Sender (send.py)
+Captures video from multiple cameras and streams it via WebRTC:
+- Uses NVIDIA GPU for video encoding
+- Supports multiple camera inputs
+- Implements low-latency streaming
 
-### Software Requirements
-- Docker with NVIDIA runtime
-- GStreamer 1.0
-- WebSocket support
-- CUDA toolkit
+```mermaid
+graph LR
+    A[Camera 1] -->|Raw Video| B[GStreamer Pipeline]
+    C[Camera 2] -->|Raw Video| B
+    D[Camera 3] -->|Raw Video| B
+    B -->|H.264| E[WebRTC Sender]
+    E -->|RTP| F[Network]
+```
+
+### Video Receiver (recv.py)
+Receives and displays the video stream:
+- Uses NVIDIA GPU for video decoding
+- Implements low-latency display
+- Supports multiple video streams
+
+```mermaid
+graph LR
+    A[Network] -->|RTP| B[WebRTC Receiver]
+    B -->|H.264| C[GStreamer Pipeline]
+    C -->|Decoded Video| D[Display]
+```
 
 ## Installation
 
-### Docker Installation
-```bash
-# Build the Docker image
-docker build -t bfb_webrtc -f Dockerfile.webrtc .
+### Prerequisites
+- NVIDIA GPU with CUDA support
+- GStreamer 1.0
+- Python 3.x
+- WebSocket support
 
-# Run the container
-docker run --gpus all \
-    -e NVIDIA_VISIBLE_DEVICES=all \
-    -e NVIDIA_DRIVER_CAPABILITIES=all \
-    -p 8080:8080 \
-    -v /dev/video0:/dev/video0 \
-    bfb_webrtc
-```
-
-### Manual Installation
+### Dependencies
 ```bash
-# Install dependencies
-sudo apt-get update
+# Install GStreamer
 sudo apt-get install -y \
     gstreamer1.0-tools \
     gstreamer1.0-plugins-base \
@@ -64,12 +85,10 @@ sudo apt-get install -y \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly \
     libgstreamer1.0-dev \
-    libgstreamer-plugins-base1.0-dev \
-    libnice-dev \
-    libwebrtc-audio-processing-dev
+    libgstreamer-plugins-base1.0-dev
 
-# Build components
-./build.sh
+# Install Python packages
+pip install websockets
 ```
 
 ## Usage
@@ -77,186 +96,61 @@ sudo apt-get install -y \
 ### Starting the System
 ```bash
 # Start signaling server
-./signaling_server
+python3 src/signaling.py
 
 # Start video sender (on robot)
-./video_sender
+python3 src/send.py
 
 # Start video receiver (on client)
-./video_receiver
+python3 src/recv.py
 ```
 
 ### Configuration
-```yaml
-camera:
-  device: /dev/video0
-  format: NV12
-  width: 1280
-  height: 720
-  fps: 30
+The system uses the following default settings:
+- Signaling server: ws://0.0.0.0:8765
+- Video resolution: 640x480
+- Frame rate: 30 fps
+- Bitrate: 1 Mbps
+- STUN server: stun.l.google.com:19302
 
-webrtc:
-  port: 8080
-  stun:
-    server: stun:stun.l.google.com:19302
-  turn:
-    server: turn:turn.example.com:3478
-    username: user
-    password: pass
+## Implementation Details
 
-gstreamer:
-  pipeline:
-    sender: "v4l2src ! nvv4l2h264enc ! rtph264pay"
-    receiver: "rtph264depay ! h264parse ! nvv4l2h264dec ! videoconvert ! autovideosink"
-```
-
-## Components
-
-### Video Sender
-- Captures video from camera
-- Encodes video using NVIDIA GPU
-- Establishes WebRTC connection
-- Streams video to receiver
-
-### Video Receiver
-- Receives video stream
-- Decodes video using NVIDIA GPU
-- Displays video on screen
-- Handles WebRTC connection
-
-### Signaling Server
-- Coordinates WebRTC connection
-- Manages client connections
-- Handles signaling messages
-- Provides security
-
-## Performance
-
-### Latency Optimization
-```mermaid
-graph TD
-    A[Input] -->|Low Latency| B[Encoding]
-    B -->|Minimal Buffering| C[Network]
-    C -->|Fast Decoding| D[Output]
-    E[GPU Acceleration] --> B
-    E --> D
-```
-
-### Resource Management
-- GPU memory allocation
-- CPU usage optimization
-- Network bandwidth management
-- Buffer size configuration
-
-## Security
-
-### Authentication
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Auth
-    participant Server
-    Client->>Auth: Request Token
-    Auth->>Client: JWT Token
-    Client->>Server: Connect (with Token)
-    Server->>Auth: Validate Token
-    Auth->>Server: Validation Result
-    Server->>Client: Connection Status
-```
-
-### Encryption
-- DTLS-SRTP for media
-- WSS for signaling
-- Certificate-based authentication
-- Secure key exchange
-
-## Monitoring
-
-### System Metrics
+### GStreamer Pipeline (Sender)
 ```bash
-# Monitor GPU usage
-nvidia-smi --query-gpu=utilization.gpu --format=csv -l 1
-
-# Monitor network traffic
-iftop -i eth0
-
-# Monitor CPU usage
-top -b -n 1
+v4l2src device=/dev/video20 ! video/x-raw,width=640,height=480,framerate=30/1 \
+! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
+! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
+! h264parse ! rtph264pay config-interval=1 pt=96 \
+! application/x-rtp,media=video,encoding-name=H264,payload=96
 ```
 
-### WebRTC Stats
-```javascript
-// Get connection statistics
-peerConnection.getStats().then(stats => {
-    stats.forEach(report => {
-        console.log(report);
-    });
-});
+### GStreamer Pipeline (Receiver)
+```bash
+webrtcbin name=recvonly bundle-policy=max-bundle stun-server=stun://stun.l.google.com:19302 \
+decodebin ! videoconvert ! xvimagesink
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 1. Camera not detected
-   - Check device permissions
-   - Verify v4l2 support
-   - Test with v4l2-ctl
+   ```bash
+   # Check camera devices
+   ls /dev/video*
+   v4l2-ctl --list-devices
+   ```
 
 2. GPU acceleration issues
-   - Verify NVIDIA drivers
-   - Check CUDA installation
-   - Test with nvidia-smi
+   ```bash
+   # Check NVIDIA GPU
+   nvidia-smi
+   ```
 
-3. Network connectivity
-   - Check firewall settings
-   - Verify port forwarding
-   - Test with netcat
-
-### Logging
-```bash
-# Enable debug logging
-export GST_DEBUG=3
-export WEBRTC_DEBUG=1
-
-# View logs
-tail -f /var/log/webrtc.log
-```
-
-## Development
-
-### Code Structure
-```mermaid
-graph TD
-    A[Project] --> B[src]
-    A --> C[include]
-    A --> D[test]
-    A --> E[build]
-    A --> F[docs]
-    B --> G[components]
-    B --> H[utils]
-    C --> I[headers]
-    D --> J[tests]
-```
-
-### Building
-```bash
-# Configure
-cmake -B build
-
-# Build
-cmake --build build
-
-# Test
-cd build && ctest
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a pull request
+3. WebRTC connection issues
+   ```bash
+   # Check network connectivity
+   ping stun.l.google.com
+   ```
 
 ## License
 
@@ -264,6 +158,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contact
 
-- Maintainer: [Your Name]
-- Email: [Your Email]
-- Issue Tracker: [GitHub Issues] 
+- Maintainer: Jevgeni Kalbin
+- Email: jevgeni.kalbin@gmail.com 

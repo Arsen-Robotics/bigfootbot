@@ -1,0 +1,65 @@
+roboclaw_control_node:
+  ros__parameters:
+    # Motors and wheels constants
+    wheel_track: 0.65 # Distance between left and right wheel in meters
+    wheel_diameter: 0.33 # Wheel diameter in meters
+    max_rpm: 177.5
+    max_motor_command: 126
+    turn_compensation_factor: 0.5
+
+    # Serial
+    comport: "/dev/ttyAMA0" # /dev/ttyAMA0 for RPi5, ttyS0 for RPi4
+    baudrate: 57600
+    address: 0x80
+
+    # Battery
+    max_battery_voltage: 29.4
+    min_battery_voltage: 21
+    battery_wh: 652.68
+    avg_static_wattage_draw: 26
+    max_motor_wattage_speed_samples: 100  # Maximum number of samples to keep
+    min_motor_wattage_speed_samples: 30  # Minimum number of samples to start calculating
+
+    # Overcurrent automatic stop
+    max_motor_current: 30 # A
+
+    # Logging
+    motor_overcurrents_log_file: "/ros2_ws/src/motor_control/log/motor_overcurrents.log"
+    motor_wattages_log_file: "/ros2_ws/src/motor_control/log/motor_wattages.log"
+
+joy_to_twist_node:
+  ros__parameters:
+    # Buttons related to driving
+    enable_axis: 3 # 4 for ps3 controller, 3 for Logitech quadrant, if not pressed robot is stopping
+    reverse_button: 20 # Only for Logitech quadrant, this button is used to turn on reverse mode
+    
+    # Servos control buttons
+    camera_up_button: 12 # 12 for ps3 controller
+    camera_down_button: 13 # 13 for ps3 controller
+    camera_left_button: 2 # 2 for ps3 controller
+    camera_right_button: 1 # 1 for ps3 controller
+    camera_left_quick_view_button: 6 # 14 for ps3 controller, 6 for Logitech quadrant
+    camera_right_quick_view_button: 7 # 15 for ps3 controller, 7 for Logitech quadrant
+    camera_reset_position_button: 0 # 3 for ps3 controller, 0 for Logitech quadrant
+
+    # Other buttons
+    buzzer_button: 1
+    headlight_button: 6
+    beacon_light_button: 7
+    plow_up_button: 2
+    plow_down_button: 3
+    offroad_drive_mode: 9
+    normal_drive_mode: 8
+
+    # Axes
+    linear_axis: 1 # 1 for ps3 controller, 2 for logitech yoke
+    angular_axis: 2 # 2 for ps3 controller, 0 for logitech yoke
+    reverse_axis: 4 # Only for Logitech quadrant, this axis is used to control the speed of the robot in reverse mode
+
+    # Scales
+    linear_scale: 3.067
+    angular_scale: 9.437
+
+    # Angular speed limiting with linear speed
+    min_angular_scale: 0.4
+    max_angular_scale: 0.7

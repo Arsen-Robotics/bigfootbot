@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>bigfootbot_teleop</name>
+  <version>0.0.0</version>
+  <description>Package enables joystick control of a robot in ROS 2. It includes nodes for interfacing 
+  with the joystick ('joy_node') and converting joystick inputs into robot movement commands ('teleop_node'). 
+  The joystick inputs are published as 'sensor_msgs/msg/Joy' messages, while the converted 
+  movement commands are outputted as 'geometry_msgs/msg/Twist' messages to the '/cmd_vel' topic.</description>
+  <maintainer email="jevgeni.kalbin@gmail.com">jevgeni</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>joy</exec_depend>
+  <exec_depend>teleop_twist_joy</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>rclpy</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

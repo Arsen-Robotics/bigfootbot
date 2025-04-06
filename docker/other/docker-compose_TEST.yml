@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  ros2:
+    image:
+      nvcr.io/nvidia/isaac/ros:x86_64-humble-nav2_7356480e8a4f3484b21ae13ec5c959ee
+    #client:
+    #    image: nginx
+    #    ports:
+    #        - 8000:80
+    #    volumes:
+    #        - ./test_html:/usr/share/nginx/html

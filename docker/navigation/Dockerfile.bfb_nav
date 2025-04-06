@@ -1,0 +1,68 @@
+# To connect to a running container: 
+#   `docker exec -it bfb_nav_cntr bash`
+# ------------------------------------
+
+ARG BASE_IMAGE="ros:humble-ros-base"
+
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive
+# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
+# The reason is that the environment variable persists after the build
+# ARG is only available during the build of the image
+
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"]
+
+# Install Nav2 and SLAM Toolbox binaries
+RUN apt-get update \    
+    && apt-get install -y \
+    ros-${ROS_DISTRO}-navigation2 \
+    ros-${ROS_DISTRO}-nav2-bringup \
+    ros-${ROS_DISTRO}-slam-toolbox \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+# -------- BEGIN Build and install ROS 2 packages from sources --------
+COPY bigfootbot_navigation ${ROS_WS}/src/bigfootbot_navigation
+
+# Install dependencies for all packages in the workspace
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    && colcon build --symlink-install \  
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+# --- END Build and install ROS 2 packages from sources' ---
+
+# Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+#CMD ["ros2", "launch", "motor_control", "motor_control_launch.py"]
+CMD ["bash"]

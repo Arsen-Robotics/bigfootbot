@@ -1,0 +1,59 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive
+# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
+# The reason is that the environment variable persists after the build
+# ARG is only available during the build of the image
+
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"]
+
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+# Copy script that will get frames from rpi camera and publish via rtp
+# COPY docker/picamera/bfb_picamera.py /bfb_picamera.py
+
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && apt-get install -y \
+    ffmpeg \
+    python3-pip \
+    && pip install \
+    # Downgrading setuptools is only needed for newer versions of Python,
+    # In this case only for ros:humble-ros-base image, not needed for nvcr
+    setuptools==58.2.0 \
+    opencv-python \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+    --ignore-src \
+    --default-yes \
+    --from-path src \
+    && colcon build --event-handlers console_direct+ --symlink-install \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+CMD ["bash"]

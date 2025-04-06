@@ -1,0 +1,44 @@
+# --- Build a docker image ---
+# `docker build -f Dockerfile.transitive_robotics -t transitive_robotics:latest .`
+
+# --- Run a docker container ---
+# NB! USE THIS: `docker run --rm -it --privileged -v ./.transitive:/root/.transitive -v /run/udev:/run/udev --name transitive_robotics_cntr transitive_robotics:latest`
+#    
+# `docker run --rm -it --privileged -v ./.transitive:/root/.transitive -v /run/udev:/run/udev -e TR_INSTALL_HASH=bfb1 --name transitive_robotics_cntr --hostname bfb_run_cntr transitive_robotics:latest`
+#   NOTE: -v /run/udev:/run/udev is required by gst-device-monitor-1.0 to enumerate available devices and supported resolutions
+#
+# --- Attach to a running container ---
+# `docker exec -it transitive_robotics_cntr bash`
+
+# Documentation: https://transitiverobotics.com/docs/guides/installing_in_docker
+
+#ARG BASE_IMAGE=ros:humble-ros-base
+ARG BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+#ARG BASE_IMAGE
+# Use the base image from the argument or default to Ubuntu 20.04
+FROM ${BASE_IMAGE:-'ubuntu:20.04'}
+
+# Workaround as of 19.01.2025 there was a GPG error ONLY with nvcr base image
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
+    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
+
+RUN apt update
+RUN apt install -y build-essential curl git lsb-release gnupg
+
+# Optionally: add a custom configuration file
+WORKDIR /root/.transitive
+COPY config.json .
+
+# The script run by the curl command will install the agent and detect the docker build environment, 
+# so it won't start the agent right away. Instead it will check the config.json file, if one was provided, 
+# and pre-install any specified desiredPackages
+
+# -s is for silent mode (not showing progress bar or error messages)
+# -f fail silently on server errors (curl will not output the error message and will return a non-zero 
+# exit status instead)
+RUN curl -sf "https://install.transitiverobotics.com?id=alexm&token=5k5l2x5160m1nop4a5r1y&docker=true" | bash    
+
+WORKDIR /root
+COPY entrypoint.sh .
+CMD ["./entrypoint.sh"]
+#CMD ["bash"]

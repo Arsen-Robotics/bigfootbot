@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- 
+    Macro that creates a robot base (chassis) with given dimensions and properties. 
+    
+    The base consists of a link named "base_link" that has a visual and collision element, and a joint named "base_joint"
+    that connects the "base_footprint" link to the "base_link" link. 
+    The "base_link" link has a box geometry with dimensions defined by the parameters passed to the macro. 
+    The macro also calculates the moments of inertia of the box and returns a block of inertial properties. 
+    
+    Finally, the code includes a gazebo tag that defines the visual material of the base in Gazebo.
+  -->
+
+  <!-- Inertial -->
+  <xacro:include filename="$(find bigfootbot_description)/urdf/inertials.urdf.xacro"/>
+
+  <!-- ********************** ROBOT BASE AND BASE FOOTPRINT *********************************  -->
+  <xacro:macro name="base" params="length width height mass wheel_radius wheel_zoff">
+  <!-- params is a list of parameters that can be passed to the macro -->
+
+    <!-- Define the center of the main robot chassis projected on the ground -->	
+    <link name="base_footprint"/>
+
+    <!-- The base footprint of the robot is located underneath the chassis -->
+    <joint name="base_joint" type="fixed">
+      <parent link="base_footprint"/>
+      <child link="base_link" />
+      <origin xyz="0.0 0.0 ${(wheel_radius+wheel_zoff)}" rpy="0 0 0"/> <!-- origin means the position of the child link relative to the parent link -->
+    </joint>
+
+    <link name="base_link">
+      <visual>
+        <origin xyz="${length/2} ${-width/2} ${-height/2}" rpy="0 0 1.57079632679"/> <!-- use this origin when <mesh> used as geometry -->
+        <!--origin xyz="0 0 0" rpy="0 0 0"/--> <!-- use this origin when <box> used as geometry -->
+        <geometry>
+          <!--box size="${length} ${width} ${height}"/-->
+          <!--mesh filename="package://bigfootbot_description/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/--> <!-- scale="0.001 0.001 0.001"-->
+          
+          <mesh filename="file://$(find bigfootbot_description)/meshes/frame_with_covers_2_m.stl" scale="1.0 1.0 1.0"/> <!-- scale="0.001 0.001 0.001"-->
+          <!-- file:// is used instead on package:// because URDF->SDF converter converts package:// to model:// and Gazebo can't find STLs -->
+          <!-- RViz can handle both file:// and package:// -->
+          <!-- added 03.09.2024: check https://gazebosim.org/docs/harmonic/ros_gz_project_template_guide/#accessing-simulation-assets -->
+        </geometry>
+        <material name="Red"/> <!-- Material for RViz-->
+      </visual>
+
+      <collision>
+        <geometry>
+          <box size="${length} ${width} ${height}"/>
+        </geometry>
+      </collision>
+      
+      <!-- Calculates moments of inertia of a box with the given mass, width, length and height and
+      returns block <inertial>...</inertial> -->
+      <xacro:box_inertia m="${mass}" w="${width}" d="${length}" h="${height}"/> 
+    </link>
+
+    <gazebo reference="base_link">  
+      <visual>  
+        <material> <!-- Red material for Gazebo -->
+          <ambient>1.0 0.0 0.0 1.0</ambient> <!-- RGB [0..1] + alpha [0..1]-->
+          <diffuse>1.0 0.0 0.0 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual> 
+    </gazebo>
+
+    <!--gazebo reference="base_link">
+      <material>Gazebo/Red</material>
+    </gazebo-->
+  </xacro:macro>
+
+</robot>

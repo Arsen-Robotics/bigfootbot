@@ -1,0 +1,11 @@
+ARG BASE_IMAGE="nvcr.io/nvidia/l4t-base:r35.1.0"
+FROM ${BASE_IMAGE} 
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_WS=/ros2_ws
+
+RUN mkdir -p ${ROS_WS}/src
+
+CMD ["bash"]

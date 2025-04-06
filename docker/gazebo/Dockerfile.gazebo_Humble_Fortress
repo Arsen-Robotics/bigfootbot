@@ -1,0 +1,133 @@
+# --- Docker commands ---
+#
+# Build docker image:
+#   `docker build -f Dockerfile.gazebo -t bfb_gazebo:latest ..`
+#   
+# Run container with GUI support: 
+# Note. Maybe is needed to add next options:
+#  --gpus all (not needed when container is run on WSL2)
+#  -e QT_X11_NO_MITSHM=1 (it used to be a fix for a bug with QT and OpenGL)
+#
+# Run on the host machine:
+# `xhost +local:root` - allow apps tunning as root in the container to connect to the host's X server
+#
+# `docker run -it --rm \
+#   -e DISPLAY \
+#   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+#    --name bfb_gazebo_cntr \
+#    bfb_gazebo:latest \
+#    gazebo /usr/share/gazebo-11/worlds/seesaw.world
+# 
+# Run container with NVIDIA GPU support:
+# docker run -it --rm --runtime=nvidia \
+#   -e DISPLAY \
+#   -e NVIDIA_VISIBLE_DEVICES=all \
+#   -e NVIDIA_DRIVER_CAPABILITIES=all \
+#   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+#   --name bfb_gazebo_cntr bfb_gazebo:latest bash
+
+#
+# To connect to a running container: 
+#   `docker exec -it bfb_gazebo_cntr bash`
+# -------------------------
+
+# --- ROS2 launch commands ---
+
+#-----------------------------
+
+# For running on ONLY Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Image built: 05/23/2023
+#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+
+# --- For running on BOTH x86/amd64 and arm64/aarch64
+# NB! Not Nvidia GPU accelerated
+# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
+# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
+# In the interest of keeping ros-core tag minimal in image size, developer tools such as rosdep, 
+# colcon and vcstools are not shipped in ros_core, but in ros-base instead.
+#ARG BASE_IMAGE="gazebo:latest"
+# --------
+
+ARG BASE_IMAGE="ros:humble-ros-base"
+
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ROS2 workspace
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"] 
+
+# Install ROS Gazebo
+# ROS Gazebo repository: https://github.com/gazebosim/ros_gz
+# As of September 2024, only binaries of Gazebo Fortress existed for ROS2 Humble.
+# We install binaries ros-humble-ros-gz, i.e. Gazebo Fortress (So we have ROS2 Humble + Gazebo Fortress)
+RUN apt-get update \
+    # Bug/problem fix with gazebo gui black screen (dated July 2023)
+    # software-properties-common - for `add-apt-repository` command
+    #&& apt-get install -y \     
+    #software-properties-common \     
+    #&& add-apt-repository ppa:kisak/kisak-mesa \
+    #&& apt upgrade -y \    
+    # Install ROS Gazebo
+    && apt-get install -y \
+    ros-${ROS_DISTRO}-ros-gz \
+    ros-${ROS_DISTRO}-ros2-control \
+    ros-${ROS_DISTRO}-ros2-controllers \
+    ros-${ROS_DISTRO}-ign-ros2-control \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# ---- Install ROS2 packages from sources ----
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+# Copy the bigfootbot_description package to the ROS2 workspace
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description
+
+# Copy the bigfootbot_gazebo package to the ROS2 workspace
+COPY bigfootbot_gazebo ${ROS_WS}/src/bigfootbot_gazebo
+
+RUN apt-get update \    
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    #  --skip-keys "bigfootbot_teleop bigfootbot_description" \        
+    ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    # with --symlink-install you don't have to rebuild the package when launch or URDF file is changed
+    # NB! package needs to be rebuilt if a new file is added to the package
+    && colcon build --symlink-install \  
+    # colcon build --symlink-install --packages-select xacro # build only xacro package
+    #&& rm -rf src logs build \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+##### Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+# run ros2 launch command
+# Open gazebo with spawned seesaw model
+#CMD ["gazebo", "/usr/share/gazebo-11/worlds/seesaw.world"]
+CMD ["bash"]

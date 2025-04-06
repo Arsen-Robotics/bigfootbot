@@ -1,0 +1,67 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive
+# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
+# The reason is that the environment variable persists after the build
+# ARG is only available during the build of the image
+
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"]
+
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+COPY ball_tracker ${ROS_WS}/src/ball_tracker
+
+# Workaround as of 19.01.2025 there was a GPG error ONLY with nvcr base image
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
+    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
+
+# Install dependencies
+RUN apt-get update \
+    && apt-get install -y wget python3-opencv ros-humble-image-transport-plugins ros-humble-v4l2-camera ros-humble-realsense2-camera \
+    && cd / \
+    && wget https://bootstrap.pypa.io/get-pip.py \
+    && python3 get-pip.py \
+    && rm get-pip.py
+
+# Install dependencies for all packages in the workspace
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    # with --symlink-install you don't have to rebuild the package 
+    # when Python source file is changed
+    # NB! package needs to be rebuilt if a new file is added to the package
+    && colcon build --symlink-install \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Setup entrypoint
+COPY bigfootbot/docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+#CMD ["ros2", "launch", "bfb_arduino_gateway", "arduino_gateway_node.py"]
+CMD ["bash"]

@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <!--  
+    
+  This file defines three macros for calculating the inertial properties of different shapes (box, cylinder, and sphere) 
+  used in robot models. The macros return an "inertial" element with the calculated mass and moment of inerti
+  
+  Moment of inertia is a physical quantity that describes how difficult it is to change the rotational 
+  motion of an object about an axis. It is a measure of an object's resistance to changes in its rotation rate. 
+  The moment of inertia depends on the mass distribution of the object and the axis of rotation. 
+  The greater the moment of inertia, the more force is required to change the object's rotation.
+
+  -->
+
+  <!-- Define intertial property macros  -->
+
+  <!-- This macro calculates the inertial properties of a box with the given mass, width, height, and depth. 
+  The macro uses the parallel axis theorem to calculate the moment of inertia about the center of mass
+  The macro returns an "inertial" element with the calculated mass and moment of inertia. -->
+  <xacro:macro name="box_inertia" params="m w h d">
+    <inertial>
+      <origin xyz="0 0 0" rpy="${pi/2} 0 ${pi/2}"/>
+      <mass value="${m}"/>
+      <inertia ixx="${(m/12) * (h*h + d*d)}" ixy="0.0" ixz="0.0" iyy="${(m/12) * (w*w + d*d)}" iyz="0.0" izz="${(m/12) * (w*w + h*h)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- Calculates the inertial properties of a cylinder with the given mass, radius, and height. 
+  The macro returns an "inertial" element with the calculated mass and moment of inertia. -->
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertial>
+      <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+      <mass value="${m}"/>
+      <inertia ixx="${(m/12) * (3*r*r + h*h)}" ixy = "0" ixz = "0" iyy="${(m/12) * (3*r*r + h*h)}" iyz = "0" izz="${(m/2) * (r*r)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!--xacro:macro name="sphere_inertia" params="m r">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${(2/5) * m * (r*r)}" ixy="0.0" ixz="0.0" iyy="${(2/5) * m * (r*r)}" iyz="0.0" izz="${(2/5) * m * (r*r)}"/>
+    </inertial>
+  </xacro:macro-->
+
+</robot>

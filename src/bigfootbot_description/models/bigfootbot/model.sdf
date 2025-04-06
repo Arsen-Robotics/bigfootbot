@@ -1,0 +1,521 @@
+<?xml version='1.0'?>
+<sdf version='1.5'> <!--- latest version is 1.9? -->
+  <model name="bigfootbot">
+    <!-- While we are creating the robot, we want Gazebo’s physics engine to ignore the robot
+    so we set static to true -->
+    <static>false</static>
+
+    <!-- ****************** ROBOT BASE FOOTPRINT ***************************  -->
+    <link name="base_footprint">
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+    </link>
+
+    <!-- ********************** ROBOT BASE *********************************  -->
+    <link name="base_link">
+      <!--pose>0 0 0 0 0 0</pose-->
+
+      <inertial>
+        <mass>20</mass>
+        <inertia> <!-- inertias are tricky to compute -->
+          <!-- http://gazebosim.org/tutorials?tut=inertia&cat=build_robot -->
+          <ixx>0.083</ixx>       <!-- for a box: ixx = 0.083 * mass * (y*y + z*z) -->
+          <ixy>0.0</ixy>         <!-- for a box: ixy = 0 -->
+          <ixz>0.0</ixz>         <!-- for a box: ixz = 0 -->
+          <iyy>0.083</iyy>       <!-- for a box: iyy = 0.083 * mass * (x*x + z*z) -->
+          <iyz>0.0</iyz>         <!-- for a box: iyz = 0 -->
+          <izz>0.083</izz>       <!-- for a box: izz = 0.083 * mass * (x*x + y*y) -->
+        </inertia>
+      </inertial>
+
+      <collision name="base_collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.75 0.45 0.20</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="base_visual">
+        <pose>0.375 -0.225 -0.1 0 0 1.5708</pose>
+        <geometry>
+          <mesh>
+            <uri>model://bigfootbot/meshes/frame_with_covers_2_m.stl</uri>
+            <scale>1.0 1.0 1.0</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1.0 0.0 0.0 1.0</ambient> <!-- RGB [0..1] + alpha [0..1]-->
+          <diffuse>1.0 0.0 0.0 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+
+    </link>
+    <!-- END OF ROBOT BASE -->
+
+    <!-- ****************************** LIDAR *****************************    -->
+    <link name="lidar_link">    
+      <inertial>
+        <pose>0.215 0 0.13 0 0 0</pose>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0.000</ixy>
+          <ixz>0.000</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0.000</iyz>
+          <izz>0.001</izz>
+        </inertia>
+        <mass>0.114</mass>
+      </inertial>
+
+      <collision name="lidar_collision">
+        <pose>0.215 0 0.13 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0508</radius>
+            <length>0.18</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="lidar_visual">
+        <pose>0.215 0 0.13 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0508</radius>
+            <length>0.18</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.0 0.0 0.0 1.0</ambient>
+          <diffuse>0.0 0.0 0.0 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+
+      <sensor name="lidar" type="ray">
+        <pose>0.215 0 0.215 0 0 0</pose>
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <update_rate>5</update_rate>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>120</samples>
+              <resolution>1.00000</resolution>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.300000</min>
+            <max>15</max>
+            <resolution>0.015000</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev>
+          </noise>
+        </ray>
+        <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <!-- Set namespace -->
+            <!--namespace>/gazebo</namespace-->
+            
+            <remapping>~/out:=scan</remapping>
+          </ros>
+          <output_type>sensor_msgs/LaserScan</output_type>
+          <frame_name>lidar_link</frame_name>
+        </plugin>
+      </sensor>
+    </link>
+    <!-- END OF BLOCK 'Lidar' -->
+
+    <!-- *********************** IMU SENSOR SETUP **************************  -->
+    <link name="imu_link">
+      <gravity>true</gravity>
+      <sensor name="bmb_imu" type="imu">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <visualize>true</visualize>
+        <imu>
+          <orientation>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </z>
+          </orientation>
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <plugin name="basic_mobile_bot_imu" filename="libgazebo_ros_imu_sensor.so">
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+          <frame_name>imu_link</frame_name>
+          <ros>
+            <namespace>/imu</namespace>
+            <remapping>~/out:=data</remapping>
+          </ros>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- *********************** GPS SETUP *********************************  -->
+    <!--link name="gps_link">
+      <sensor name="bmb_gps" type="gps">
+        <always_on>true</always_on>
+        <update_rate>10.0</update_rate>
+        <gps>
+          <position_sensing>
+            <horizontal>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1e-2</stddev>
+              </noise>
+            </horizontal>
+            <vertical>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1</stddev>
+              </noise>
+            </vertical>
+          </position_sensing>
+        </gps>
+        <plugin name="basic_mobile_bot_gps" filename="libgazebo_ros_gps_sensor.so">
+          <ros>
+            <remapping>~/out:=gps/fix</remapping>
+          </ros>
+        </plugin>
+      </sensor>
+    </link-->
+
+    <!-- *********************** DRIVE WHEELS ******************************  -->
+    <!-- front left wheel-->
+    <link name="drivewhl_fl_link">
+      <pose>0.275 0.295 -0.1 0 0 0</pose>
+      
+      <collision name="drivewhl_fl_collision">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.165</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="drivewhl_fl_visual">
+        <pose>0 0 0 0 0 3.1416</pose>
+        <geometry>
+          <mesh>
+            <uri>model://bigfootbot/meshes/wheel_m.stl</uri>
+            <scale>1.0 1.0 1.0</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1.0</ambient> <!-- RGB [0..1] + alpha [0..1]-->
+          <diffuse>0.5 0.5 0.5 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+
+    </link>
+
+    <!-- front right wheel-->
+    <link name="drivewhl_fr_link">
+      <pose>0.275 -0.295 -0.1 0 0 0</pose>
+      
+      <collision name="drivewhl_fr_collision">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.165</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="drivewhl_fr_visual">
+        <geometry>
+          <mesh>
+            <uri>model://bigfootbot/meshes/wheel_m.stl</uri>
+            <scale>1.0 1.0 1.0</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1.0</ambient> <!-- RGB [0..1] + alpha [0..1]-->
+          <diffuse>0.5 0.5 0.5 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+
+    </link>
+
+    <!-- rear left wheel-->
+    <link name="drivewhl_rl_link">
+      <pose>-0.275 0.295 -0.1 0 0 0</pose>
+      
+      <collision name="drivewhl_rl_collision">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.165</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="drivewhl_rl_visual">
+        <pose>0 0 0 0 0 3.1416</pose>
+        <geometry>
+          <mesh>
+            <uri>model://bigfootbot/meshes/wheel_m.stl</uri>
+            <scale>1.0 1.0 1.0</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1.0</ambient> <!-- RGB [0..1] + alpha [0..1]-->
+          <diffuse>0.5 0.5 0.5 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+
+    </link>
+
+    <!-- rear right wheel-->
+    <link name="drivewhl_rr_link">
+      <pose>-0.275 -0.295 -0.1 0 0 0</pose>
+      
+      <collision name="drivewhl_rr_collision">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.165</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="drivewhl_rr_visual">
+        <geometry>
+          <mesh>
+            <uri>model://bigfootbot/meshes/wheel_m.stl</uri>
+            <scale>1.0 1.0 1.0</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1.0</ambient> <!-- RGB [0..1] + alpha [0..1]-->
+          <diffuse>0.5 0.5 0.5 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+
+    </link>
+    <!-- END OF DRIVE WHEELS -->
+
+    <!-- ************************ JOINTS ***********************************  -->
+    <!-- Pose of the joint is the same as the child link frame -->
+    <!-- Axis is the axis of rotation relative to the child link frame -->
+    
+    <joint name="base_joint" type="fixed">
+      <parent>base_footprint</parent>
+      <child>base_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+
+    <joint name="drivewhl_fl_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewhl_fl_link</child>
+      <pose>0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <joint name="drivewhl_fr_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewhl_fr_link</child>
+      <pose>0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <joint name="drivewhl_rl_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewhl_rl_link</child>
+      <pose>0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <joint name="drivewhl_rr_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewhl_rr_link</child>
+      <pose>0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <joint name="lidar_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>lidar_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+
+    <joint name="imu_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>imu_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>  
+
+    <!--joint name="gps_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>gps_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint-->  
+    <!-- END OF JOINTS -->
+
+    <!-- *********** DIFFERENTIAL DRIVE CONTROLLER + WHEEL ODOMETRY ***************************-->
+    <plugin name="bigfootbot_skid_drive" filename="libgazebo_ros_diff_drive.so">
+
+      <update_rate>30</update_rate>
+
+      <!-- Number of wheel pairs -->
+      <num_wheel_pairs>2</num_wheel_pairs>
+        
+      <!-- Front pair of wheels -->
+      <left_joint>drivewhl_fl_joint</left_joint>
+      <right_joint>drivewhl_fr_joint</right_joint>
+
+      <!-- Rear pair of wheels -->
+      <left_joint>drivewhl_rl_joint</left_joint>
+      <right_joint>drivewhl_rr_joint</right_joint>
+
+      <!-- Kinematics -->
+      <wheel_separation>0.62</wheel_separation> <!-- front wheel pair-->
+      <!--wheel_separation>0.62</wheel_separation--> <!-- rear wheel pair-->
+
+      <wheel_diameter>0.33</wheel_diameter> <!-- front wheels -->
+      <!--wheel_diameter>0.33</wheel_diameter--> <!-- rear wheels -->
+
+      <!-- limits -->
+      <max_wheel_torque>20</max_wheel_torque> <!-- Maximum torque which the wheels can produce, in Nm, defaults to 5 Nm -->
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+
+      <!-- Receive velocity commands on this ROS topic -->
+      <command_topic>cmd_vel</command_topic>
+
+      <!-- Topic to publish nav_msgs/Odometry messages, defaults to `odom` -->
+      <odometry_topic>odom</odometry_topic>
+
+      <!-- Odometry frame, defaults to `odom` -->
+      <odometry_frame>odom</odometry_frame>
+
+      <!-- Robot frame to calculate odometry from, defaults to `base_footprint` -->
+      <robot_base_frame>base_footprint</robot_base_frame>
+
+      <!-- output -->
+      <!-- When false, publish no wheel odometry data to a ROS topic -->
+      <publish_odom>true</publish_odom>
+
+      <!-- When true, publish coordinate transform from odom to base_footprint -->
+      <!-- I usually use the robot_localization package to publish this transform -->   
+      <publish_odom_tf>false</publish_odom_tf>
+      
+      <!-- When true, publish coordinate transform from base_link to the wheels, defaults to false -->
+      <!-- The robot_state_publisher package is often used to publish this transform -->   
+      <publish_wheel_tf>false</publish_wheel_tf>
+
+      <!-- Odometry source, 0 for ENCODER, 1 for WORLD, defaults to WORLD -->
+      <odometry_source>1</odometry_source>
+
+      <!-- Change the ROS topic we will publish the odometry data to -->
+      <ros>
+          <remapping> odom:=wheel/odometry</remapping>
+          <!--remapping> /gazebo/cmd_vel:=/cmd_vel </remapping--> <!-- we remap to /cmd_vel because the node teleop_twist_joy_node
+                                                                  publishes to the topic /cmd_vel -->
+          <!-- Set namespace -->
+          <!--namespace>/gazebo</namespace-->
+
+          <!-- Remap default topics -->
+          <!--argument>cmd_vel:=cmd_demo</argument>
+          <argument>odom:=odom_demo</argument-->
+      </ros>
+    </plugin>
+    <!-- END OF DIFFERENTIAL DRIVE CONTROLLER + WHEEL ODOMETRY -->
+
+    <plugin name="bigfootbot_joint_state" filename="libgazebo_ros_joint_state_publisher.so">
+    <ros>
+      <remapping>~/out:=joint_states</remapping>
+    </ros>
+    <update_rate>30</update_rate>
+    <joint_name>drivewhl_fl_joint</joint_name>
+    <joint_name>drivewhl_fr_joint</joint_name>
+    <joint_name>drivewhl_rl_joint</joint_name>
+    <joint_name>drivewhl_rr_joint</joint_name>
+  </plugin>   
+
+  </model>
+</sdf>

@@ -1,0 +1,128 @@
+# Description: 
+# This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
+# on Nvidia Jetson devices with Nvidia GPU acceleration (extending the Nvidia accelerated image)
+# or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
+# Installed ROS2 packages: 
+#   - 'bigfootbot_base' is used to control the robot's motors via Roboclaw motor controller.
+#
+# --- Docker commands ---
+# Build docker image:
+#   `docker build -f Dockerfile.bfb_base -t bfb_base:latest ..`
+#
+# Run docker container:
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_base_container bfb_base:latest`
+#
+# To connect to a running container: 
+#   `docker exec -it bfb_base_container bash`
+# -------------------------
+
+# --- ROS2 commands ---
+# Launch Roboclaw (motor controller):
+#   `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
+#
+# Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
+# This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
+# of a joystick buttons and axes
+#   `ros2 launch joy joy-launch.py` 
+#
+# Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
+# sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
+#   `ros2 launch teleop_twist_joy teleop-launch.py`
+#  
+# Send test Twist messages (at rate 20 msgs/s) from CLI to /cmd_vel topic: 
+#   `ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+#  
+# -- ROS2 control commands --
+#   `ros2 control list_hardware_interfaces` - list all hardware interfaces available in the system
+#-----------------------------
+
+ARG BASE_IMAGE
+
+# For running on Nvidia Jetson device (arm64/aarch64 Nvidia GPU accelerated)
+# Nvidia catalog of accelerated docker contaieners: https://catalog.ngc.nvidia.com/containers
+# Image built: 05/23/2023
+#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8"
+
+# --- For running on x86/amd64 and arm64/aarch64
+# NB! Not Nvidia GPU accelerated
+# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
+# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
+# ARG BASE_IMAGE="ros:humble-ros-base"
+# --------
+
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive
+# NB! It should be actively discouraged to set the DEBIAN_FRONTEND to noninteractive via ENV. 
+# The reason is that the environment variable persists after the build
+# ARG is only available during the build of the image
+
+# ROS2 workspace
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"] 
+
+# Install additional packages needed for ROS2 dependencies
+RUN apt-get update && apt-get install -y \
+    libboost-all-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+# --- Build and install ROS2 packages
+COPY bigfootbot_base ${ROS_WS}/src/bigfootbot_base
+
+# Clone sources of roboclaw driver (forked from https://github.com/wimblerobotics/ros2_roboclaw_driver.git
+# latest update of the original repo: 26.06.2022) 
+# ROS2 package "ros2_roboclaw_driver"
+RUN cd ${ROS_WS}/src \
+    && git clone https://github.com/jevgenik/ros2_roboclaw_driver.git
+
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+    #  --skip-keys "bigfootbot_teleop bigfootbot_description" \
+    # NB! colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
+    ##&& colcon build \
+    ##&& colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    && colcon build --symlink-install \
+    #&& rm -rf src logs build \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean 
+# --- end of 'Build and install ROS2 packages'
+
+# Install GDB and GDB server
+#RUN apt-get update \
+#    && apt-get install -y gdb \
+#      gdbserverr
+
+##### Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+# ENTRYPOINT means that the container will run the executable file ros_entrypoint.sh when it starts
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+CMD ["ros2", "launch", "bigfootbot_base", "bfb_roboclaw.launch.py"]
+#CMD ["bash"]

@@ -1,0 +1,65 @@
+services:
+  bfb_webrtc:
+      build:
+        context: ../../..
+        dockerfile: docker/web/webrtc_video/Dockerfile.webrtc
+
+        # Pass arguments to Dockerfile to use different base images
+        args:
+          # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+          #- BASE_IMAGE=ros:humble-ros-base
+          
+          # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+          - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+      
+      # The name of the Docker image to be created from the Dockerfile
+      image: bfb_webrtc:latest
+
+      # NVIDIA GPU-accelerated container
+      runtime: nvidia
+
+      # The name to be given to the container created from the image
+      container_name: bfb_webrtc_cntr
+
+      environment:
+        - DISPLAY=:0
+        - NVIDIA_VISIBLE_DEVICES=all
+        - XAUTHORITY=/root/.Xauthority
+        - QT_X11_NO_MITSHM=1
+
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: all
+                capabilities: [gpu]
+
+      # Map all devices from host to container
+      volumes:
+        - '/dev:/dev'
+        # Mount Python source files to be able to update them inside the container without rebuilding the image
+        - ./src:/webrtc_video/src
+
+        - /tmp/.X11-unix:/tmp/.X11-unix  # Allow access to X11
+        #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
+        - $HOME/.Xauthority:/root/.Xauthority  # Allow access to X11
+        - /var/run:/var/run
+
+      privileged: true
+
+      stdin_open: true # docker run -i
+      tty: true        # docker run -t
+
+      ports:
+        - "8765:8765"  # WebSocket server
+
+      networks:
+        macnet:
+          ipv4_address: 192.168.5.77
+
+      #command: python3 /src/signaling.py
+
+networks:
+  macnet:
+    external: true  # Use the existing Macvlan network

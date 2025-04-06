@@ -1,0 +1,340 @@
+# --- README ---
+# Install udev rules for RoboClaw, GPS module and Arduino Mega on the host:
+# Copy motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
+# Copy bfb_gps/udev/99-gps-module.rules to /etc/udev/rules.d
+# Copy bfb_arduino_gateway/udev/99-arduino-mega.rules to /etc/udev/rules.d
+# Run udevadm control --reload-rules && udevadm trigger
+
+# --- Docker compose commands ---
+
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#   `docker compose -f docker-compose_teleop.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#   `docker compose -f docker-compose_teleop.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#   `docker compose -f docker-compose_teleop.yml up --build`
+# 
+# To rebuild a certain service:
+#   `docker compose up --build <service_name>`
+#
+# To run a certain service:
+#   `docker compose up <service_name>`
+#   i.e `docker compose -f docker-compose_teleop.yml up bfb_teleop`
+# --------------------
+
+services:
+  bfb_roboclaw_control:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_roboclaw_control
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+      
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_roboclaw_control:latest
+
+    # The name to be given to the container created from the image
+    container_name: bfb_roboclaw_control_cntr
+
+    # Map all devices from host to container
+    volumes:
+      - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
+
+      - ../../motor_control/log:/ros2_ws/src/motor_control/log
+      - ../../motor_control/config:/ros2_ws/src/motor_control/config
+
+    privileged: true
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.70
+
+    command: ros2 run motor_control roboclaw_control_node --ros-args --params-file ros2_ws/src/motor_control/config/params.yaml
+
+  bfb_joy_to_twist:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_joy_to_twist
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+      
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_joy_to_twist:latest
+
+    # The name to be given to the container created from the image
+    container_name: bfb_joy_to_twist_cntr
+
+    volumes:
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
+
+      - ../../motor_control/config:/ros2_ws/src/motor_control/config
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.71
+
+    command: ros2 run motor_control joy_to_twist_node --ros-args --params-file ros2_ws/src/motor_control/config/params.yaml
+
+  bfb_foxglove_bridge:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_foxglove_bridge
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_foxglove_bridge:latest
+
+    # The name to be given to the container created from the image
+    container_name: bfb_foxglove_bridge_cntr
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.72
+
+    # ports:
+      # - "8765:8765"
+      # - "9090:9090"
+
+    # command: ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+    command: ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+
+  bfb_gps:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_gps
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        #- BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+      
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_gps:latest
+
+    # The name to be given to the container created from the image
+    container_name: bfb_gps_cntr
+
+    # Map all devices from host to container
+    volumes:
+      - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../bfb_gps/bfb_gps:/ros2_ws/src/bfb_gps/bfb_gps
+
+      # - ../../bfb_gps/config:/ros2_ws/src/nmea_navsat_driver/config
+      - ../../bfb_gps/gpx:/ros2_ws/src/bfb_gps/gpx
+      - ../../bfb_gps/config:/ros2_ws/src/bfb_gps/config
+
+    privileged: true
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.73
+
+    command: ros2 run bfb_gps gps_node --ros-args --params-file ros2_ws/src/bfb_gps/config/params.yaml
+    #command: ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py
+
+  bfb_arduino_gateway:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_arduino_gateway
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+      
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_arduino_gateway:latest
+
+    # The name to be given to the container created from the image
+    container_name: bfb_arduino_gateway_cntr
+
+    # Map all devices from host to container
+    volumes:
+      - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../bfb_arduino_gateway/bfb_arduino_gateway:/ros2_ws/src/bfb_arduino_gateway/bfb_arduino_gateway
+
+    privileged: true
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.74
+
+    command: ros2 run bfb_arduino_gateway arduino_gateway_node
+
+  ball_tracker:
+    build:
+      context: ../../..
+      dockerfile: bigfootbot/docker/teleop/Dockerfile.ball_tracker
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        #- BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+    
+    # The name of the Docker image to be created from the Dockerfile
+    image: ball_tracker:latest
+
+    # The name to be given to the container created from the image
+    container_name: ball_tracker_cntr
+
+    environment:
+      - DISPLAY=:0
+
+    # Map all devices from host to container
+    volumes:
+      - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../../ball_tracker/ball_tracker:/ros2_ws/src/ball_tracker/ball_tracker
+
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
+
+    privileged: true
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.75
+
+    #command: ros2 run
+
+    # ros2 run realsense2_camera realsense2_camera_node
+    # ros2 run ball_tracker detect_ball --ros-args -p tuning_mode:=true -r image_in:=/color/image_raw
+    # ros2 run ball_tracker follow_ball --ros-args -r cmd_vel:=cmd_vel_tracker
+
+  bfb_road_follower:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_road_follower
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        #- BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+    
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_road_follower:latest
+
+    # NVIDIA GPU-accelerated container
+    runtime: nvidia
+
+    # The name to be given to the container created from the image
+    container_name: bfb_road_follower_cntr
+
+    environment:
+      - DISPLAY=:0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - STUN_SERVER=stun.l.google.com:19302  # Use Google STUN server
+      - SIGNALING_SERVER=ws://192.168.5.15:8765  # Replace with your signaling server URL
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Map all devices from host to container
+    volumes:
+      - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../bfb_road_follower/bfb_road_follower:/ros2_ws/src/bfb_road_follower/bfb_road_follower
+
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
+      - ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
+
+    privileged: true
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    ports:
+      - "50000-60000:50000-60000/udp"  # Expose WebRTC UDP ports (media)
+      - "8765:8765"  # Expose WebSocket port because signaling server is running locally
+
+    #network_mode: "host"
+
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.76
+
+    #command: ros2 run
+
+    # ros2 run realsense2_camera realsense2_camera_node --ros-args -p rgb_camera.power_line_frequency:=0 -p rgb_camera.profile:=1280x720x30
+    # ros2 run bfb_road_follower edge_detection_node
+
+networks:
+  macnet:
+    external: true  # Use the existing Macvlan network

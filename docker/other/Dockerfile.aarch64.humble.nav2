@@ -1,0 +1,51 @@
+ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-humble-nav2_c2befe2b1d90532fc15ef72650ccd7b0"
+FROM ${BASE_IMAGE} 
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENV ROS_WS=/ros2_ws
+#WORKDIR $ROS_WS
+
+# === Install foxglove_bridge for communication with Foxglove studio
+RUN apt-get update \
+    && mkdir -p ${ROS_WS}/src && cd ${ROS_WS}/src/ \
+    && git clone https://github.com/foxglove/ros-foxglove-bridge.git \
+    && cd ${ROS_WS} \
+    && source /opt/ros/humble/setup.bash \
+    && rosdep update \
+    && rosdep install -y -r --ignore-src --from-path src \
+    && colcon build 
+    #&& rm -rf src logs build \
+    #&& rm -rf /var/lib/apt/lists/* \
+    #&& apt-get clean
+# === end of block 'foxglove_bridge'
+
+# === Install BigFootBot
+
+COPY bigfootbot_description ${ROS_WS}/src/bigfootbot_description 
+
+# === end of 'BigFootBot'
+
+# === Setup Fast DDS default profile configuration (env var. FASTRTPS_DEFAULT_PROFILES_FILE)
+#COPY docker/fastdds_husarnet.xml /
+
+# === Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# Scripts launching Foxglove node and RealSense node
+#COPY ./scripts/launch_foxglove.sh /
+#COPY ./scripts/launch_realsense.sh /
+COPY docker/scripts/launch.sh /
+
+# Change workdir
+#WORKDIR /root/ros2_ws
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+# CMD ["bash"]
+CMD ["./launch.sh"]

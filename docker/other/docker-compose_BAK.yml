@@ -1,0 +1,169 @@
+#version: '3.5' # version flag is Depricated in Docker compose V2?
+
+# --- Docker compose commands ---
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#  `docker compose -f docker-compose.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#  `docker compose -f docker-compose.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#  `docker-compose -f docker-compose.yml up --build`
+# To rebuild a certain service:
+# `docker-compose up --build <service_name>`
+# --------------------
+
+services:
+  bfb_drive:
+    #restart: unless-stopped
+    
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.bfb_drive
+
+    # the name of the Docker image to be created from the Dockerfile.
+    image: bfb_drive:latest
+
+    # the name to be given to the container created from the image.
+    container_name: bfb_drive_container
+    #working_dir: /webcam
+
+    volumes:
+      # Docker's privileged:true creates a tmpfs inside the container 
+      # and recreates all device nodes currently in the hosts /dev. 
+      # However, it does not create or update symlinks from hosts /dev
+      # We bound /dev to have access symlinks to devices created by 
+      # udev rules on the host
+      #- /dev:/dev 
+      
+      # Forward X socket to container to enable GUI 
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      
+      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
+      # on the fly in the running container
+      - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
+
+    # Enable GPU access for the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+    runtime: nvidia
+
+    environment:
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+    
+    # It grants the container elevated privileges and bypasses certain 
+    # security measures enforced by Docker. With this flag, the container gains 
+    # full access to all devices in the /dev directory, among other privileged operations.
+    # NB! Docker's privileged:true creates a tmpfs inside the container 
+    # and recreates all device nodes currently in the hosts /dev. 
+    # However, it does not create or update symlinks from hosts /dev
+    # You should bind (in volumes section) /dev:/dev to have access symlinks 
+    # to devices created by udev rules on the host
+    #privileged: true
+    
+    # Allows you to explicitly specify device files that should be made 
+    # available within the container. For example, devices: /dev/ttyACM0:/dev/ttyACM0 
+    # would make the /dev/ttyACM0 device file accessible within the container. 
+    # NOTE: parameter 'devices' works fine (unlike privileged:true) with symlinks 
+    # for devices in /dev folder created on the host using udev rules 
+    devices:
+      - /dev/roboclaw:/dev/roboclaw
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    network_mode: host
+    #ipc: host # Interprocess communication. Check whether to enable or not. Maybe ROS2 nodes located in separate containers will communicate faster?
+
+  bfb_teleop:
+    #restart: unless-stopped
+    
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.bfb_teleop
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_teleop:latest
+
+    # The name to be given to the container created from the image.
+    container_name: bfb_teleop_container
+
+    volumes:
+      # Docker's privileged:true creates a tmpfs inside the container 
+      # and recreates all device nodes currently in the hosts /dev. 
+      # However, it does not create or update symlinks from hosts /dev
+      # We bound /dev to have access symlinks to devices created by 
+      # udev rules on the host
+      - /dev:/dev 
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+  ####################  BIGFOOTBOT REALSENSE ################
+  #bfb_realsense:
+    ##restart: unless-stopped
+   # build: 
+    #  context: ..
+     # dockerfile: docker/Dockerfile.aarch64.humble.nav2_bigfootbot_realsense
+
+   # image: bigfootbot_realsense
+
+    #container_name: bigfootbot_realsense
+    ##working_dir: /webcam
+
+    ##volumes:
+      ## forward X socket to container to enable GUI 
+     ## - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      
+      # Roboclaw motor driver config file. It is added as volume to be able to change motor driver parameters 
+      ## on the fly in the running container
+     ## - ../bigfootbot_base/config/roboclaw_config.yaml:/ros2_ws/install/bigfootbot_base/share/bigfootbot_base/config/roboclaw_config.yaml                                                       
+
+    # Enable GPU access for the container
+    #deploy:
+     # resources:
+      #  reservations:
+       #   devices:
+        #    - driver: nvidia
+         #     capabilities: [gpu]
+
+    #runtime: nvidia
+
+    #environment:
+    #  - DISPLAY
+    #  - QT_X11_NO_MITSHM=1
+    
+    #privileged: true # To allow container to access RealSense camera (USB) on the host
+    ##devices:
+    ##  - /dev:/dev
+    
+    #stdin_open: true # docker run -i
+    #tty: true        # docker run -t
+
+    #network_mode: host
+
+  # Test app (Web server)
+  #test_app:
+   # image: nginx
+    
+    #volumes:
+   #   - ./test_html:/usr/share/nginx/html
+
+   # network_mode: host
+
+    # Published ports are discarded when using host network mode               
+    #ports:
+    #  - "80:80"
+    
+      

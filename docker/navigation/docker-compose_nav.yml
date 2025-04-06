@@ -1,0 +1,71 @@
+# --- README ---
+#
+
+# --- Docker compose commands ---
+
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#   `docker compose -f docker-compose_nav.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#   `docker compose -f docker-compose_nav.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#   `docker compose -f docker-compose_nav.yml up --build`
+# 
+# To rebuild a certain service:
+#   `docker compose up --build <service_name>`
+#
+# To run a certain service:
+#   `docker compose up <service_name>`
+#   i.e `docker compose -f docker-compose_nav.yml up bfb_teleop`
+# --------------------------------------------------------------
+
+services:
+  bfb_nav:
+    build:
+      context: ../..
+      dockerfile: docker/navigation/Dockerfile.bfb_nav
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+        
+        # Build the docker image for ONLY Jetson device (Nvidia GPU-accelerated)
+        # nvcr.io is the NVIDIA NGC container registry containing pre-built, GPU-accelerated 
+        # Docker containers
+        # It's similar to Docker Hub but tailored for NVIDIA's GPU-accelerated containers.
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_692ceb1a0a35fe8a1f37641bab978508
+      
+    # The name of the Docker image to be created from the Dockerfile
+    image: bfb_nav:latest
+
+    # The name to be given to the container created from the image
+    container_name: bfb_nav_cntr
+
+    volumes:
+      # Mount navigation package to be able to update nav configuration files without rebuilding the image and
+      # and to store maps created by robot so they are not lost when the container is removed
+      - ../../bigfootbot_navigation:/ros2_ws/src/bigfootbot_navigation  
+
+    #privileged: true
+
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    
+    # Overload the default command executed by the container
+    #command: ros2 run motor_control roboclaw_control_node
+
+    #network_mode: "host"
+    networks:
+      bfb_network:
+
+networks:
+  bfb_network:
+    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+                   # instead of creating a new one for this project (docker-compose_gazebo.yml)

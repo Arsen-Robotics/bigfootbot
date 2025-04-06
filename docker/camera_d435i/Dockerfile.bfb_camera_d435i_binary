@@ -1,0 +1,138 @@
+# Description: 
+# This Dockerfile is used to build a Docker image for running ROS2 (Robot Operating System 2)
+# on Nvidia Jetson devices with Nvidia GPU acceleration (extending the Nvidia accelerated image)
+# or on x86/amd64 and any arm64/aarch64 device (extending the ROS2 base image).
+#
+# Installed ROS2 packages: 
+#   .....
+#
+# --- Docker commands ---
+#    
+# Build docker image:
+#   `docker build -f Dockerfile.bfb_camera_d435i_binary -t bfb_camera_d435i_binary:latest ../..`
+#
+# Run docker container:
+#   `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name bfb_camera_d435i_binary_container bfb_camera_d435i_binary:latest`
+#
+# To connect to a running container: 
+#   `docker exec -it bfb_camera_d435i_binary_container bash`
+# -------------------------
+
+# --- ROS2 commands ---
+#
+# Launch RealSense D435i camera node:
+#   `ros2 launch realsense2_camera rs_launch.py`
+#-----------------------------
+
+ARG BASE_IMAGE
+
+# --- For running on x86/amd64 and arm64/aarch64
+# NB! Not Nvidia GPU accelerated
+# NOTE As of May 25, 2023, Ubuntu 22.04 "Jammy" was used.
+# ROS2 version: communication libraries, message packages, command line tools. No GUI tools
+# ARG BASE_IMAGE="ros:humble-ros-base"
+# --------
+
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ARG DEBIAN_FRONTEND=noninteractive
+
+# ROS2 workspace
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"]
+
+# Install Intel RealSense ROS 2 wrapper (including RealSense SDK 2.0) (binary packages)
+RUN apt-get update \
+    && apt-get install -y ros-${ROS_DISTRO}-realsense2-* \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# --- Build and install ROS2 packages 
+
+# Create ROS2 working and source directories
+RUN mkdir -p ${ROS_WS}/src
+
+# Clone the xacro package from GitHub
+# We install xacro from sources because binary version of xacro package was not 
+# available for ROS2 Humble as of 09.06.2023
+# Note: if the binary version of xacro package would be available for ROS2 Humble,
+# it would be installed automatically by rosdep install command (dependency is written
+# in package.xml file of the package realsense2_description [as: <exec_depend>xacro</exec_depend>])
+#RUN cd ${ROS_WS}/src \
+#    && git clone -b ros2 https://github.com/ros/xacro.git  
+
+# Install ROS dependencies (ROS packages on which depend packages that located in the src directory)
+# -y, --default-yes - Tell the package manager to default to y or fail when installing
+# -r - Continue installing despite errors
+# --ignore-src - Install only the packages in the 'rosdep database' and ignore all source-based packages
+# --from-path - Install all the dependencies of the packages in the specified path
+# --rosdistro - The ROS distribution to check for dependencies
+# --skip-keys - Skip a package (or list of packages) when installing dependencies
+# --symlink-install - if you change code in your source code, it will take effect, 
+#   you don't have to compile it again (ony with python, not c++)
+#   or e.g., the yaml configuration file in the workspace without having to rebuild the workspace.
+# --event-handlers console_direct+ - shows console output while building (can otherwise be found in the log directory)
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && apt-get install -y \    
+    python3-pip \
+    && pip install \
+    # Downgrading setuptools is only needed for newer versions of Python,
+    # In this case only for ros:humble-ros-base image, not needed for nvcr (Nvidia GPU accelerated image)
+    setuptools==58.2.0 \
+    #opencv-python \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \     
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \ 
+      --rosdistro ${ROS_DISTRO} \
+      #--skip-keys "librealsense2 launch_pytest" \
+    # librealsense2 is skipped because it is already installed from sources (see above)    
+    # launch_pytest is skipped because it causes error "realsense2_camera: No definition of [launch_pytest] for OS version [focal]"
+    # launch_pytest is added in realsense2_camera package.xml file as: <test_depend>launch_pytest</test_depend>
+    ##&& colcon build \
+    ##Build with debug info: && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    # TODO test this statement: colcon build --symlink-install generate error "CMakeFiles/Makefile2:421: CMakeFiles/ament_cmake_python_symlink_realsense2_camera_msgs.dir/all] Error 2"
+    && colcon build --symlink-install \
+    #&& rm -rf src logs build \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean 
+    #&& rosdep install -y -r --ignore-src --from-path src --rosdistro $ROS_DISTRO --skip-keys=librealsense2 \    
+    # TODO! add --symlink-install to colcon build ?
+# -- end of block 'Build and install ROS2 Wrapper for RealSense'
+
+# --- end of block 'Build and install ROS2 packages'
+
+# Intall Foxglove bridge
+# NB! TODO! This is a temporary solution. Foxglove bridge should be installed as separate docker compose service
+# to be accessable to other containers running other ROS 2 packages
+RUN apt-get update \
+    && apt-get install -y ros-${ROS_DISTRO}-foxglove-bridge \
+    ros-${ROS_DISTRO}-image-transport-plugins \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean 
+
+# Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+#CMD ["ros2", "launch", "bigfootbot_teleop", "bfb_teleop.launch.py"]
+CMD ["bash"]

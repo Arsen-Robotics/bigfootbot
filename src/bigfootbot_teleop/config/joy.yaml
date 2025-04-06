@@ -1,0 +1,36 @@
+# --- Parameters file for the package 'joy'
+# https://github.com/ros-drivers/joystick_drivers/tree/ros2/joy
+#
+# 'joy_node' - a node that interfaces a generic joystick to ROS 2. This node publishes a 
+# 'sensor_msgs/msg/Joy' message, which contains the current state of each one of the 
+# joystick's buttons and axes.
+
+joy_node:
+    ros__parameters:
+        device_id: 0
+        device_name: "" # The joystick name to use. This can be useful when multiple different 
+                        # joysticks are attached. If both device_name and device_id are specified, 
+                        # device_name takes precedence.
+        deadzone: 0.1 # Sets the deadzone for the joystick axes. The deadzone is a range around 
+                      # the center position of the joystick axes where small variations in position 
+                      # are ignored. Values within the deadzone are considered as zero. The 'deadzone' 
+                      # parameter specifies the size of the deadzone as a fraction of the maximum range 
+                      # of the joystick axes. For example, a 'deadzone: 0.5' means that any values between 
+                      # -0.5 and 0.5 will be considered as zero.
+        autorepeat_rate: 20.0 # Rate in Hz at which a joystick that has a non-changing state will resend the 
+                              # previously sent message. If set to 0.0, autorepeat will be disabled, meaning joy messages 
+                              # will only be published when the joystick changes. Cannot be larger than 1000.0.
+        sticky_buttons: false # Whether buttons are "sticky". If this is false (the default), then a button press 
+                              # will result in a 1 being output, and a button release will result in a 0 being output. 
+                              # If this is true, then a button press will toggle the current state of the button, 
+                              # and a button release will do nothing. Thus, hitting the button while it is 
+                              # currently 0 will switch it to 1, and keep it at 1 until the button is pressed again.
+        coalesce_interval_ms: 1 # The number of milliseconds to wait after an axis event before publishing a message. 
+                                # Since the kernel sends an event for every change, this can significantly reduce the number 
+                                # of messages published. Setting it to 0 disables this behavior. The default of 1 ms is a 
+                                # good compromise between message delays and number of messages published.
+
+                                # In the context of ROS (Robot Operating System), "coalesce" refers to the process 
+                                # of combining or merging similar or redundant messages into a single message. 
+                                # When a stream of messages is being published rapidly, coalescing helps to reduce 
+                                # the number of messages and improve efficiency.

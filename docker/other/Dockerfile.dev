@@ -1,0 +1,124 @@
+# --- Docker commands ---
+# Build docker image:
+#  `docker build -f Dockerfile.dev -t bfb_dev:latest ..`
+#
+# Run docker container:
+#  `docker run -it --rm --privileged --network host --runtime=nvidia --gpus all --name dfb_dev_container bfb_dev:latest`
+#
+# To connect to a running container: 
+#  `docker exec -it dfb_dev_container bash`
+# -------------------------
+
+# --- ROS2 launch commands ---
+# Launch Roboclaw (motor controller):
+# `ros2 launch bigfootbot_bringup ros2_roboclaw_driver.launch.py`
+#
+# Launch 'joy_node' (package 'joy'), a node that interfaces a generic joystick to ROS 2
+# This node publishes a 'sensor_msgs/msg/Joy' message, which contains the current state 
+# of a joystick buttons and axes
+# `ros2 launch joy joy-launch.py` 
+#
+# Launch node 'teleop_node' (package 'teleop_twist_joy') that republishes 
+# sensor_msgs/msg/Joy messages as scaled geometry_msgs/msg/Twist messages
+# `ros2 launch teleop_twist_joy teleop-launch.py`
+#-----------------------------
+
+# For running on Nvidia Jetson device (Nvidia GPU accelerated)
+#ARG BASE_IMAGE="nvcr.io/nvidia/isaac/ros:aarch64-humble-nav2_c2befe2b1d90532fc15ef72650ccd7b0"
+
+# For running on x86/amd64 PC 
+# NB! Not Nvidia GPU accelerated
+ARG BASE_IMAGE="ros:humble-ros-base"
+
+FROM ${BASE_IMAGE}
+
+# Zero interaction while installing or upgrading the system via apt. 
+# It accepts the default answer for all questions.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ROS2 workspace
+ENV ROS_WS=/ros2_ws
+
+# If you only need to set the SHELL environment variable for other purposes, such as in a 
+# script that will be run inside the container
+# NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
+# the default shell used to run subsequent commands in the Dockerfile
+ENV SHELL=/bin/bash
+
+# Sets the default shell for running subsequent commands in the Dockerfile
+# (the default shell on Linux is ["/bin/sh", "-c"])
+# -c: This option specifies that the next argument is the command to execute.
+SHELL ["/bin/bash", "-c"] 
+
+# Fundamentals
+#RUN apt-get update && apt-get install -y \
+#    build-essential \
+#    curl \
+#    git \
+#    lsb-release \
+#    sudo \
+#    tar \
+#    unzip \
+#    vim \
+#    wget \
+#    libgoogle-glog-dev \
+#    software-properties-common \
+#&& rm -rf /var/lib/apt/lists/* \
+#&& apt-get clean
+
+# Install additional packages needed for ROS2 dependencies
+#RUN apt-get update && apt-get install -y \
+#    python3-distutils \
+#    libboost-all-dev \
+#    libboost-dev \
+#    libpcl-dev \
+#    libode-dev \
+#    lcov \
+#    python3-zmq \
+#    libxaw7-dev \
+#    libgraphicsmagick++1-dev \
+#    graphicsmagick-libmagick-dev-compat \
+#    libceres-dev \
+#    libsuitesparse-dev \
+#    libncurses5-dev \
+#    libassimp-dev \
+#   libyaml-cpp-dev \
+#    libpcap-dev \
+#&& rm -rf /var/lib/apt/lists/* \
+#&& apt-get clean
+
+# Install additional packages needed for ROS2 dependencies
+RUN apt-get update && apt-get install -y \
+#    python3-distutils \
+    libboost-all-dev \
+#    libboost-dev \
+#    libpcl-dev \
+#    libode-dev \
+#    lcov \
+#    python3-zmq \
+#    libxaw7-dev \
+#    libgraphicsmagick++1-dev \
+#    graphicsmagick-libmagick-dev-compat \
+#    libceres-dev \
+#    libsuitesparse-dev \
+#    libncurses5-dev \
+#    libassimp-dev \
+#   libyaml-cpp-dev \
+#    libpcap-dev \
+&& rm -rf /var/lib/apt/lists/* \
+&& apt-get clean
+
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
+
+##### Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
+#CMD ["ros2", "launch", "bigfootbot_bringup", "bfb_teleop.launch.py"]
+CMD ["bash"]

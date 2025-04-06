@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="diff_drive_controller" params="wheel_separation wheel_radius wheel_torque">
+    <gazebo>
+      <!-- Drive controller + wheel odometry -->
+      <!-- DiffDrive Class Reference https://gazebosim.org/api/gazebo/6/classignition_1_1gazebo_1_1systems_1_1DiffDrive.html -->      
+      <plugin filename="gz-sim-diff-drive-system"
+              name="gz::sim::systems::DiffDrive">
+
+        <!-- Front pair of wheels -->
+        <!-- Name of a joint that controls a left wheel. This element can appear multiple times, and must 
+        appear at least once-->
+        <left_joint>drivewhl_fl_joint</left_joint>
+        <!-- Name of a joint that controls a right wheel. This element can appear multiple times, and must 
+        appear at least once-->
+        <right_joint>drivewhl_fr_joint</right_joint>
+
+        <!-- Rear pair of wheels -->
+        <left_joint>drivewhl_rl_joint</left_joint>
+        <right_joint>drivewhl_rr_joint</right_joint>
+        
+        <!-- KINEMATICS -->
+        <!-- Distance between wheels, in meters. This element is optional, although it is recommended to be included 
+        with an appropriate value. The default value is 1.0m. -->
+        <!-- variable 'wheel_separation' is the parameter passed to this macro -->
+        <wheel_separation>${wheel_separation}</wheel_separation>           
+        <!-- Wheel radius in meters. This element is optional, although it is recommended to be included 
+        with an appropriate value. The default value is 0.2m. -->
+        <wheel_radius>${wheel_radius}</wheel_radius>  
+                
+        <!--  Odometry publication frequency. This element is optional, and the default value is 50Hz. -->
+        <odom_publish_frequency>30</odom_publish_frequency>   
+        
+        <!-- Custom topic that this system will subscribe to in order to receive command velocity messages. 
+        This element if optional, and the default value is /model/{name_of_model}/cmd_vel -->
+        <!-- ROS 2 publishes messages to /cmd_vel as geometry_msgs/msg/Twist then they are bridged by ros_gz_bridge 
+        to Gazebo as gz.msgs.Twist -->
+        <topic>cmd_vel</topic>        
+
+        <!-- Custom topic on which this system will publish odometry messages. This element is optional, and the 
+        default value is /model/{name_of_model}/odometry -->
+        <!-- Plugin publishes odometry messages as gz.msgs.Odometry that then bridged by ros_gz_bridge to ROS 2 as nav_msgs/msg/Odometry -->
+        <odom_topic>odom</odom_topic>
+        
+        <!-- Custom topic on which this system will publish the transform from frame_id to child_frame_id. This element is optional, 
+        and the default value is /model/{name_of_model}/tf -->
+        <tf_topic>tf</tf_topic>
+        
+        <!-- Custom frame_id field that this system will use as the origin of the odometry transform in both the <tf_topic> ignition.msgs.Pose_V message 
+        and the <odom_topic> ignition.msgs.Odometry message. This element if optional, and the default value is {name_of_model}/odom.-->
+        <frame_id>odom</frame_id>  
+
+        <!-- Custom child_frame_id that this system will use as the target of the odometry transform in both the <tf_topic> ignition.msgs.Pose_V message 
+        and the <odom_topic> ignition.msgs.Odometry message. This element if optional, and the default value is {name_of_model}/{name_of_link}. -->
+        <child_frame_id>base_footprint</child_frame_id>
+
+        <!-- LIMITS -->
+        <!-- Sets the maximum linear acceleration. Overrides <max_acceleration> -->
+        <!--max_linear_acceleration>0.033</max_linear_acceleration-->
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+</robot>

@@ -1,0 +1,47 @@
+# --- Example Video Chat App demonstrating WebRTC using Node.js ---
+#
+# Tutorial: https://tsh.io/blog/how-to-write-video-chat-app-using-webrtc-and-nodejs/
+# GitHub: https://github.com/Miczeq22/simple-chat-app/tree/master
+
+# --- Build docker image ---
+# `docker build -f Dockerfile.webrtc -t webrtc:latest .`
+
+# --- Run docker container ---
+# `docker run --rm -it -p 3000:3000 -v ./app:/app --name webrtc_container webrtc:latest`
+
+# --- Npm commands ---
+# `npm run dev` - Start the application in development mode (it runs script "dev" from package.json)
+
+# --- Installation and Usage ---
+# 1. Build the image and run the container (see the commands above)
+#
+# 2. NOTE! For development only: in the container, run: npm install
+#
+# 3. In the container, start the application (in development mode): `npm run dev`
+#    (to attach to the running container, run: docker exec -it webrtc_container bash)
+#
+# 4. Open the browser and go to: http://localhost:3000
+
+# Use official node image
+FROM node:latest
+
+# Set the working directory
+WORKDIR /app
+
+# Install ngrok for HTTPS tunneling
+RUN curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && \
+    echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list && \
+    apt update && apt install ngrok -y
+
+# Copy app files 
+#COPY app /app
+
+# Install the dependencies
+#RUN npm install
+
+# Expose the port your app runs on (3000 is the default port for create-react-app)
+#EXPOSE 3000 
+
+# Start the application
+#CMD ["node", "server.js"]
+CMD ["bash"]

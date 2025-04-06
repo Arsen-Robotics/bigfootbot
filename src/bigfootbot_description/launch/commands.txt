@@ -1,0 +1,26 @@
+source "/ros_ws/install/setup.bash"
+
+=== Normal launch
+ros2 launch bigfootbot_description view_model.launch.py
+
+=== If you want to see the available arguments you can pass to the launch file from the terminal window, type
+ros2 launch -s bigfootbot_description view_model.launch.py
+
+=== Example of using launch arguments (e.g. launch the robot without RViz)
+ros2 launch bigfootbot_description view_model.launch.py use_rviz:='False'
+
+ros2 run tf2_tools view_frames.py
+
+==== Docker commmands ===
+--- Run new terminal in the running container
+docker exec -it <container-name/ID> bash
+
+=== Gazebo ===
+--- Add path to robot model (this line maybe added to ~/.bashrc or docker images entrypoint
+--- [ros_entrypoint.sh])
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/ros_ws/src/bigfootbot_description/models/
+
+--- If Gazebo is not launching properly, you can terminate Gazebo as follows:
+killall gazebo
+killall gzserver
+killall gzclient

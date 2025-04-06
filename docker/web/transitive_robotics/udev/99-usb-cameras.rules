@@ -1,0 +1,5 @@
+# Arducam (Microdia Webcam)
+#SUBSYSTEM=="video4linux", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6366", ATTR{index}=="0", SYMLINK+="video21", MODE="0666"
+
+# Aveo camera
+#SUBSYSTEM=="video4linux", ATTRS{idVendor}=="1871", ATTRS{idProduct}=="0143", ATTR{index}=="0", SYMLINK+="video22", MODE="0666"

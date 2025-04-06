@@ -1,0 +1,209 @@
+# --- Docker compose commands ---
+#
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#   `docker compose -f docker-compose_gazebo.yml up'
+#
+# To pass the world file name to the container, use the following command:
+# world_file_name.sdf must be located in the container's 
+# /home/ubuntu/ros2_ws/src/bigfootbot_gazebo/worlds folder
+# `WORLD_FILE=<world_file_name.sdf> docker compose -f docker-compose_gazebo.yml up`
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#   `docker compose -f docker-compose_gazebo.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#   `docker compose -f docker-compose_gazebo.yml up --build`
+#
+# To rebuild a certain service:
+#   `docker compose -f docker-compose_gazebo.yml up --build <service_name>`
+#
+# To run a certain service:
+#   `docker compose up <service_name>`
+# 
+# To allow the container to access the host's X11 server for GUI applications,
+# you need to run the following command on the host machine:
+#   `xhost +local:root` OR `xhost +`
+#
+# To connect to a running container: 
+#   `docker exec -it bfb_gazebo_cntr bash`
+#
+# Move the robot (forward 0.2 m/s) (-1 means publish only one message):
+#   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+# 
+# Move the robot (backward 0.2 m/s):
+#   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: -0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+#
+# Stop the robot:
+#   `ros2 topic pub -1 /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"`
+#
+# GPU access:
+#   `prime-select nvidia` - use Nvidia GPU
+#   `prime-select on-demand` - use AMD GPU
+# ---------------------------------------
+
+
+#version: '3.5' # version flag is Depricated in Docker compose V2?
+services:
+  # === GAZEBO SIMULATOR ===
+  bfb_gazebo:
+    #restart: unless-stopped
+    
+    build: 
+      context: ../../
+      dockerfile: docker/gazebo/Dockerfile.gazebo # ROS 2 Jazzy + Gazebo Harmonic
+      #dockerfile: docker/gazebo/Dockerfile.gazebo_Humble_Fortress # ROS 2 Humble + Gazebo Harmonic
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_gazebo:latest
+    #image: bfb_gazebo_fortress:latest
+
+    # The name to be given to the container created from the image.
+    container_name: bfb_gazebo_cntr
+    #container_name: bfb_gazebo_fortress_cntr
+    
+    #user: "1000:1000"  # Set the user to the host user so newly mapped volumes are owned 
+                       # by the host user
+
+    volumes:
+      # Forward X socket to container to enable GUI
+      # Note: if privileged: true, then volumes: is not needed
+      # because the container will have access to the host's X11 server
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+      ## Mount launch files to be able to update them inside the container without rebuilding the image
+      # launch files from the package bigfootbot_gazebo
+      #- ../../bigfootbot_gazebo/launch:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/launch
+      - ../../bigfootbot_gazebo/launch:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/launch
+
+      # Mount folder with world SDF files to be able to update SDFs on-the-fly in the running container,
+      # without the need to rebuild the image
+      #- ../../bigfootbot_gazebo/worlds:/ros2_ws/install/bigfootbot_gazebo/share/bigfootbot_gazebo/worlds
+      - ../../bigfootbot_gazebo/worlds:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/worlds
+
+      # Persist Gazebo Fuel models 
+      # use this when you want to persist downloaded Gazebo Fuel models
+      # and use them in .sdf files
+      # Alternative to downloading models and use files locally would be to use links to the models
+      # located on the fuel.gazebosim.org website
+      #- ../../bigfootbot_gazebo/worlds/.gz/fuel:/home/ubuntu/.gz/fuel
+
+      # Use a named volume for .gz directory
+      #- gazebo_home:/home/ubuntu/.gz
+
+      # Mount folder with configuration files (e.g for gz_bridge) to be able to update them on-the-fly in the running container,
+      - ../../bigfootbot_gazebo/config:/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/config
+      
+      # Config files for ros2_control controllers
+      - ../../bigfootbot_description/config:/home/ubuntu/ros2_ws/src/bigfootbot_description/config
+
+      # launch files from the package bigfootbot_description
+      #- ../../bigfootbot_description/launch:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/launch
+      - ../../bigfootbot_description/launch:/home/ubuntu/ros2_ws/src/bigfootbot_description/launch
+
+      # Mount folder with URDF files to be able to update URDFs on-the-fly in the running container,
+      # without the need to rebuild the image
+      #- ../../bigfootbot_description/urdf:/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf
+      - ../../bigfootbot_description/urdf:/home/ubuntu/ros2_ws/src/bigfootbot_description/urdf
+
+    environment:
+      - DISPLAY=$DISPLAY  # To allow the container to access the host's 
+                          # X11 server for GUI applications.
+      #- QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
+      #- NVIDIA_VISIBLE_DEVICES=all # alternative to `devices` below
+                                    # controls which GPUs will be made accessible inside the container
+      #- NVIDIA_DRIVER_CAPABILITIES=all # alternative to `capabilities` below
+                                        # Controls which driver libraries/binaries will be mounted inside the container.
+
+    # Enable GPU access for the container NB! Only for NVIDIA GPUs
+    # NOTE To be sure that Nvidia GPU is used for rendering run `prime-select nvidia`
+    # prime-select is a utility to switch between Intel and Nvidia GPUs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia 
+              device_ids: ['0'] # The ID of the GPU to be made accessible inside the container
+    #          count: 1
+              capabilities: ['compute','video','graphics','utility'] # Controls which driver libraries/binaries will 
+                                                                     # be mounted inside the container.
+
+    #runtime: nvidia
+
+    #privileged: true # To allow the container to access the host's 
+                     # X11 server and GPU for GUI applications.
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    # Overload the default command executed by the container
+    #command: "ign gazebo /usr/share/ignition/ignition-gazebo6/worlds/empty.sdf"  #/usr/share/gazebo-11/worlds/seesaw.world
+    #command: bash -c "rviz2 && joint_state_publisher_gui"
+    #command: "ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=empty.sdf"
+    #command: "ros2 launch bigfootbot_gazebo gazebo.launch.py"
+
+    # Add command to launch with specified world
+    # ${WORLD_FILE} is environment variable that will be replaced with the actual world file name at runtime
+    # To pass the world file name to the container, use the following command:
+    # `WORLD_FILE=my_test_world.sdf docker compose -f docker-compose_gazebo.yml up`
+    command: ros2 launch bigfootbot_gazebo gazebo.launch.py world:=/home/ubuntu/ros2_ws/src/bigfootbot_gazebo/worlds/${WORLD_FILE}
+    #command: "bash"
+    
+    networks:
+      bfb_network:
+
+    #network_mode: host
+  
+  # === TELEOPERATION ===
+  bfb_teleop:          
+    build: 
+      context: ../../
+      dockerfile: docker/teleop/Dockerfile.bfb_std_joystick
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
+        
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        #- BASE_IMAGE=ros:humble-ros-base
+        - BASE_IMAGE=ros:jazzy-ros-base
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: bfb_teleop:latest
+
+    # The name to be given to the container created from the image.
+    container_name: bfb_teleop_cntr
+    
+    volumes:     
+      # Mount launch and config files to be able to update them inside the container without rebuilding the image
+      - ../../bigfootbot_teleop/launch:/home/ubuntu/ros2_ws/src/bigfootbot_teleop/launch
+
+      - ../../bigfootbot_teleop/config:/home/ubuntu/ros2_ws/src/bigfootbot_teleop/config
+
+      - ../../bigfootbot_teleop/script:/home/ubuntu/ros2_ws/src/bigfootbot_teleop/script
+
+    # Map all devices from host to container (need to be able to access the joystick)
+    privileged: true
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    command: "ros2 launch bigfootbot_teleop bfb_teleop.launch.py"
+
+    networks:
+      bfb_network:
+
+#volumes:
+  # Define the named volume
+#  gazebo_home:
+#    name: gazebo_home  # This ensures the same volume name across different projects
+
+networks:
+  bfb_network:
+    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+                   # instead of creating a new one for this project (docker-compose_gazebo.yml)

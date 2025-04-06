@@ -1,0 +1,94 @@
+# --- Docker compose commands ---
+#
+# Create and start containers defined in the compose file
+# NOTE Docker Compose detects changes in your configuration files, 
+# including the Dockerfile, and automatically rebuilds the corresponding images if necessary
+#   `docker compose -f docker-compose_rviz2.yml up'
+#
+# Stop and remove containers that were created based on the 
+# configuration specified in the compose file.
+#   `docker compose -f docker-compose_rviz2.yml down'
+# 
+# Rebuild all services (all the images are built from scratch)
+# --build option indicates that Docker Compose should rebuild the images, 
+# even if they already exist
+#   `docker compose -f docker-compose_rviz2.yml up --build`
+#
+# To rebuild a certain service:
+#   `docker compose up --build <service_name>`
+#
+# To run a certain service:
+#   `docker compose up <service_name>`
+#   `docker compose -f docker-compose_rviz2.yml up humble_rviz2`
+# --------------------
+
+
+#version: '3.5' # version flag is Depricated in Docker compose V2?
+services:
+  humble_rviz2:
+    #restart: unless-stopped
+    
+    build: 
+      context: ../../
+      dockerfile: docker/rviz2/Dockerfile.rviz2
+
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+        #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_33836e394da2d095a59afd2d151038f8 
+        
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+
+    # The name of the Docker image to be created from the Dockerfile.
+    image: humble_rviz2:latest
+
+    # The name to be given to the container created from the image.
+    container_name: humble_rviz2_cntr
+
+    volumes:
+      # Forward X socket to container to enable GUI
+      # Note: if privileged: true, then volumes: is not needed
+      # because the container will have access to the host's X11 server
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    environment:
+      - DISPLAY=$DISPLAY  # To allow the container to access the host's 
+                          # X11 server for GUI applications.
+      #- QT_X11_NO_MITSHM=1 # To prevent Qt applications from crashing (bug fix)
+
+    # Enable GPU access for the container NB! Only for NVIDIA GPUs
+    #deploy:
+    #  resources:
+    #    reservations:
+    #      devices:
+    #        - driver: nvidia
+    #          capabilities: [gpu]
+
+    #runtime: nvidia
+
+    #privileged: true # To allow the container to access the host's 
+                     # X11 server and GPU for GUI applications.
+    
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+    # Overload the default command executed by the container
+    command: "ros2 launch bigfootbot_description view_robot.launch.py \
+              model:=/ros2_ws/install/bigfootbot_description/share/bigfootbot_description/urdf/bigfootbot_NEW.urdf.xacro \
+              use_robot_state_pub:=False \
+              use_joint_state_pub_gui:=False \
+              use_rviz:=True \
+              use_sim_time:=False"              
+    #command: bash -c "rviz2 && joint_state_publisher_gui"
+    #command: "bash"
+        
+    #network_mode: host
+
+    networks:
+      bfb_network:
+
+networks:
+  bfb_network:
+    external: true # Use an existing network called "bfb_network" (created using `docker network create bfb_network`)
+                   # instead of creating a new one for this project (docker-compose_rviz2.yml)

@@ -1,0 +1,36 @@
+# docker run -it --rm -p 1935:1935 --device=/dev/video0:/dev/video0 --name video-stream-container video-stream
+# docker build -t nginx_rtmp -f Dockerfile.rtmp .
+# docker build --no-cache -t nginx_rtmp -f Dockerfile.rtmp . - build without cache
+# docker run -d --rm -p 1935:1935 -p 80:80 --name nginx_rtmp_container nginx_rtmp - run in detached mode
+# docker run -it -e "TERM=xterm-256color" --rm -p 1935:1935 --name nginx_rtmp_container nginx_rtmp - run in interactive mode
+
+# Use Ubuntu as the base image
+#FROM ubuntu:latest
+
+# Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+FROM nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+
+# Avoid prompts from apt during installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install NGINX and the RTMP module
+RUN apt-get update && \
+    apt-get install -y nginx libnginx-mod-rtmp ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy rtmp.conf with RTMP module configuration
+COPY rtmp.conf /etc/nginx/rtmp.conf
+
+# Append the contents of rtmp.conf to the end of nginx.conf
+RUN cat /etc/nginx/rtmp.conf >> /etc/nginx/nginx.conf
+
+# Expose the RTMP port
+EXPOSE 1935
+
+# Use the NGINX command to start NGINX. "-g daemon off;" ensures NGINX stays in the foreground.
+# This is necessary when running NGINX within a Docker container because Docker expects the main process 
+# (NGINX in this case) to run in the foreground. If NGINX runs as a background daemon, Docker will think 
+# the container has stopped immediately after starting it.
+# -g means global directives (directives that can be set in the global context)
+CMD ["nginx", "-g", "daemon off;"]
+#CMD ["bash"]

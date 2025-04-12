@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Camera Feed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .video-container {
+            width: 100%;
+            margin: 20px 0;
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #000;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 10px;
+            text-align: center;
+            color: #666;
+        }
+        .error {
+            color: #f44336;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Robot Camera Feed</h1>
+        <div class="video-container">
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+        <div class="controls">
+            <button id="startBtn">Start Stream</button>
+            <button id="stopBtn" disabled>Stop Stream</button>
+        </div>
+        <div id="status" class="status">Disconnected</div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        // WebRTC configuration
+        const config = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ]
+        };
+        
+        // DOM elements
+        const remoteVideo = document.getElementById('remoteVideo');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+        const errorDiv = document.getElementById('error');
+        
+        // Global variables
+        let peerConnection;
+        let websocket;
+        
+        // Update status display
+        function updateStatus(message) {
+            statusDiv.textContent = message;
+        }
+        
+        // Show error message
+        function showError(message) {
+            errorDiv.textContent = message;
+        }
+        
+        // Clear error message
+        function clearError() {
+            errorDiv.textContent = '';
+        }
+        
+        // Initialize WebRTC connection
+        function startStream() {
+            clearError();
+            const serverAddress = prompt('Enter signaling server address:', 'localhost:8765');
+            if (!serverAddress) return;
+            
+            updateStatus('Connecting to signaling server...');
+            startBtn.disabled = true;
+            
+            // Create WebSocket connection
+            websocket = new WebSocket(`ws://${serverAddress}`);
+            
+            websocket.onopen = () => {
+                updateStatus('Connected to signaling server. Sending HELLO...');
+                // Send HELLO message to initiate the connection
+                websocket.send(JSON.stringify({ status: 'HELLO' }));
+            };
+            
+            websocket.onclose = () => {
+                updateStatus('Disconnected from signaling server');
+                stopStream();
+            };
+            
+            websocket.onerror = (error) => {
+                showError(`WebSocket error: ${error.message || 'Connection failed'}`);
+                updateStatus('Connection error');
+                stopStream();
+            };
+            
+            websocket.onmessage = handleSignalingMessage;
+            
+            // Create RTCPeerConnection
+            createPeerConnection();
+        }
+        
+        // Create peer connection
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(config);
+            
+            // Set up event handlers for the RTCPeerConnection
+            peerConnection.ontrack = (event) => {
+                if (event.streams && event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                    updateStatus('Streaming');
+                    stopBtn.disabled = false;
+                }
+            };
+            
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    // Send ICE candidate to the server
+                    websocket.send(JSON.stringify({
+                        ice: {
+                            candidate: event.candidate.candidate,
+                            sdpMLineIndex: event.candidate.sdpMLineIndex
+                        }
+                    }));
+                }
+            };
+            
+            peerConnection.oniceconnectionstatechange = () => {
+                updateStatus(`ICE state: ${peerConnection.iceConnectionState}`);
+                if (peerConnection.iceConnectionState === 'disconnected' || 
+                    peerConnection.iceConnectionState === 'failed' || 
+                    peerConnection.iceConnectionState === 'closed') {
+                    stopStream();
+                }
+            };
+        }
+        
+        // Handle signaling messages from the server
+        async function handleSignalingMessage(event) {
+            const message = JSON.parse(event.data);
+            
+            // Handle SDP offer
+            if (message.sdp && message.sdp.type === 'offer') {
+                try {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
+                    updateStatus('Received offer, creating answer...');
+                    
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    
+                    // Send the answer to the server
+                    websocket.send(JSON.stringify({
+                        sdp: {
+                            type: 'answer',
+                            sdp: peerConnection.localDescription.sdp
+                        }
+                    }));
+                    
+                    updateStatus('Answer sent, waiting for stream...');
+                } catch (error) {
+                    showError(`Error handling SDP offer: ${error.message}`);
+                }
+            }
+            
+            // Handle ICE candidate
+            else if (message.ice) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate({
+                        candidate: message.ice.candidate,
+                        sdpMLineIndex: message.ice.sdpMLineIndex
+                    }));
+                } catch (error) {
+                    showError(`Error adding ICE candidate: ${error.message}`);
+                }
+            }
+            
+            // Handle status message
+            else if (message.status === 'OK') {
+                updateStatus('Connection established with server, waiting for offer...');
+            }
+        }
+        
+        // Stop the WebRTC stream and clean up
+        function stopStream() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.close();
+            }
+            
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                remoteVideo.srcObject = null;
+            }
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('Disconnected');
+        }
+        
+        // Set up event listeners
+        startBtn.addEventListener('click', startStream);
+        stopBtn.addEventListener('click', stopStream);
+    </script>
+</body>
+</html> 

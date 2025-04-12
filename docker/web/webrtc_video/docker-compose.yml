@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  signaling:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpi
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    command: signaling
+    networks:
+      - webrtc-network
+
+  webclient:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpi
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    command: web
+    networks:
+      - webrtc-network
+    depends_on:
+      - signaling
+
+  sender:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpi
+    devices:
+      - /dev/video0:/dev/video0
+    privileged: true  # Needed for hardware access
+    restart: unless-stopped
+    # Pass the signaling server address, using the docker-compose service name
+    command: sender signaling 8765
+    networks:
+      - webrtc-network
+    depends_on:
+      - signaling
+    # For hardware acceleration (enable if needed)
+    # runtime: nvidia  # For NVIDIA accelerated devices
+    # Uncomment for direct X11 access if needed for display
+    # volumes:
+    #   - /tmp/.X11-unix:/tmp/.X11-unix
+    # environment:
+    #   - DISPLAY=${DISPLAY}
+
+networks:
+  webrtc-network:
+    driver: bridge 

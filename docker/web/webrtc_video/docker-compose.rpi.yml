@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  signaling:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpi.arm
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    command: signaling
+    networks:
+      - webrtc-network
+
+  webclient:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpi.arm
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    command: web
+    networks:
+      - webrtc-network
+    depends_on:
+      - signaling
+
+  sender:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpi.arm
+    devices:
+      # For USB webcam
+      - /dev/video0:/dev/video0
+      # For Raspberry Pi Camera Module (if using it)
+      - /dev/vchiq:/dev/vchiq
+      - /dev/vcsm:/dev/vcsm
+    privileged: true  # Needed for hardware access
+    restart: unless-stopped
+    # Pass the signaling server address, using the docker-compose service name
+    command: sender signaling 8765
+    networks:
+      - webrtc-network
+    volumes:
+      # Give access to device nodes for hardware acceleration
+      - /opt/vc:/opt/vc
+      - /dev:/dev
+    environment:
+      # Add paths for Raspberry Pi libraries
+      - LD_LIBRARY_PATH=/opt/vc/lib
+      - PATH=$PATH:/opt/vc/bin
+    depends_on:
+      - signaling
+
+networks:
+  webrtc-network:
+    driver: bridge 

@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     libboost-thread-dev \
     git \
     python3 \
+    python3-pip \
     libv4l-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -29,19 +30,15 @@ RUN apt-get update && apt-get install -y \
 # Create working directory
 WORKDIR /app
 
-# Copy source files
+# Copy source files and build script
 COPY src/ /app/src/
-COPY build_rpi.sh /app/
+COPY docker-build.sh /app/
 
 # Make build script executable
-RUN chmod +x /app/build_rpi.sh
+RUN chmod +x /app/docker-build.sh
 
-# Modify build script to skip dependency check (we've already installed everything)
-RUN sed -i 's/check_dependencies/#check_dependencies/' /app/build_rpi.sh
-# DO NOT remove the -mtune=cortex-a72 flag as it provides important optimizations for Raspberry Pi 4
-
-# Build the applications
-RUN ./build_rpi.sh
+# Build the applications using the Docker-specific build script
+RUN ./docker-build.sh
 
 # Create directory for client web files
 RUN mkdir -p /app/client

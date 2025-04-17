@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
+    libgstreamer-plugins-bad1.0-dev \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly \
@@ -24,6 +25,9 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     libv4l-dev \
+    sudo \
+    && echo "Verifying WebRTC headers installation:" \
+    && ls -la /usr/include/gstreamer-1.0/gst/webrtc/ || echo "Warning: WebRTC headers not found" \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -60,7 +64,9 @@ elif [ "$1" = "sender" ]; then\n\
   SERVER_ADDR=$2\n\
   SERVER_PORT=${3:-8765}\n\
   # List available video devices to help with debugging\n\
-  ls -la /dev/video*\n\
+  echo "Available video devices:"\n\
+  ls -la /dev/video* 2>/dev/null || echo "No video devices found"\n\
+  echo "Starting sender connecting to $SERVER_ADDR:$SERVER_PORT"\n\
   # Run the sender\n\
   exec /app/bin/send_rpi $SERVER_ADDR $SERVER_PORT\n\
 elif [ "$1" = "web" ]; then\n\

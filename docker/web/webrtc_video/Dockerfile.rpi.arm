@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
+    # Add specific WebRTC and SDP libraries
+    libgstreamer-webrtc-1.0-dev \
+    libgstreamer-sdp-1.0-dev \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly \
@@ -26,8 +29,10 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     libv4l-dev \
     sudo \
-    && echo "Verifying WebRTC headers installation:" \
+    && echo "Verifying WebRTC headers and libraries installation:" \
     && ls -la /usr/include/gstreamer-1.0/gst/webrtc/ || echo "Warning: WebRTC headers not found" \
+    && ls -la /usr/lib/*/libgstreamer-webrtc-1.0.so || echo "Warning: WebRTC library not found" \
+    && ls -la /usr/lib/*/libgstreamer-sdp-1.0.so || echo "Warning: SDP library not found" \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

@@ -8,7 +8,7 @@ mkdir -p bin
 
 # Compiler flags
 CFLAGS="-O2 -march=armv8-a -mtune=cortex-a72"
-LDFLAGS="-lpthread -lwebsocketpp -ljsoncpp -lboost_system -lboost_thread"
+LDFLAGS="-lpthread -ljsoncpp -lboost_system -lboost_thread"
 
 # GStreamer flags (hardcoded for Docker environment)
 GST_INCLUDE="-I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include"

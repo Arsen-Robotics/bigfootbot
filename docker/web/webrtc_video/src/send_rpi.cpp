@@ -251,13 +251,14 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
-        // Define pipeline configuration - using openh264enc which works reliably on Raspberry Pi
+        // Define pipeline configuration - optimized for Raspberry Pi with detailed encoder settings
         std::string pipeline_desc = 
             "webrtcbin name=sendrecv bundle-policy=max-bundle "
             "stun-server=stun://stun.l.google.com:19302 "
-            "v4l2src device=/dev/video0 ! image/jpeg,width=640,height=480,framerate=30/1 "
-            "! jpegdec ! videoconvert ! openh264enc bitrate=500 ! "
-            "h264parse ! rtph264pay config-interval=1 pt=96 ! "
+            "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=I420 ! "
+            "queue max-size-buffers=1 max-size-time=20000000 max-size-bytes=0 leaky=downstream ! "
+            "x264enc tune=zerolatency speed-preset=ultrafast rc-lookahead=0 bitrate=1000 "
+            "key-int-max=30 qp-min=18 qp-max=25 ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
             "application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.";
             
         LOG_INFO("Creating pipeline");

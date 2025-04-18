@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
-    # GStreamer plugins
     gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
@@ -45,7 +44,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && echo "Verifying pkg-config installation:" \
     && pkg-config --version \
     && echo "Verifying GStreamer installation:" \
-    && pkg-config --modversion gstreamer-1.0
+    && pkg-config --modversion gstreamer-1.0 \
+    # Locate the WebRTC library file if it exists
+    && echo "Checking for GStreamer WebRTC library file:" \
+    && find /usr/lib -name "libgstwebrtc*" || echo "WebRTC library not found in standard locations"
 
 # Copy source files and build script
 COPY src/ /app/src/

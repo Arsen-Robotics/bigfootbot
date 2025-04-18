@@ -20,15 +20,21 @@ if ! command -v pkg-config &> /dev/null; then
 fi
 
 # Compiler flags
-CFLAGS="-O2 -march=armv8-a -mtune=cortex-a72"
+CFLAGS="-O2 -march=armv8-a -mtune=cortex-a72 -DGST_USE_UNSTABLE_API"
 LDFLAGS="-lpthread -ljsoncpp -lboost_system -lboost_thread"
 
 # Get GStreamer flags via pkg-config - note that webrtc is part of plugins-bad, not a separate dev package
 GST_INCLUDE=$(pkg-config --cflags gstreamer-1.0 gstreamer-plugins-bad-1.0 gstreamer-sdp-1.0 2>/dev/null || \
   echo "-I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include")
 
+# Make sure we explicitly include the webrtc library in our link flags
 GST_LIBS=$(pkg-config --libs gstreamer-1.0 gstreamer-plugins-bad-1.0 gstreamer-sdp-1.0 2>/dev/null || \
   echo "-lgstreamer-1.0 -lgobject-2.0 -lglib-2.0")
+
+# Explicitly add gstwebrtc library
+if ! echo "$GST_LIBS" | grep -q "gstwebrtc-1.0"; then
+    GST_LIBS="$GST_LIBS -lgstwebrtc-1.0"
+fi
 
 echo "Using GStreamer Include flags: $GST_INCLUDE"
 echo "Using GStreamer Library flags: $GST_LIBS"

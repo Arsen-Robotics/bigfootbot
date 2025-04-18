@@ -251,20 +251,17 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
-        // Create GStreamer pipeline - absolute barebones version
-        GError* error = nullptr;
-        
-        // Define pipeline configuration - absolute barebones version
+        // Define pipeline configuration - using camera's MJPG format directly
         std::string pipeline_desc = 
-            "webrtcbin name=sendrecv bundle-policy=max-bundle "
-            "v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 "
-            "! videoconvert ! v4l2h264enc ! h264parse ! rtph264pay "
-            "! application/x-rtp,media=video,encoding-name=H264,payload=96 "
-            "! sendrecv.";
+            "v4l2src device=/dev/video0 ! image/jpeg,width=640,height=480,framerate=30/1 "
+            "! jpegdec ! videoconvert ! x264enc tune=zerolatency ! h264parse "
+            "! rtph264pay config-interval=1 ! webrtcbin name=sendrecv bundle-policy=max-bundle "
+            "stun-server=stun://stun.l.google.com:19302";
             
         LOG_INFO("Creating pipeline");
         
         // Parse the pipeline
+        GError* error = nullptr;
         pipeline = gst_parse_launch(pipeline_desc.c_str(), &error);
             
         if (error) {
@@ -278,19 +275,12 @@ public:
             return;
         }
 
-        // Get webrtcbin element
+        // Get webrtcbin element from the pipeline
         webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "sendrecv");
-
         if (!webrtcbin) {
-            LOG_ERROR("Could not get WebRTC element from pipeline");
+            LOG_ERROR("Could not find WebRTC element in the pipeline");
             return;
         }
-
-        // Set WebRTC properties
-        g_object_set(G_OBJECT(webrtcbin), 
-                    "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, 
-                    "stun-server", "stun://stun.l.google.com:19302", 
-                    nullptr);
 
         // Connect to signaling callbacks
         g_signal_connect(webrtcbin, "on-negotiation-needed", 

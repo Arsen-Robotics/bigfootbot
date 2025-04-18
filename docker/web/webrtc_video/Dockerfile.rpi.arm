@@ -7,7 +7,7 @@ ENV TZ=Etc/UTC
 # Create working directory
 WORKDIR /app
 
-# Install dependencies and verify installation in a single RUN command
+# Install dependencies - Note: WebRTC components are included in gstreamer1.0-plugins-bad
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools
     build-essential \
@@ -17,10 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
-    # WebRTC and SDP libraries
-    libgstreamer-webrtc-1.0-dev \
-    libgstreamer-sdp-1.0-dev \
     # GStreamer plugins
+    gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly \
@@ -46,10 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && g++ --version \
     && echo "Verifying pkg-config installation:" \
     && pkg-config --version \
-    && echo "Verifying WebRTC headers and libraries installation:" \
-    && ls -la /usr/include/gstreamer-1.0/gst/webrtc/ \
-    && ls -la /usr/lib/*/libgstreamer-webrtc-1.0.so \
-    && ls -la /usr/lib/*/libgstreamer-sdp-1.0.so \
+    && echo "Verifying GStreamer installation:" \
     && pkg-config --modversion gstreamer-1.0
 
 # Copy source files and build script

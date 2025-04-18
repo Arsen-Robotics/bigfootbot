@@ -251,14 +251,14 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
-        // Define pipeline configuration - simple and reliable approach for WebRTC
+        // Define pipeline configuration - using send.cpp pattern for WebRTC connections
         std::string pipeline_desc = 
-            "v4l2src device=/dev/video0 ! image/jpeg,width=640,height=480,framerate=30/1 "
-            "! jpegdec ! videoconvert ! queue ! x264enc tune=zerolatency bitrate=500 ! "
-            "h264parse ! rtph264pay config-interval=1 name=pay0 pt=96 ! "
-            "queue ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! "
             "webrtcbin name=sendrecv bundle-policy=max-bundle "
-            "stun-server=stun://stun.l.google.com:19302";
+            "stun-server=stun://stun.l.google.com:19302 "
+            "v4l2src device=/dev/video0 ! image/jpeg,width=640,height=480,framerate=30/1 "
+            "! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=500 ! "
+            "h264parse ! rtph264pay config-interval=1 pt=96 ! "
+            "application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.";
             
         LOG_INFO("Creating pipeline");
         

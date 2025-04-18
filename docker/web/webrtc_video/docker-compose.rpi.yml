@@ -1,4 +1,5 @@
-version: '3'
+# WebRTC Video Services for Raspberry Pi
+# Run with: docker compose -f docker-compose.rpi.yml up
 
 services:
   signaling:

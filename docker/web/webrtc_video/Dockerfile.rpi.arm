@@ -1,13 +1,13 @@
 FROM arm64v8/ubuntu:20.04
 
-# Set non-interactive installation and prevent apt from hanging on user prompts
+# Set non-interactive installation and timezone
 ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
+ENV TZ=Etc/UTC
 
-# Set working directory
+# Create working directory
 WORKDIR /app
 
-# Install package dependencies
+# Install dependencies and verify installation in a single RUN command
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools
     build-essential \
@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
+    # WebRTC and SDP libraries
     libgstreamer-webrtc-1.0-dev \
     libgstreamer-sdp-1.0-dev \
     # GStreamer plugins
@@ -32,45 +33,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Boost libraries
     libboost-system-dev \
     libboost-thread-dev \
-    # Video for Linux
-    libv4l-dev \
     # Additional tools
     git \
     python3 \
     python3-pip \
+    libv4l-dev \
     sudo \
-    && echo "Verifying WebRTC headers and libraries installation:" \
-    && ls -la /usr/include/gstreamer-1.0/gst/webrtc/ || echo "Warning: WebRTC headers not found" \
-    && ls -la /usr/lib/*/libgstreamer-webrtc-1.0.so || echo "Warning: WebRTC library not found" \
-    && ls -la /usr/lib/*/libgstreamer-sdp-1.0.so || echo "Warning: SDP library not found" \
-    && pkg-config --modversion gstreamer-1.0 || echo "Warning: pkg-config can't find GStreamer" \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # Verify installation
+    && echo "Verifying g++ installation:" \
+    && g++ --version \
+    && echo "Verifying pkg-config installation:" \
+    && pkg-config --version \
+    && echo "Verifying WebRTC headers and libraries installation:" \
+    && ls -la /usr/include/gstreamer-1.0/gst/webrtc/ \
+    && ls -la /usr/lib/*/libgstreamer-webrtc-1.0.so \
+    && ls -la /usr/lib/*/libgstreamer-sdp-1.0.so \
+    && pkg-config --modversion gstreamer-1.0
 
-# Verify critical packages are installed
-RUN g++ --version && \
-    echo "Checking for critical libraries:" && \
-    ls -la /usr/include/gstreamer-1.0/gst/webrtc/ && \
-    ls -la /usr/lib/*/libgstreamer-webrtc-1.0.so && \
-    ls -la /usr/lib/*/libgstreamer-sdp-1.0.so
-
-# Copy source files
+# Copy source files and build script
 COPY src/ /app/src/
 COPY docker-build.sh /app/
 
-# Make build script executable and run the build
-RUN chmod +x /app/docker-build.sh && \
-    ./docker-build.sh
+# Make build script executable and run build
+RUN chmod +x /app/docker-build.sh && ./docker-build.sh
 
-# Set up web client
+# Create directory for client web files
 RUN mkdir -p /app/client
 COPY client/ /app/client/
 
-# Create a simple script to serve web client files
-RUN echo '#!/bin/bash\ncd /app/client && python3 -m http.server 8080' > /app/serve_client.sh && \
-    chmod +x /app/serve_client.sh
+# Create a simple script to serve the client files
+RUN echo '#!/bin/bash\ncd /app/client && python3 -m http.server 8080' > /app/serve_client.sh \
+    && chmod +x /app/serve_client.sh
 
-# Create entrypoint script
+# Create an entrypoint script to handle different modes
 RUN echo '#!/bin/bash\n\
 if [ "$1" = "signaling" ]; then\n\
   exec /app/bin/signaling\n\
@@ -92,12 +89,12 @@ elif [ "$1" = "web" ]; then\n\
 else\n\
   echo "Usage: $0 {signaling|sender <server_address> [<server_port>]|web}"\n\
   exit 1\n\
-fi' > /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
+fi' > /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh
 
-# Set the entrypoint and default command
+# Set the entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["signaling"]
 
-# Expose ports for signaling and web server
+# Expose ports
 EXPOSE 8765 8080 

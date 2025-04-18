@@ -251,12 +251,12 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
-        // Define pipeline configuration - using send.cpp pattern for WebRTC connections
+        // Define pipeline configuration - using raw YUYV format directly for better efficiency
         std::string pipeline_desc = 
             "webrtcbin name=sendrecv bundle-policy=max-bundle "
             "stun-server=stun://stun.l.google.com:19302 "
-            "v4l2src device=/dev/video0 ! image/jpeg,width=640,height=480,framerate=30/1 "
-            "! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=500 ! "
+            "v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,format=YUYV,framerate=30/1 "
+            "! videoconvert ! x264enc tune=zerolatency bitrate=500 speed-preset=ultrafast ! "
             "h264parse ! rtph264pay config-interval=1 pt=96 ! "
             "application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.";
             

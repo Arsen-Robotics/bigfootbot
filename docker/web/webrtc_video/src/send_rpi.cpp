@@ -251,17 +251,16 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
-        // Create GStreamer pipeline - optimized for Raspberry Pi 4
+        // Create GStreamer pipeline - absolute barebones version
         GError* error = nullptr;
         
-        // Define pipeline configuration
+        // Define pipeline configuration - absolute barebones version
         std::string pipeline_desc = 
-            "webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 "
-            "stun-server=stun://stun.l.google.com:19302 "
+            "webrtcbin name=sendrecv bundle-policy=max-bundle "
             "v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 "
-            "! videoconvert ! v4l2h264enc tune=zerolatency ! h264parse ! "
-            "rtph264pay config-interval=1 name=payloader ! "
-            "application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.";
+            "! videoconvert ! v4l2h264enc ! h264parse ! rtph264pay "
+            "! application/x-rtp,media=video,encoding-name=H264,payload=96 "
+            "! sendrecv.";
             
         LOG_INFO("Creating pipeline");
         

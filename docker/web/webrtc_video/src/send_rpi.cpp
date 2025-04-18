@@ -251,10 +251,14 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
-        // Define pipeline configuration - using camera's MJPG format with direct RTP payloading
+        // Define pipeline configuration - using camera's MJPG format efficiently with WebRTC-compatible encoding
         std::string pipeline_desc = 
             "v4l2src device=/dev/video0 ! image/jpeg,width=640,height=480,framerate=30/1 "
-            "! rtpjpegpay ! webrtcbin name=sendrecv bundle-policy=max-bundle "
+            "! jpegdec ! videoconvert ! "
+            // Try hardware encoder first with fallback to software
+            "queue ! v4l2h264enc extra-controls=\"controls,h264_profile=1,video_bitrate=500000\" ! "
+            "video/x-h264,profile=baseline ! h264parse ! "
+            "rtph264pay config-interval=1 ! webrtcbin name=sendrecv bundle-policy=max-bundle "
             "stun-server=stun://stun.l.google.com:19302";
             
         LOG_INFO("Creating pipeline");

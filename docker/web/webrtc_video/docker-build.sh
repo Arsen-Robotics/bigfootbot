@@ -1,18 +1,43 @@
 #!/bin/bash
-
 # Build script for Raspberry Pi WebRTC components (Docker-specific version)
-# This version has hardcoded include and library paths to avoid pkg-config issues
+# Uses pkg-config to find GStreamer packages
+
+set -e  # Exit immediately if a command exits with non-zero status
 
 echo "Creating bin directory..."
 mkdir -p bin
 
+# Verify build tools are available
+if ! command -v g++ &> /dev/null; then
+    echo "g++ not found. Installing build-essential..."
+    apt-get update && apt-get install -y build-essential
+fi
+
+# Use pkg-config to find packages
+if ! command -v pkg-config &> /dev/null; then
+    echo "pkg-config not found. Installing..."
+    apt-get update && apt-get install -y pkg-config
+fi
+
 # Compiler flags
-CFLAGS="-O2 -march=armv8-a -mtune=cortex-a72"
+CFLAGS="-O2 -march=armv8-a -mtune=cortex-a72 -DGST_USE_UNSTABLE_API"
 LDFLAGS="-lpthread -ljsoncpp -lboost_system -lboost_thread"
 
-# GStreamer flags (hardcoded for Docker environment)
-GST_INCLUDE="-I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include"
-GST_LIBS="-lgstreamer-1.0 -lgobject-2.0 -lglib-2.0 -lgstreamer-webrtc-1.0 -lgstreamer-sdp-1.0"
+# Get GStreamer flags via pkg-config - note that webrtc is part of plugins-bad, not a separate dev package
+GST_INCLUDE=$(pkg-config --cflags gstreamer-1.0 gstreamer-plugins-bad-1.0 gstreamer-sdp-1.0 2>/dev/null || \
+  echo "-I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include")
+
+# Make sure we explicitly include the webrtc library in our link flags
+GST_LIBS=$(pkg-config --libs gstreamer-1.0 gstreamer-plugins-bad-1.0 gstreamer-sdp-1.0 2>/dev/null || \
+  echo "-lgstreamer-1.0 -lgobject-2.0 -lglib-2.0")
+
+# Explicitly add gstwebrtc library
+if ! echo "$GST_LIBS" | grep -q "gstwebrtc-1.0"; then
+    GST_LIBS="$GST_LIBS -lgstwebrtc-1.0"
+fi
+
+echo "Using GStreamer Include flags: $GST_INCLUDE"
+echo "Using GStreamer Library flags: $GST_LIBS"
 
 # Build signaling server
 echo "Building signaling server..."

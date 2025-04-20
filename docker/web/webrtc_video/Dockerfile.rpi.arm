@@ -1,53 +1,60 @@
 FROM arm64v8/ubuntu:20.04
 
-# Set non-interactive installation
+# Set non-interactive installation and timezone
 ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
+# Create working directory
+WORKDIR /app
+
+# Install dependencies - Note: WebRTC components are included in gstreamer1.0-plugins-bad
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build tools
     build-essential \
     cmake \
     pkg-config \
+    # GStreamer core
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     libgstreamer-plugins-bad1.0-dev \
-    # Add specific WebRTC and SDP libraries
-    libgstreamer-webrtc-1.0-dev \
-    libgstreamer-sdp-1.0-dev \
+    gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly \
     gstreamer1.0-libav \
     gstreamer1.0-tools \
     gstreamer1.0-alsa \
+    # WebSocket and JSON support
     libwebsocketpp-dev \
     libjsoncpp-dev \
+    # Boost libraries
     libboost-system-dev \
     libboost-thread-dev \
+    # Additional tools
     git \
     python3 \
     python3-pip \
     libv4l-dev \
     sudo \
-    && echo "Verifying WebRTC headers and libraries installation:" \
-    && ls -la /usr/include/gstreamer-1.0/gst/webrtc/ || echo "Warning: WebRTC headers not found" \
-    && ls -la /usr/lib/*/libgstreamer-webrtc-1.0.so || echo "Warning: WebRTC library not found" \
-    && ls -la /usr/lib/*/libgstreamer-sdp-1.0.so || echo "Warning: SDP library not found" \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create working directory
-WORKDIR /app
+    && rm -rf /var/lib/apt/lists/* \
+    # Verify installation
+    && echo "Verifying g++ installation:" \
+    && g++ --version \
+    && echo "Verifying pkg-config installation:" \
+    && pkg-config --version \
+    && echo "Verifying GStreamer installation:" \
+    && pkg-config --modversion gstreamer-1.0 \
+    # Locate the WebRTC library file if it exists
+    && echo "Checking for GStreamer WebRTC library file:" \
+    && find /usr/lib -name "libgstwebrtc*" || echo "WebRTC library not found in standard locations"
 
 # Copy source files and build script
 COPY src/ /app/src/
 COPY docker-build.sh /app/
 
-# Make build script executable
-RUN chmod +x /app/docker-build.sh
-
-# Build the applications using the Docker-specific build script
-RUN ./docker-build.sh
+# Make build script executable and run build
+RUN chmod +x /app/docker-build.sh && ./docker-build.sh
 
 # Create directory for client web files
 RUN mkdir -p /app/client

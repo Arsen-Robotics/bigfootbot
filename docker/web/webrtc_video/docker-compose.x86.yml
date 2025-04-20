@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  signaling:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86
+    ports:
+      - "0.0.0.0:8765:8765"
+    networks:
+      - webrtc-net
+    command: signaling
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86
+    ports:
+      - "0.0.0.0:8080:8080"
+    networks:
+      - webrtc-net
+    command: web
+    restart: unless-stopped
+    depends_on:
+      - signaling
+
+  sender:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86
+    devices:
+      - /dev/video0:/dev/video0
+    networks:
+      - webrtc-net
+    command: sender signaling 8765
+    restart: unless-stopped
+    depends_on:
+      - signaling
+    environment:
+      - GST_DEBUG=3  # Set GStreamer debug level (0-5)
+
+networks:
+  webrtc-net:
+    driver: bridge 

@@ -73,7 +73,7 @@
     <div class="container">
         <h1>Robot Camera Feed</h1>
         <div class="video-container">
-            <video id="remoteVideo" autoplay playsinline></video>
+            <video id="remoteVideo" autoplay playsinline muted></video>
         </div>
         <div class="controls">
             <button id="startBtn">Start Stream</button>
@@ -84,10 +84,20 @@
     </div>
 
     <script>
-        // WebRTC configuration
+        // Configure RTCPeerConnection
         const config = {
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' }
+                {urls: 'stun:stun.l.google.com:19302'},
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject', 
+                    credential: 'openrelayproject'
+                }
             ]
         };
         
@@ -99,8 +109,9 @@
         const errorDiv = document.getElementById('error');
         
         // Global variables
-        let peerConnection;
+        let peerConnection = null;
         let websocket;
+        let iceCandidatesQueue = [];
         
         // Update status display
         function updateStatus(message) {
@@ -156,15 +167,6 @@
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(config);
             
-            // Set up event handlers for the RTCPeerConnection
-            peerConnection.ontrack = (event) => {
-                if (event.streams && event.streams[0]) {
-                    remoteVideo.srcObject = event.streams[0];
-                    updateStatus('Streaming');
-                    stopBtn.disabled = false;
-                }
-            };
-            
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
                     // Send ICE candidate to the server
@@ -190,46 +192,136 @@
         // Handle signaling messages from the server
         async function handleSignalingMessage(event) {
             const message = JSON.parse(event.data);
+            console.log("Received message:", message);
             
-            // Handle SDP offer
-            if (message.sdp && message.sdp.type === 'offer') {
-                try {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
-                    updateStatus('Received offer, creating answer...');
-                    
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    
-                    // Send the answer to the server
-                    websocket.send(JSON.stringify({
-                        sdp: {
-                            type: 'answer',
-                            sdp: peerConnection.localDescription.sdp
+            if (message.status && (message.status === 'OK' || message.status === 'HELLO')) {
+                updateStatus('Waiting for stream...');
+                
+                // Initialize WebRTC if not already done
+                if (!peerConnection) {
+                    initializePeerConnection(websocket);
+                }
+            } else if (message.sdp && message.type === 'offer') {
+                console.log('Received SDP offer');
+                updateStatus('Received offer, setting remote description...');
+                
+                const sessionDescription = new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: message.sdp
+                });
+                
+                peerConnection.setRemoteDescription(sessionDescription)
+                    .then(() => {
+                        updateStatus('Creating answer...');
+                        return peerConnection.createAnswer();
+                    })
+                    .then(answer => {
+                        updateStatus('Setting local description...');
+                        return peerConnection.setLocalDescription(answer);
+                    })
+                    .then(() => {
+                        updateStatus('Sending answer...');
+                        websocket.send(JSON.stringify({
+                            sdp: peerConnection.localDescription.sdp,
+                            type: 'answer'
+                        }));
+                        
+                        // After setting remote description, process any queued ICE candidates
+                        console.log(`Processing ${iceCandidatesQueue.length} queued ICE candidates`);
+                        while (iceCandidatesQueue.length > 0) {
+                            const candidate = iceCandidatesQueue.shift();
+                            addIceCandidate(candidate);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error handling SDP offer:', error);
+                        updateStatus('Error: ' + error.message);
+                    });
+            } else if (message.ice) {
+                if (peerConnection.remoteDescription) {
+                    console.log('Adding ICE candidate directly');
+                    addIceCandidate(message.ice);
+                } else {
+                    console.log('Queueing ICE candidate until remote description is set');
+                    iceCandidatesQueue.push(message.ice);
+                }
+            }
+        }
+        
+        function addIceCandidate(ice) {
+            const candidate = new RTCIceCandidate({
+                candidate: ice.candidate,
+                sdpMLineIndex: ice.sdpMLineIndex,
+                sdpMid: ice.sdpMid
+            });
+            
+            peerConnection.addIceCandidate(candidate)
+                .catch(error => {
+                    console.error('Error adding ICE candidate:', error);
+                    updateStatus('Error adding ICE candidate: ' + error.message);
+                });
+        }
+        
+        function initializePeerConnection(signaling) {
+            // Configure ICE servers, including STUN server
+            const configuration = {
+                iceServers: [
+                    {urls: 'stun:stun.l.google.com:19302'}
+                ]
+            };
+            
+            // Create peer connection
+            peerConnection = new RTCPeerConnection(configuration);
+            
+            // Set up event handlers
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    console.log('Generated ICE candidate for remote peer');
+                    signaling.send(JSON.stringify({
+                        ice: {
+                            candidate: event.candidate.candidate,
+                            sdpMLineIndex: event.candidate.sdpMLineIndex,
+                            sdpMid: event.candidate.sdpMid
                         }
                     }));
+                }
+            };
+            
+            peerConnection.ontrack = event => {
+                console.log('Received remote stream', event.streams[0]);
+                const remoteVideo = document.getElementById('remoteVideo');
+                if (remoteVideo.srcObject !== event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
                     
-                    updateStatus('Answer sent, waiting for stream...');
-                } catch (error) {
-                    showError(`Error handling SDP offer: ${error.message}`);
+                    // Add event listeners to debug video playback issues
+                    remoteVideo.onloadedmetadata = () => {
+                        console.log('Video metadata loaded, resolution:', remoteVideo.videoWidth, 'x', remoteVideo.videoHeight);
+                        remoteVideo.play().catch(e => console.error('Error playing video:', e));
+                    };
+                    
+                    remoteVideo.onplaying = () => {
+                        console.log('Video playback started');
+                        updateStatus('Stream connected and playing!');
+                    };
+                    
+                    remoteVideo.onerror = (e) => {
+                        console.error('Video element error:', e);
+                    };
+                    
+                    updateStatus('Stream connected!');
                 }
-            }
+            };
             
-            // Handle ICE candidate
-            else if (message.ice) {
-                try {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate({
-                        candidate: message.ice.candidate,
-                        sdpMLineIndex: message.ice.sdpMLineIndex
-                    }));
-                } catch (error) {
-                    showError(`Error adding ICE candidate: ${error.message}`);
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log('ICE connection state: ' + peerConnection.iceConnectionState);
+                if (peerConnection.iceConnectionState === 'failed' || 
+                    peerConnection.iceConnectionState === 'disconnected' || 
+                    peerConnection.iceConnectionState === 'closed') {
+                    updateStatus('Connection lost. ICE state: ' + peerConnection.iceConnectionState);
                 }
-            }
+            };
             
-            // Handle status message
-            else if (message.status === 'OK') {
-                updateStatus('Connection established with server, waiting for offer...');
-            }
+            console.log('WebRTC peer connection initialized');
         }
         
         // Stop the WebRTC stream and clean up

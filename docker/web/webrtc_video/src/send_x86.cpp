@@ -367,11 +367,10 @@ public:
             "stun-server=stun://stun.l.google.com:19302 "
             "v4l2src device=" + m_device + " ! "
             "video/x-raw,width=" + std::to_string(m_width) + ",height=" + std::to_string(m_height) + ",framerate=" + std::to_string(m_framerate) + "/1 ! "
-            "videoconvert ! video/x-raw,format=I420 ! "
-            "x264enc tune=zerolatency key-int-max=30 bitrate=1000 speed-preset=ultrafast ! "
-            "h264parse config-interval=-1 ! "
-            "rtph264pay config-interval=1 pt=96 ! "
-            "application/x-rtp,media=video,encoding-name=H264,payload=96 ! "
+            "videoconvert ! "
+            "vp8enc deadline=1 target-bitrate=1000000 error-resilient=1 temporal-resampling=true keyframe-max-dist=30 auto-alt-ref=true cpu-used=0 ! "
+            "rtpvp8pay ! "
+            "application/x-rtp,media=video,encoding-name=VP8,payload=96 ! "
             "webrtc.";
         
         std::cout << "Creating pipeline: " << pipelineDesc << std::endl;

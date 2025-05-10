@@ -1,0 +1,60 @@
+# docker compose -f docker-compose.yml up --build
+# docker compose -f docker-compose.yml up
+
+version: '3'
+
+services:
+  # Signaling server handles WebSocket connections for signaling
+  signaling-server:
+    build:
+      context: .
+      dockerfile: signaling.Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1  # Show logs immediately
+      - LOG_LEVEL=INFO
+      # Allow external connections by binding to all interfaces
+      - HOST=0.0.0.0
+    network_mode: host
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+  
+  # WebRTC sender handles video streaming
+  webrtc-sender:
+    build:
+      context: .
+      dockerfile: webrtc_sender.Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1  # Show logs immediately
+      - LOG_LEVEL=INFO
+      - CAMERA_ID=0         # Camera device ID to use
+      - VIDEO_SOURCE=camera # Options: camera, test, colorbar
+      # Use localhost for internal communication
+      - SIGNALING_URL=ws://localhost:8765
+    # Improved camera access and networking
+    privileged: true
+    # Using host networking for better WebRTC connectivity 
+    network_mode: host
+    # Add access to video devices
+    devices:
+      - /dev/video0:/dev/video0
+    depends_on:
+      - signaling-server
+    restart: unless-stopped 
+
+  # HTTP server serves the web UI
+  http-server:
+    build:
+      context: .
+      dockerfile: http_server.Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1  # Show logs immediately
+      - LOG_LEVEL=INFO
+      - PORT=8080
+      # Allow external connections by binding to all interfaces
+      - HOST=0.0.0.0
+    # Using host networking for better WebRTC connectivity 
+    network_mode: host
+    restart: unless-stopped 
+    ports:
+      - "8080:8080"

@@ -1,3 +1,5 @@
+# docker compose -f docker-compose.x86.yml up
+
 version: '3'
 
 services:

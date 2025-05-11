@@ -1,0 +1,23 @@
+# docker compose -f docker-compose.yml up --build
+
+services:
+  signaling_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: robot_webrtc_signaling
+    ports:
+      - "8765:8765"
+    environment:
+      - NODE_ENV=production
+      - PORT=8765
+      # These are the default values, replace in production
+      - TURN_USERNAME=e7732b9290f5e64733c79636
+      - TURN_CREDENTIAL=873vUZ4RAg01OUqD
+    restart: unless-stopped
+    networks:
+      - robot_network
+
+networks:
+  robot_network:
+    driver: bridge 

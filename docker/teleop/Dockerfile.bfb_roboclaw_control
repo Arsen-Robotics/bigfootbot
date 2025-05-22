@@ -29,8 +29,8 @@ SHELL ["/bin/bash", "-c"]
 RUN mkdir -p ${ROS_WS}/src
 
 # -------- Build and install packages --------
-COPY motor_control ${ROS_WS}/src/motor_control
-COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
+COPY src/motor_control ${ROS_WS}/src/motor_control
+COPY src/bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
 # Install wget and pip
 RUN apt-get update \

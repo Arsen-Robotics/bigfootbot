@@ -33,8 +33,8 @@ RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/nul
     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
 
 # -------- Build and install packages --------
-COPY bfb_gps ${ROS_WS}/src/bfb_gps
-COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
+COPY src/bfb_gps ${ROS_WS}/src/bfb_gps
+COPY src/bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 RUN cd ${ROS_WS}/src \
     && git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
 

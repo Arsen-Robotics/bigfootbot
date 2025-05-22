@@ -29,8 +29,8 @@ SHELL ["/bin/bash", "-c"]
 RUN mkdir -p ${ROS_WS}/src
 
 # -------- Build and install packages --------
-COPY bfb_arduino_gateway ${ROS_WS}/src/bfb_arduino_gateway
-COPY bfb_interfaces ${ROS_WS}/src/bfb_interfaces
+COPY src/bfb_arduino_gateway ${ROS_WS}/src/bfb_arduino_gateway
+COPY src/bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
 # Install wget and pip
 RUN apt-get update \

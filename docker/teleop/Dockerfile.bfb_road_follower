@@ -34,7 +34,7 @@ RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/nul
 RUN apt-get update \
     && apt-get install -y wget python3-opencv ros-humble-image-transport* ros-humble-librealsense2* ros-humble-realsense2-* \
     && cd / \
-    && wget https://bootstrap.pypa.io/get-pip.py \
+    && wget https://bootstrap.pypa.io/pip/3.8/get-pip.py \
     && python3 get-pip.py \
     && rm get-pip.py
 

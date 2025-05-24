@@ -194,11 +194,16 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/video7 ! video/x-raw,width=640,height=480 \
-            ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 leaky=2 ! identity silent=false ! nvvidconv ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1,format=I420 \
-            ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 leaky=2 ! identity silent=false ! nvv4l2h264enc control-rate=1 bitrate=3000000 iframeinterval=15 preset-level=1 \
-            ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 leaky=2 ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 leaky=2 ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.", &error);
+            v4l2src device=/dev/video7 io-mode=4 ! \
+            video/x-raw,width=640,height=480,framerate=30/1 ! \
+            nvvidconv ! \
+            video/x-raw(memory:NVMM),format=NV12 ! \
+            queue ! \
+            nvv4l2h264enc bitrate=1000000 insert-sps-pps=true iframeinterval=30 control-rate=1 preset-level=1 profile=2 ! \
+            queue ! h264parse ! \
+            rtph264pay config-interval=1 pt=96 ! \
+            application/x-rtp,media=video,encoding-name=H264,payload=96 ! \
+            queue ! sendrecv.", &error);
 
             // v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             // ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \

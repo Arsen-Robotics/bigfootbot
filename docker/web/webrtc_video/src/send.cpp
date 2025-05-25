@@ -192,18 +192,19 @@ public:
     void setup_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
-        pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+        pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=50 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/video7 io-mode=4 ! \
-            video/x-raw,width=640,height=480,framerate=30/1 ! \
-            nvvidconv ! \
-            video/x-raw(memory:NVMM),format=NV12 ! \
-            queue ! \
-            nvv4l2h264enc bitrate=1000000 insert-sps-pps=true iframeinterval=30 control-rate=1 preset-level=1 profile=2 ! \
-            queue ! h264parse ! \
+            v4l2src device=/dev/video9 do-timestamp=true ! \
+            videorate max-rate=30 ! video/x-raw,width=640,height=480,framerate=30/1 ! \
+            queue max-size-buffers=300 max-size-bytes=0 max-size-time=0 ! \
+            nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
+            queue max-size-buffers=300 max-size-bytes=0 max-size-time=0 ! \
+            nvv4l2h264enc bitrate=2000000 preset-level=1 profile=4 insert-sps-pps=1 maxperf-enable=1 iframeinterval=30 ! \
+            h264parse ! \
             rtph264pay config-interval=1 pt=96 ! \
-            application/x-rtp,media=video,encoding-name=H264,payload=96 ! \
-            queue ! sendrecv.", &error);
+            queue max-size-buffers=300 max-size-bytes=0 max-size-time=0 ! \
+            identity sync=true ! \
+            sendrecv.", &error);
 
             // v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             // ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
@@ -234,8 +235,10 @@ public:
             return;
         }
 
+        gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
+
         // Set WebRTC properties
-        g_object_set(G_OBJECT(webrtcbin), "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", nullptr);
+        g_object_set(G_OBJECT(webrtcbin), "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", "sync", TRUE, nullptr);
 
         // Connect to signals
         g_signal_connect(webrtcbin, "on-negotiation-needed", G_CALLBACK(&WebRTCSend::on_negotiation_needed), this);

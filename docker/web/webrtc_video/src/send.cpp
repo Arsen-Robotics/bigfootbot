@@ -194,16 +194,19 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=50 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/video9 do-timestamp=true ! \
-            videorate max-rate=30 ! video/x-raw,width=640,height=480,framerate=30/1 ! \
-            queue max-size-buffers=300 max-size-bytes=0 max-size-time=0 ! \
-            nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
-            queue max-size-buffers=300 max-size-bytes=0 max-size-time=0 ! \
-            nvv4l2h264enc bitrate=2000000 preset-level=1 profile=4 insert-sps-pps=1 maxperf-enable=1 iframeinterval=30 ! \
-            h264parse ! \
-            rtph264pay config-interval=1 pt=96 ! \
-            queue max-size-buffers=300 max-size-bytes=0 max-size-time=0 ! \
-            identity sync=true ! \
+            videotestsrc pattern=ball flip=true ! \
+            video/x-raw,format=I420,width=848,height=480,framerate=30/1 ! \
+            nvvidconv ! \
+            video/x-raw(memory:NVMM),format=I420 ! \
+            nvv4l2h264enc bitrate=1000000 \
+            control-rate=variable_bitrate \
+            preset-level=UltraFastPreset \
+            profile=Baseline \
+            iframeinterval=10 \
+            insert-sps-pps=true \
+            maxperf-enable=true \
+            h264parse config-interval=1 ! \
+            rtph264pay config-interval=1 pt=96 mtu=1200 aggregate-mode=zero-latency ! \
             sendrecv.", &error);
 
             // v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \

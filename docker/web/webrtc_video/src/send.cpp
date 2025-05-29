@@ -192,23 +192,63 @@ public:
     void setup_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
-        pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=50 \
+        pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            videotestsrc pattern=ball flip=true ! \
-            video/x-raw,format=I420,width=848,height=480,framerate=30/1 ! \
-            nvvidconv ! \
-            video/x-raw(memory:NVMM),format=I420 ! \
-            nvv4l2h264enc bitrate=1000000 \
-            control-rate=variable_bitrate \
-            preset-level=UltraFastPreset \
-            profile=Baseline \
-            iframeinterval=10 \
-            insert-sps-pps=true \
-            maxperf-enable=true \
-            h264parse config-interval=1 ! \
-            rtph264pay config-interval=1 pt=96 mtu=1200 aggregate-mode=zero-latency ! \
-            sendrecv.", &error);
+            v4l2src device=/dev/video5 io-mode=4 \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv \
+            ! video/x-raw(memory:NVMM), format=NV12 \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! nvv4l2h264enc \
+                maxperf-enable=true \
+                bitrate=4000000 \
+                idrinterval=5 \
+                iframeinterval=5 \
+                insert-sps-pps=true \
+                insert-aud=true \
+                insert-vui=true \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! h264parse config-interval=1 \
+            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            ! sendrecv.", &error);
 
+            // compositor name=mix sink_0::xpos=0   sink_0::ypos=0 \
+            //     sink_1::xpos=640  sink_1::ypos=0 \
+            //     sink_2::xpos=1280 sink_2::ypos=0 \
+            // ! queue max-size-buffers=2 leaky=downstream \
+            // ! video/x-raw,width=1920,height=480,framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM), format=NV12 \
+            // ! queue max-size-buffers=2 leaky=downstream \
+            // ! nvv4l2h264enc \
+            //     maxperf-enable=true \
+            //     bitrate=4000000 \
+            //     idrinterval=5 \
+            //     iframeinterval=5 \
+            //     insert-sps-pps=true \
+            //     insert-aud=true \
+            //     insert-vui=true \
+            // ! queue max-size-buffers=2 leaky=downstream \
+            // ! h264parse config-interval=1 \
+            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            // ! sendrecv. \
+            // \
+            // v4l2src device=/dev/video20 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! queue \
+            // ! mix.sink_0 \
+            // \
+            // v4l2src device=/dev/video9 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! queue \
+            // ! mix.sink_1 \
+            // \
+            // v4l2src device=/dev/video7 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! queue \
+            // ! mix.sink_2
+            
             // v4l2src device=/dev/video7 io-mode=4 ! video/x-raw,width=640,height=480,framerate=30/1 \
             // ! nvvidconv ! video/x-raw(memory:NVMM),format=I420 \
             // ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 \
@@ -241,7 +281,7 @@ public:
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
         // Set WebRTC properties
-        g_object_set(G_OBJECT(webrtcbin), "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", "sync", TRUE, nullptr);
+        g_object_set(G_OBJECT(webrtcbin), "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", nullptr);
 
         // Connect to signals
         g_signal_connect(webrtcbin, "on-negotiation-needed", G_CALLBACK(&WebRTCSend::on_negotiation_needed), this);

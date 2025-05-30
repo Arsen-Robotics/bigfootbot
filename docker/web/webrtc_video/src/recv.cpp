@@ -364,47 +364,59 @@ public:
      * Sets up appropriate elements for handling decoded audio/video streams
      */
     static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCRecv* self) {
-        // Get the capabilities of the pad to determine stream type
         GstCaps* caps = gst_pad_get_current_caps(pad);
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
 
-        // Elements for converting and outputting the stream
         GstElement* conv = nullptr;
         GstElement* sink = nullptr;
+        GstElement* queue = nullptr;
 
-        // Set up appropriate elements based on stream type
         if (g_str_has_prefix(name, "video")) {
-            // For video streams, use videoconvert and autovideosink
+            // Create queue to help absorb jitter
+            queue = gst_element_factory_make("queue", nullptr);
+            g_object_set(queue,
+                "max-size-buffers", 20,
+                "max-size-time", 0,
+                "max-size-bytes", 0,
+                "leaky", 2, // downstream
+                NULL);
+
             conv = gst_element_factory_make("videoconvert", nullptr);
-            sink = gst_element_factory_make("autovideosink", nullptr);
+            sink = gst_element_factory_make("xvimagesink", nullptr);
+            g_object_set(sink, "sync", FALSE, NULL);
         } else if (g_str_has_prefix(name, "audio")) {
-            // For audio streams, use audioconvert and autoaudiosink
             conv = gst_element_factory_make("audioconvert", nullptr);
             sink = gst_element_factory_make("autoaudiosink", nullptr);
         }
 
-        // If both elements were created successfully
         if (conv && sink) {
-            // Add elements to pipeline and sync their states
-            gst_bin_add_many(GST_BIN(self->pipeline), conv, sink, nullptr);
+            if (queue) {
+                gst_bin_add_many(GST_BIN(self->pipeline), queue, conv, sink, nullptr);
+                gst_element_sync_state_with_parent(queue);
+            } else {
+                gst_bin_add_many(GST_BIN(self->pipeline), conv, sink, nullptr);
+            }
+
             gst_element_sync_state_with_parent(conv);
             gst_element_sync_state_with_parent(sink);
 
-            // Link decoded pad to converter input
-            GstPad* sinkpad = gst_element_get_static_pad(conv, "sink");
-            gst_pad_link(pad, sinkpad);
-            gst_object_unref(sinkpad);
+            if (queue) {
+                // Link: decodebin pad → queue → conv → sink
+                GstPad* sinkpad = gst_element_get_static_pad(queue, "sink");
+                gst_pad_link(pad, sinkpad);
+                gst_object_unref(sinkpad);
 
-            // Link converter output to sink input
-            GstPad* srcpad = gst_element_get_static_pad(conv, "src");
-            GstPad* sinkpad2 = gst_element_get_static_pad(sink, "sink");
-            gst_pad_link(srcpad, sinkpad2);
-            gst_object_unref(srcpad);
-            gst_object_unref(sinkpad2);
+                gst_element_link_many(queue, conv, sink, nullptr);
+            } else {
+                // Link: decodebin pad → conv → sink (no queue)
+                GstPad* sinkpad = gst_element_get_static_pad(conv, "sink");
+                gst_pad_link(pad, sinkpad);
+                gst_object_unref(sinkpad);
+
+                gst_element_link(conv, sink);
+            }
         }
-
-        // Clean up capabilities structure
         gst_caps_unref(caps);
     }
 

@@ -113,6 +113,10 @@ sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/docker/web/transitive_robotics/udev/99-
 # Reload rules
 sudo udevadm control --reload-rules && sudo udevadm trigger
 
+# Add display environment variable for Nvidia acceleration
+echo 'export DISPLAY=:0' >> ~/.bashrc
+echo 'xhost +local:root' >> ~/.bashrc
+
 # Notify user to setup Docker network
 echo "After reboot, follow instructions in the end of this file to setup Docker macvlan network."
 

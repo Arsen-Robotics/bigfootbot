@@ -194,58 +194,96 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            nvcompositor name=mix sync-import-streams=false \
-            sink_0::xpos=0   sink_0::ypos=0   sink_0::width=640  sink_0::height=480 \
-            sink_1::xpos=640 sink_1::ypos=0   sink_1::width=640  sink_1::height=480 \
-            sink_2::xpos=1280 sink_2::ypos=0  sink_2::width=640  sink_2::height=480 \
+            nvarguscamerasrc sensor-mode=4 \
             ! queue max-size-buffers=5 leaky=downstream \
-            ! video/x-raw(memory:NVMM), width=1920, height=480, framerate=30/1 \
+            ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
             ! nvvidconv \
-            ! video/x-raw(memory:NVMM), format=NV12 \
+            ! video/x-raw(memory:NVMM),format=NV12 \
             ! queue max-size-buffers=5 leaky=downstream \
-            ! nvv4l2h264enc maxperf-enable=true bitrate=4000000 idrinterval=5 iframeinterval=5 insert-sps-pps=true insert-aud=true insert-vui=true \
+            ! nvv4l2h264enc \
+                maxperf-enable=true \
+                bitrate=4000000 \
+                idrinterval=5 \
+                iframeinterval=5 \
+                insert-sps-pps=true \
+                insert-aud=true \
+                insert-vui=true \
             ! queue max-size-buffers=5 leaky=downstream \
             ! h264parse config-interval=1 \
             ! rtph264pay pt=96 mtu=1200 config-interval=1 \
             ! sendrecv. \
             \
-            nvarguscamerasrc sensor-mode=4 \
-            ! queue max-size-buffers=2 leaky=downstream \
-            ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
-            ! nvvidconv \
-            ! video/x-raw(memory:NVMM),format=NV12 \
-            ! mix.sink_0 \
-            \
-            v4l2src device=/dev/video9 io-mode=4 \
+            v4l2src device=/dev/video10 io-mode=4 \
+            ! queue max-size-buffers=5 leaky=downstream \
             ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv \
             ! video/x-raw(memory:NVMM),format=NV12 \
-            ! mix.sink_1 \
+            ! queue max-size-buffers=5 leaky=downstream \
+            ! nvv4l2h264enc \
+                maxperf-enable=true \
+                bitrate=4000000 \
+                idrinterval=5 \
+                iframeinterval=5 \
+                insert-sps-pps=true \
+                insert-aud=true \
+                insert-vui=true \
+            ! queue max-size-buffers=5 leaky=downstream \
+            ! h264parse config-interval=1 \
+            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            ! sendrecv. \
             \
             v4l2src device=/dev/video7 io-mode=4 \
+            ! queue max-size-buffers=5 leaky=downstream \
             ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv \
             ! video/x-raw(memory:NVMM),format=NV12 \
-            ! mix.sink_2", &error);
+            ! queue max-size-buffers=5 leaky=downstream \
+            ! nvv4l2h264enc \
+                maxperf-enable=true \
+                bitrate=4000000 \
+                idrinterval=5 \
+                iframeinterval=5 \
+                insert-sps-pps=true \
+                insert-aud=true \
+                insert-vui=true \
+            ! queue max-size-buffers=5 leaky=downstream \
+            ! h264parse config-interval=1 \
+            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            ! sendrecv.", &error);
 
+            // nvcompositor name=mix sync-import-streams=false \
+            // sink_0::xpos=0   sink_0::ypos=0   sink_0::width=640  sink_0::height=480 \
+            // sink_1::xpos=640 sink_1::ypos=0   sink_1::width=640  sink_1::height=480 \
+            // sink_2::xpos=1280 sink_2::ypos=0  sink_2::width=640  sink_2::height=480 \
+            // ! queue max-size-buffers=7 leaky=upstream \
+            // ! video/x-raw(memory:NVMM), width=1920, height=480, framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM), format=NV12 \
+            // ! queue max-size-buffers=7 leaky=upstream \
+            // ! nvv4l2h264enc maxperf-enable=true bitrate=4000000 idrinterval=5 iframeinterval=5 insert-sps-pps=true insert-aud=true insert-vui=true \
+            // ! queue max-size-buffers=7 leaky=upstream \
+            // ! h264parse config-interval=1 \
+            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            // ! sendrecv. \
+            // \
             // nvarguscamerasrc sensor-mode=4 \
-            // ! queue max-size-buffers=2 leaky=downstream \
+            // ! queue max-size-buffers=7 leaky=upstream \
             // ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
             // ! nvvidconv \
             // ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! queue max-size-buffers=2 leaky=downstream \
-            // ! nvv4l2h264enc \
-            //     maxperf-enable=true \
-            //     bitrate=4000000 \
-            //     idrinterval=5 \
-            //     iframeinterval=5 \
-            //     insert-sps-pps=true \
-            //     insert-aud=true \
-            //     insert-vui=true \
-            // ! queue max-size-buffers=2 leaky=downstream \
-            // ! h264parse config-interval=1 \
-            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            // ! sendrecv.", &error);
+            // ! mix.sink_0 \
+            // \
+            // v4l2src device=/dev/video9 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! mix.sink_1 \
+            // \
+            // v4l2src device=/dev/video7 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! mix.sink_2", &error);
 
         if (error) {
             std::cerr << "ERROR: Could not create GStreamer pipeline: " << error->message << std::endl;

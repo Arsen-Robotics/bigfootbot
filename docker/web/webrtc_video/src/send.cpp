@@ -195,61 +195,68 @@ public:
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
             nvarguscamerasrc sensor-mode=4 \
-            ! queue max-size-buffers=5 leaky=downstream \
             ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
+            ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
             ! nvvidconv \
             ! video/x-raw(memory:NVMM),format=NV12 \
-            ! queue max-size-buffers=5 leaky=downstream \
+            ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
             ! nvv4l2h264enc \
                 maxperf-enable=true \
-                bitrate=4000000 \
+                bitrate=2900000 \
                 idrinterval=5 \
                 iframeinterval=5 \
                 insert-sps-pps=true \
                 insert-aud=true \
                 insert-vui=true \
-            ! queue max-size-buffers=5 leaky=downstream \
-            ! h264parse config-interval=1 \
-            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            ! sendrecv. \
-            \
-            v4l2src device=/dev/video10 io-mode=4 \
-            ! queue max-size-buffers=5 leaky=downstream \
-            ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! nvvidconv \
-            ! video/x-raw(memory:NVMM),format=NV12 \
-            ! queue max-size-buffers=5 leaky=downstream \
-            ! nvv4l2h264enc \
-                maxperf-enable=true \
-                bitrate=4000000 \
-                idrinterval=5 \
-                iframeinterval=5 \
-                insert-sps-pps=true \
-                insert-aud=true \
-                insert-vui=true \
-            ! queue max-size-buffers=5 leaky=downstream \
-            ! h264parse config-interval=1 \
-            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            ! sendrecv. \
-            \
-            v4l2src device=/dev/video7 io-mode=4 \
-            ! queue max-size-buffers=5 leaky=downstream \
-            ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! nvvidconv \
-            ! video/x-raw(memory:NVMM),format=NV12 \
-            ! queue max-size-buffers=5 leaky=downstream \
-            ! nvv4l2h264enc \
-                maxperf-enable=true \
-                bitrate=4000000 \
-                idrinterval=5 \
-                iframeinterval=5 \
-                insert-sps-pps=true \
-                insert-aud=true \
-                insert-vui=true \
-            ! queue max-size-buffers=5 leaky=downstream \
+                control-rate=1 \
+                preset-level=1 \
+                ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
             ! h264parse config-interval=1 \
             ! rtph264pay pt=96 mtu=1200 config-interval=1 \
             ! sendrecv.", &error);
+
+            // \
+            // v4l2src device=/dev/video9 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
+            // ! nvv4l2h264enc \
+            //     maxperf-enable=true \
+            //     bitrate=2900000 \
+            //     idrinterval=5 \
+            //     iframeinterval=5 \
+            //     insert-sps-pps=true \
+            //     insert-aud=true \
+            //     insert-vui=true \
+            //     control-rate=1 \
+            //     preset-level=1 \
+            // ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
+            // ! h264parse config-interval=1 \
+            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            // ! sendrecv. \
+            // \
+            // v4l2src device=/dev/video7 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
+            // ! nvv4l2h264enc \
+            //     maxperf-enable=true \
+            //     bitrate=2900000 \
+            //     idrinterval=5 \
+            //     iframeinterval=5 \
+            //     insert-sps-pps=true \
+            //     insert-aud=true \
+            //     insert-vui=true \
+            //     control-rate=1 \
+            //     preset-level=1 \
+            // ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
+            // ! h264parse config-interval=1 \
+            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            // ! sendrecv.
 
             // nvcompositor name=mix sync-import-streams=false \
             // sink_0::xpos=0   sink_0::ypos=0   sink_0::width=640  sink_0::height=480 \

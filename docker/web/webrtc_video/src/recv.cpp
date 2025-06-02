@@ -401,7 +401,7 @@ public:
             sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,
-                "max-lateness", 0,  // Drop immediately if late
+                "max-lateness", 10000000,  // Drop immediately if late
                 NULL);
             
             // g_object_set(sink, "sync", FALSE, NULL);

@@ -366,7 +366,7 @@ public:
     static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCRecv* self) {
         GstClock* clock = gst_system_clock_obtain();
         gst_pipeline_use_clock(GST_PIPELINE(self->pipeline), clock);
-        g_object_set(self->pipeline, "latency", 1000000, NULL); // 1ms target latency
+        g_object_set(self->pipeline, "latency", 0, NULL); // 1ms target latency
 
         GstCaps* caps = gst_pad_get_current_caps(pad);
         const GstStructure* str = gst_caps_get_structure(caps, 0);
@@ -381,7 +381,7 @@ public:
             // Create queue to help absorb jitter
             queue1 = gst_element_factory_make("queue", nullptr);
             g_object_set(queue1,
-                "max-size-buffers", 15,
+                "max-size-buffers", 20,
                 "max-size-time", 0,
                 "max-size-bytes", 0,
                 "leaky", 2, // downstream
@@ -401,7 +401,7 @@ public:
             sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,
-                "max-lateness", 10000000,  // Drop immediately if late
+                "max-lateness", 100000000,  // Drop immediately if late
                 NULL);
             
             // g_object_set(sink, "sync", FALSE, NULL);

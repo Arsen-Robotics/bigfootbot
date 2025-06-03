@@ -1,0 +1,5 @@
+# Arducam (Microdia webcam) main video interface
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6366", ATTR{index}=="0", SYMLINK+="cam-arducam"
+
+# Aveo camera main video interface
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="1871", ATTRS{idProduct}=="0143", ATTR{index}=="0", SYMLINK+="cam-aveo"

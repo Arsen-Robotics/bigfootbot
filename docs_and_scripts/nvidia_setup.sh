@@ -118,6 +118,9 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 echo 'export DISPLAY=:0' >> ~/.bashrc
 echo 'xhost +local:root' >> ~/.bashrc
 
+# Change NVIDIA fan control profile to "cool"
+sudo sed -i.bak -E "s/^(.*FAN_DEFAULT_PROFILE[[:space:]]+)(quiet|cool)(.*)$/\1cool\3/" /etc/nvfancontrol.conf
+
 # Notify user to setup Docker network
 echo "After reboot, follow instructions in the end of this file to setup Docker macvlan network."
 

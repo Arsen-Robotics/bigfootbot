@@ -19,7 +19,7 @@ class EdgeDetectionNode(Node):
         # GStreamer pipeline for BGR output with reduced latency (sync=false to reduce buffering)
         self.gst_pipeline = (
             "appsrc is-live=true block=false format=GST_FORMAT_TIME ! "
-            "videoconvert ! video/x-raw,format=BGR,width=640,height=480 ! "
+            "nvvidconv ! video/x-raw,format=BGR,width=640,height=480 ! "
             "v4l2sink device=/dev/video21 sync=false"
         )
         self.out = cv2.VideoWriter(self.gst_pipeline, cv2.CAP_GSTREAMER, 0, 30, (640, 480))

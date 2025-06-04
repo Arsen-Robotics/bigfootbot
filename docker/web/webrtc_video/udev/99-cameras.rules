@@ -3,3 +3,6 @@ SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="0c45", ATTRS{
 
 # Aveo camera main video interface
 SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="1871", ATTRS{idProduct}=="0143", ATTR{index}=="0", SYMLINK+="cam-aveo"
+
+# Microdia camera main video interface
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6340", ATTR{index}=="0", SYMLINK+="cam-microdia"

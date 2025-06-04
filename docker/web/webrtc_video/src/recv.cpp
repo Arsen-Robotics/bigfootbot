@@ -381,7 +381,7 @@ public:
             // Create queue to help absorb jitter
             queue1 = gst_element_factory_make("queue", nullptr);
             g_object_set(queue1,
-                "max-size-buffers", 15, // yesterday was 20 when testing outside
+                "max-size-buffers", 20, // yesterday was 20 when testing outside
                 "max-size-time", 0,
                 "max-size-bytes", 0,
                 "leaky", 2, // downstream

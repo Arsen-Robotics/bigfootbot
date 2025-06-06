@@ -296,6 +296,7 @@ services:
       - QT_X11_NO_MITSHM=1
       - NVIDIA_DRIVER_CAPABILITIES=all
       - XDG_RUNTIME_DIR=/tmp/runtime-${USER}
+      - LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libGLdispatch.so.0
 
     deploy:
       resources:
@@ -362,7 +363,7 @@ services:
 
     #command: ros2 run
 
-    # ros2 run realsense2_camera realsense2_camera_node --ros-args -p rgb_camera.power_line_frequency:=0 -p rgb_camera.profile:=1280x720x30
+    # ros2 run realsense2_camera realsense2_camera_node --ros-args -p rgb_camera.power_line_frequency:=0 -p rgb_camera.profile:=640x480x30
     # ros2 run bfb_road_follower edge_detection_node
 
 networks:

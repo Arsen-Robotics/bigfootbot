@@ -296,7 +296,7 @@ services:
       - QT_X11_NO_MITSHM=1
       - NVIDIA_DRIVER_CAPABILITIES=all
       - XDG_RUNTIME_DIR=/tmp/runtime-${USER}
-      - LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libGLdispatch.so.0
+      - LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1:/usr/lib/aarch64-linux-gnu/libGLdispatch.so.0:$LD_PRELOAD
 
     deploy:
       resources:

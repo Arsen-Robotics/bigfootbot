@@ -18,9 +18,11 @@ class EdgeDetectionNode(Node):
 
         # GStreamer pipeline for BGR output with reduced latency (sync=false to reduce buffering)
         self.gst_pipeline = (
-            "appsrc is-live=true block=false format=GST_FORMAT_TIME ! "
-            "nvvidconv ! video/x-raw,format=BGR,width=640,height=480 ! "
-            "v4l2sink device=/dev/video21 sync=false"
+            "appsrc ! "
+            "video/x-raw, format=BGR, width=640, height=480, framerate=30/1 ! "
+            "videoconvert ! "
+            "video/x-raw, format=YUY2 ! "
+            "identity drop-allocation=1 ! v4l2sink device=/dev/video21 sync=false"
         )
         self.out = cv2.VideoWriter(self.gst_pipeline, cv2.CAP_GSTREAMER, 0, 30, (640, 480))
 
@@ -36,17 +38,49 @@ class EdgeDetectionNode(Node):
         blur = cv2.GaussianBlur(gray, (5, 5), 2)
         edges = cv2.Canny(blur, 100, 200)
 
-        # Region of interest (ROI): focus on the bottom half of the image where road edges typically appear
-        # height, width = edges.shape
-        # roi = edges[int(height / 2):height, 0:width]
+        # Crop to lower 2/3 of the image
+        height, width = edges.shape
+        roi_top = int(height * (1/3))  # top of ROI
+        edges_roi = edges[roi_top:, :]  # keep bottom 2/3
 
         # Detect lines using Hough Transform
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50, minLineLength=100, maxLineGap=40)
         line_image = np.zeros_like(rgb_image)
 
         if lines is not None:
+            left_lines  = []
+            right_lines = []
+
+            # 1) Filter by slope and bucket into left/right
             for x1, y1, x2, y2 in lines[:, 0]:
-                cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Draw all detected lines
+                # y1 += roi_top
+                # y2 += roi_top
+
+                dx = x2 - x1
+                dy = y2 - y1
+                if dx == 0:
+                    slope = float('inf')
+                else:
+                    slope = dy / dx
+
+                # only keep steep lines
+                if abs(slope) > 1.0:
+                    length = np.hypot(dx, dy)
+                    if slope < 0:
+                        left_lines.append(((x1, y1, x2, y2), length))
+                    else:
+                        right_lines.append(((x1, y1, x2, y2), length))
+
+            # 2) Pick the longest from each side
+            best_lines = []
+            if left_lines:
+                best_lines.append(max(left_lines,  key=lambda x: x[1])[0])
+            if right_lines:
+                best_lines.append(max(right_lines, key=lambda x: x[1])[0])
+
+            # 3) Draw exactly those
+            for (x1, y1, x2, y2) in best_lines:
+                cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
         # if lines is not None:
         #     for x1, y1, x2, y2 in lines[:, 0]:
@@ -70,7 +104,7 @@ class EdgeDetectionNode(Node):
         self.out.write(resized_image_640x480)
 
         # Publish both images to ROS (RViz and other subscribers)
-        self.pub_image_out.publish(self.bridge.cv2_to_imgmsg(overlayed_image, 'bgr8'))
+        #self.pub_image_out.publish(self.bridge.cv2_to_imgmsg(overlayed_image, 'bgr8'))
         #self.pub_lines.publish(self.bridge.cv2_to_imgmsg(roi, 'mono8'))
 
     def destroy_node(self):

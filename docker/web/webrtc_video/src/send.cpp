@@ -255,27 +255,6 @@ public:
             ! h264parse config-interval=1 \
             ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
             ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            ! sendrecv. \
-            \
-            v4l2src device=/dev/video21 \
-            ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! queue max-size-buffers=8 max-size-time=0 max-size-bytes=0 leaky=downstream \
-            ! nvvidconv \
-            ! video/x-raw(memory:NVMM),format=NV12 \
-            ! queue max-size-buffers=7 max-size-time=0 max-size-bytes=0 leaky=downstream \
-            ! nvv4l2h264enc \
-                maxperf-enable=true \
-                idrinterval=5 \
-                iframeinterval=5 \
-                insert-sps-pps=true \
-                insert-aud=true \
-                insert-vui=true \
-                preset-level=1 \
-                control-rate=0 \
-            ! queue max-size-buffers=7 max-size-time=0 max-size-bytes=0 leaky=downstream \
-            ! h264parse config-interval=1 \
-            ! queue max-size-buffers=5 max-size-time=0 max-size-bytes=0 leaky=downstream \
-            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
             ! sendrecv.", &error);
 
             // nvcompositor name=mix sync-import-streams=false \

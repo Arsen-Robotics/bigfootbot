@@ -27,6 +27,8 @@ class JoyToTwistNode(Node):
         self.declare_parameter("plow_down_button", 3)
         self.declare_parameter("offroad_drive_mode", 9)
         self.declare_parameter("normal_drive_mode", 8)
+        self.declare_parameter("trim_left", 14)
+        self.declare_parameter("trim_right", 15)
 
         self.declare_parameter("linear_axis", 2)
         self.declare_parameter("angular_axis", 0)
@@ -34,6 +36,7 @@ class JoyToTwistNode(Node):
 
         self.declare_parameter("linear_scale", 3.067)
         self.declare_parameter("angular_scale", 9.437)
+        self.declare_parameter("trim_increment", 0.05)
 
         self.declare_parameter("min_angular_scale", 0.4)
         self.declare_parameter("max_angular_scale", 0.7)
@@ -56,6 +59,8 @@ class JoyToTwistNode(Node):
         self.plow_up_button = self.get_parameter("plow_up_button").value
         self.plow_down_button = self.get_parameter("plow_down_button").value
         self.offroad_drive_mode = self.get_parameter("offroad_drive_mode").value
+        self.trim_left = self.get_parameter("trim_left").value
+        self.trim_right = self.get_parameter("trim_right").value
         
         self.normal_drive_mode = self.get_parameter("normal_drive_mode").value
         self.linear_axis = self.get_parameter("linear_axis").value
@@ -64,6 +69,7 @@ class JoyToTwistNode(Node):
         
         self.linear_scale = self.get_parameter("linear_scale").value
         self.angular_scale = self.get_parameter("angular_scale").value
+        self.trim_increment = self.get_parameter("trim_increment").value
 
         # Flags
         self.buzzer_enabled = 0
@@ -77,6 +83,9 @@ class JoyToTwistNode(Node):
         self.plow_moving_down = 0
         self.reverse_beeper_enabled = 0
         self.drive_mode = 0 # 0 is normal drive mode, 1 is offroad drive mode
+        self.trim_left_pressed = 0
+        self.trim_right_pressed = 0
+        self.trim_value = 0
 
         # Calculations for normal drive mode
         self.min_angular_scale = self.angular_scale * self.get_parameter("min_angular_scale").value
@@ -105,45 +114,49 @@ class JoyToTwistNode(Node):
     # It reads joy messages and converts them to Twist messages
     # and publishes them to the cmd_vel topic
     def command_callback(self, msg):
-        msg.axes[self.enable_axis] = 1
+        #msg.axes[self.enable_axis] = 1
         try:
-            if msg.axes[self.enable_axis] == 1: # Check if enable button is pressed
-                twist_msg = Twist()
+            #if msg.axes[self.enable_axis] == 1: # Check if enable button is pressed
+            twist_msg = Twist()
 
-                # Logitech quadrant provides values between -1 and +1,
-                # so it is required to scale them to the range of 0 to +1
-                # because this axis is used only for forward motion
-                #twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis] + 1) / 2
-                twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis])
+            # Logitech quadrant provides values between -1 and +1,
+            # so it is required to scale them to the range of 0 to +1
+            # because this axis is used only for forward motion
+            #twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis] + 1) / 2
+            twist_msg.linear.x = self.linear_scale * (msg.axes[self.linear_axis])
 
-                # If quadrant's most left axis is pushed all the way down (reverse button),
-                # reverse mode is activated and the most right axis is used to control the speed of the robot in reverse
-                # When driving backwards, angular axis should be flipped for realism
-                # if msg.buttons[self.reverse_button] == 1:
-                #     twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
-                #     msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
+            # If quadrant's most left axis is pushed all the way down (reverse button),
+            # reverse mode is activated and the most right axis is used to control the speed of the robot in reverse
+            # When driving backwards, angular axis should be flipped for realism
+            # if msg.buttons[self.reverse_button] == 1:
+            #     twist_msg.linear.x = -self.linear_scale * (msg.axes[self.reverse_axis] + 1) / 2
+            #     msg.axes[self.angular_axis] = -msg.axes[self.angular_axis]
 
-                if self.drive_mode == 0:
-                    # Absolute linear speed
-                    abs_linear_speed = abs(twist_msg.linear.x)
+            if self.drive_mode == 0:
+                # Absolute linear speed
+                abs_linear_speed = abs(twist_msg.linear.x)
 
-                    # Compute dynamic angular scale (inverse relationship with linear speed)
-                    dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
+                # Compute dynamic angular scale (inverse relationship with linear speed)
+                dynamic_angular_scale = self.angular_scale * (1 - abs_linear_speed / self.linear_scale)
 
-                    # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
-                    dynamic_angular_scale = max(dynamic_angular_scale, self.min_angular_scale)
-                    dynamic_angular_scale = min(dynamic_angular_scale, self.max_angular_scale)
+                # Ensure dynamic_angular_scale doesn't go below a minimum or above a maximum value
+                dynamic_angular_scale = max(dynamic_angular_scale, self.min_angular_scale)
+                dynamic_angular_scale = min(dynamic_angular_scale, self.max_angular_scale)
 
-                    # Apply the dynamic angular scale to the angular velocity
-                    twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
+                # Apply the dynamic angular scale to the angular velocity
+                twist_msg.angular.z = dynamic_angular_scale * msg.axes[self.angular_axis]
 
-                    # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
-                    # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+                # twist_msg.angular.z = self.angular_scale * (msg.axes[self.angular_axis] ** 3)
+                # twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-                elif self.drive_mode == 1:
-                    twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
+            elif self.drive_mode == 1:
+                twist_msg.angular.z = self.angular_scale * msg.axes[self.angular_axis]
 
-                self.twist_publisher.publish(twist_msg)
+            # Apply trim
+            if twist_msg.linear.x > 0:
+                twist_msg.angular.z += self.trim_value
+
+            self.twist_publisher.publish(twist_msg)
 
             # if msg.buttons[self.camera_reset_position_button] == 1: # Check if camera reset position button is pressed
             #     string_msg = String()
@@ -194,34 +207,34 @@ class JoyToTwistNode(Node):
             #     string_msg.data = "6" # Command for camera right
             #     self.arduino_command_publisher.publish(string_msg)
 
-            # # Buzzer
-            # if msg.buttons[self.buzzer_button] == 1 and self.buzzer_enabled == 0:
-            #     string_msg = String()
-            #     string_msg.data = "7" # Command to enable buzzer
-            #     self.arduino_command_publisher.publish(string_msg)
-            #     self.buzzer_enabled = 1
-            # elif msg.buttons[self.buzzer_button] == 0 and self.buzzer_enabled == 1:
-            #     string_msg = String()
-            #     string_msg.data = "8" # Command to disable buzzer
-            #     self.arduino_command_publisher.publish(string_msg)
-            #     self.buzzer_enabled = 0
+            # Buzzer
+            if msg.buttons[self.buzzer_button] == 1 and self.buzzer_enabled == 0:
+                string_msg = String()
+                string_msg.data = "7" # Command to enable buzzer
+                self.arduino_command_publisher.publish(string_msg)
+                self.buzzer_enabled = 1
+            elif msg.buttons[self.buzzer_button] == 0 and self.buzzer_enabled == 1:
+                string_msg = String()
+                string_msg.data = "8" # Command to disable buzzer
+                self.arduino_command_publisher.publish(string_msg)
+                self.buzzer_enabled = 0
 
-            # # Headlight
-            # if msg.buttons[self.headlight_button] == 1 and self.headlight_button_pressed == 0:
-            #     self.headlight_button_pressed = 1
-            #     if self.headlight_enabled == 0:
-            #         string_msg = String()
-            #         string_msg.data = "10"  # Command to enable light
-            #         self.arduino_command_publisher.publish(string_msg)
-            #         self.headlight_enabled = 1
-            #     else:
-            #         string_msg = String()
-            #         string_msg.data = "9"  # Command to disable light
-            #         self.arduino_command_publisher.publish(string_msg)
-            #         self.headlight_enabled = 0
+            # Headlight
+            if msg.buttons[self.headlight_button] == 1 and self.headlight_button_pressed == 0:
+                self.headlight_button_pressed = 1
+                if self.headlight_enabled == 0:
+                    string_msg = String()
+                    string_msg.data = "10"  # Command to enable light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.headlight_enabled = 1
+                else:
+                    string_msg = String()
+                    string_msg.data = "9"  # Command to disable light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.headlight_enabled = 0
 
-            # elif msg.buttons[self.headlight_button] == 0 and self.headlight_button_pressed == 1:
-            #     self.headlight_button_pressed = 0
+            elif msg.buttons[self.headlight_button] == 0 and self.headlight_button_pressed == 1:
+                self.headlight_button_pressed = 0
 
             # # # Snow plow
             # # if msg.buttons[self.plow_up_button] == 1 and self.plow_moving_up == 0:
@@ -246,22 +259,22 @@ class JoyToTwistNode(Node):
             # #     self.arduino_command_publisher.publish(string_msg)
             # #     self.plow_moving_down = 0
 
-            # # Beacon light
-            # if msg.buttons[self.beacon_light_button] == 1 and self.beacon_light_button_pressed == 0:
-            #     self.beacon_light_button_pressed = 1
-            #     if self.beacon_light_enabled == 0:
-            #         string_msg = String()
-            #         string_msg.data = "15"  # Command to enable beacon light
-            #         self.arduino_command_publisher.publish(string_msg)
-            #         self.beacon_light_enabled = 1
-            #     else:
-            #         string_msg = String()
-            #         string_msg.data = "16"  # Command to disable beacon light
-            #         self.arduino_command_publisher.publish(string_msg)
-            #         self.beacon_light_enabled = 0
+            # Beacon light
+            if msg.buttons[self.beacon_light_button] == 1 and self.beacon_light_button_pressed == 0:
+                self.beacon_light_button_pressed = 1
+                if self.beacon_light_enabled == 0:
+                    string_msg = String()
+                    string_msg.data = "15"  # Command to enable beacon light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.beacon_light_enabled = 1
+                else:
+                    string_msg = String()
+                    string_msg.data = "16"  # Command to disable beacon light
+                    self.arduino_command_publisher.publish(string_msg)
+                    self.beacon_light_enabled = 0
 
-            # elif msg.buttons[self.beacon_light_button] == 0 and self.beacon_light_button_pressed == 1:
-            #     self.beacon_light_button_pressed = 0
+            elif msg.buttons[self.beacon_light_button] == 0 and self.beacon_light_button_pressed == 1:
+                self.beacon_light_button_pressed = 0
 
             # # # When reversing, start beeping for people's awareness
             # # if msg.buttons[self.reverse_button] == 1:
@@ -293,6 +306,18 @@ class JoyToTwistNode(Node):
             #     twist_msg.angular.z = 0.0
 
             #     self.twist_publisher.publish(twist_msg)
+
+            # Trim
+            if msg.buttons[self.trim_left] == 1 and self.trim_left_pressed == 0:
+                self.trim_value += self.trim_increment
+                self.trim_left_pressed = 1
+            if msg.buttons[self.trim_right] == 1 and self.trim_right_pressed == 0:
+                self.trim_value -= self.trim_increment
+                self.trim_right_pressed = 1
+            if msg.buttons[self.trim_left] == 0 and self.trim_left_pressed == 1:
+                self.trim_left_pressed = 0
+            if msg.buttons[self.trim_right] == 0 and self.trim_right_pressed == 1:
+                self.trim_right_pressed = 0
             
         # If an exception occurs, print the exception to the console
         except Exception as e:

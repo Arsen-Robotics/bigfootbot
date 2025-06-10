@@ -11,3 +11,5 @@ gst-launch-1.0 nvarguscamerasrc sensor-mode=4 ! 'video/x-raw(memory:NVMM),width=
 
 # docker run --rm -it --gpus all --runtime=nvidia --privileged -v ./.transitive:/root/.transitive -v /run/udev:/run/udev --name transitive_robotics_cntr transitive_robotics:latest
 # sudo rmmod v4l2loopback
+
+# sudo modprobe v4l2loopback video_nr=20,21 card_label="OpenCV road detect","Depth" exclusive_caps=1,1

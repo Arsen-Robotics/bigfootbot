@@ -71,25 +71,25 @@ class WebRTCSend:
             stun-server=stun://stun.l.google.com:19302 \
             v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! nvv4l2h264enc bitrate=2300000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
             \
-            v4l2src device=/dev/cam-aveo ! video/x-raw,width=640,height=480,framerate=30/1 \
+            v4l2src device=/dev/cam-microdia ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-            ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            \
-            v4l2src device=/dev/video21 ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! nvv4l2h264enc bitrate=2300000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
             \
             nvarguscamerasrc sensor-mode=4 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            ! nvv4l2h264enc bitrate=1000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! nvv4l2h264enc bitrate=2300000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            \
+            v4l2src device=/dev/video21 ! video/x-raw,width=848,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            ! nvv4l2h264enc bitrate=2300000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.')
 

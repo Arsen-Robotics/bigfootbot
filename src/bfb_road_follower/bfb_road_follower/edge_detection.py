@@ -22,7 +22,7 @@ class EdgeDetectionNode(Node):
             "video/x-raw, format=BGR, width=640, height=480, framerate=30/1 ! "
             "videoconvert ! "
             "video/x-raw, format=YUY2 ! "
-            "identity drop-allocation=1 ! v4l2sink device=/dev/video21 sync=false"
+            "identity drop-allocation=1 ! v4l2sink device=/dev/video20 sync=false"
         )
         self.out = cv2.VideoWriter(self.gst_pipeline, cv2.CAP_GSTREAMER, 0, 30, (640, 480))
 

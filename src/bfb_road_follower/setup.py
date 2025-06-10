@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'edge_detection_node = bfb_road_follower.edge_detection:main',
+            'depth_node = bfb_road_follower.depth:main',
         ],
     },
 )

@@ -9,7 +9,11 @@ class DepthNode(Node):
     def __init__(self):
         super().__init__('depth_node')
         self.sub_depth = self.create_subscription(Image, '/depth/image_rect_raw', self.depth_callback, 10)
+        self.sub_color = self.create_subscription(Image, '/color/image_raw', self.color_callback, 10)
         self.bridge = CvBridge()
+
+        self.depth_img = None
+        self.color_img = None
 
         # GStreamer pipeline for depth output
         self.gst_pipeline = (
@@ -26,22 +30,27 @@ class DepthNode(Node):
             self.get_logger().error("Failed to open video pipeline.")
 
     def depth_callback(self, msg):
-        # Convert ROS Image to numpy array (depth image)
-        depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+        self.depth_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+        self.try_process()
 
-        valid_mask = (depth_image >= 0) & (depth_image <= 5000)
+    def color_callback(self, msg):
+        self.color_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        self.try_process()
 
-        # Normalize depth data to 0-255 (uint8)
-        depth_normalized = (depth_image / 5000) * 255.0
-        depth_normalized = depth_normalized.astype(np.uint8)
+    def try_process(self):
+        if self.depth_img is not None and self.color_img is not None:
+            # Process the depth image
+            depth_processed = cv2.applyColorMap(self.depth_img, cv2.COLORMAP_JET)
 
-        # Apply thermal colormap
-        depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+            # Combine depth and color images (for visualization)
+            combined = cv2.addWeighted(depth_processed, 0.5, self.color_img, 0.5, 0)
 
-        depth_colored[~valid_mask] = 0
+            # Write to GStreamer pipeline
+            self.out.write(combined)
 
-        if self.out.isOpened():
-            self.out.write(depth_colored)
+            # Reset images to avoid reprocessing
+            self.depth_img = None
+            self.color_img = None
 
 def main(args=None):
     rclpy.init(args=args)

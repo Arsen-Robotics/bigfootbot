@@ -328,6 +328,7 @@ services:
       - /usr/lib/aarch64-linux-gnu/tegra-egl:/usr/lib/aarch64-linux-gnu/tegra-egl
       - /lib/modules:/lib/modules
       - /tmp/argus_socket:/tmp/argus_socket
+      - /usr/local/cuda:/usr/local/cuda:ro
 
     devices:
       - /dev/nvhost-ctrl

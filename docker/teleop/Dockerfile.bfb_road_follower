@@ -45,10 +45,24 @@ RUN apt-get update \
     libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good libjsoncpp-dev \
     gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
     gstreamer1.0-qt5 gstreamer1.0-pulseaudio nlohmann-json3-dev libwebsocketpp-dev libboost-dev \
+    libopenblas-base libopenmpi-dev libomp-dev libjpeg-dev zlib1g-dev libpython3-dev libopenblas-dev \
+    libavcodec-dev libavformat-dev libswscale-dev \
     && cd / \
     && wget https://bootstrap.pypa.io/pip/3.8/get-pip.py \
     && python3 get-pip.py \
     && rm get-pip.py
+
+# Install PyTorch
+RUN wget https://developer.download.nvidia.cn/compute/redist/jp/v512/pytorch/torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl \
+    && pip3 install 'Cython<3' \
+    && pip3 install numpy torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl
+
+# Install TorchVision
+RUN git clone --branch v0.16.1 https://github.com/pytorch/vision torchvision \
+    && cd torchvision \
+    && export BUILD_VERSION=0.16.1 \
+    && python3 setup.py install --user
+    # && cd ../ \
 
 # Install dependencies for all packages in the workspace
 RUN apt-get update \

@@ -22,6 +22,8 @@ setup(
         'console_scripts': [
             'edge_detection_node = bfb_road_follower.edge_detection:main',
             'depth_node = bfb_road_follower.depth:main',
+            'segmentation_node = bfb_road_follower.segmentation:main',
+            'road_follower_node = bfb_road_follower.road_follower:main',
         ],
     },
 )

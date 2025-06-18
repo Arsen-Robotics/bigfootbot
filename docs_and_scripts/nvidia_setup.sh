@@ -122,7 +122,7 @@ echo 'xhost +local:root' >> ~/.bashrc
 sudo sed -i.bak -E "s/^(.*FAN_DEFAULT_PROFILE[[:space:]]+)(quiet|cool)(.*)$/\1cool\3/" /etc/nvfancontrol.conf
 
 # Notify user to setup Docker network
-echo "After reboot, follow instructions in the end of this file to setup Docker macvlan network."
+echo "After reboot, follow instructions in the end of this file."
 
 while true; do
     echo "Do you want to reboot now?"
@@ -151,7 +151,7 @@ while true; do
     esac
 done
 
-# --- Set up Docker network ---
+# ---------- 1. Set up Docker network -------------
 
 # NB! Replace eth0 with your interface. You can list interfaces with command "ip a"
 
@@ -168,3 +168,5 @@ done
 # sudo ip link set macnet-shim up
 
 # docker run --rm -d --net=macnet <IMAGE>
+
+# ---------- 2. Enable Jetson Clocks on boot in jtop -------------

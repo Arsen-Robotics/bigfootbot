@@ -96,6 +96,7 @@ sudo jq '. + {"data-root": "/mnt/nvme/docker"}' /etc/docker/daemon.json > temp.j
 sudo systemctl start docker
 
 # Configure NVIDIA Docker runtime
+sudo apt install nvidia-jetpack -y
 echo "Configuring NVIDIA Docker runtime"
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
@@ -120,6 +121,10 @@ echo 'xhost +local:root' >> ~/.bashrc
 
 # Change NVIDIA fan control profile to "cool"
 sudo sed -i.bak -E "s/^(.*FAN_DEFAULT_PROFILE[[:space:]]+)(quiet|cool)(.*)$/\1cool\3/" /etc/nvfancontrol.conf
+
+# Upgrade system packages
+echo "Upgrading system packages..."
+sudo apt update && sudo apt full-upgrade -y
 
 # Notify user to setup Docker network
 echo "After reboot, follow instructions in the end of this file."

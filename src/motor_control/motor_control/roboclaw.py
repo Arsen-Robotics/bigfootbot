@@ -44,6 +44,7 @@ class Roboclaw:
         :param value: Speed value (0-127).
         :return: True if successful, False otherwise.
         """
+        print("forward_m1")
         return self.send_drive_command(address, Cmd.M1_FORWARD, value)
 
     def backward_m1(self, address, value):
@@ -182,6 +183,7 @@ class Roboclaw:
         :param value: The speed value (0-127).
         :return: True if the command was acknowledged (0xFF), False otherwise.
         """
+        print("send_drive_command")
         try:
             start_time = time.time()
             self.ser.flushInput()  # Clear the input buffer
@@ -199,16 +201,18 @@ class Roboclaw:
             
             # Read the acknowledgment
             ack = self.ser.read(1)
+            print(ack)
             with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
                 if ack == b'\xFF':
                     # elapsed_time = time.time() - start_time
                     # log_file.write(f"True, time: {elapsed_time}\n")
-                    # print("Drive command acknowledged (0xFF).")
+                    print("Drive command acknowledged (0xFF).")
                     # log_file.write(f"OK\n")
                     return True
                 else:
                     # tries -= 1
                     # elapsed_time = time.time() - start_time
+                    print(f"Received byte: {ack}")
                     log_file.write(f"Received byte: {ack}; left tries: {tries}. Time: {elapsed_time}\n")
                     # logger.info(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
                     return False

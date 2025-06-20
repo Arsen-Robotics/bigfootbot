@@ -71,6 +71,8 @@ services:
 
     command: ros2 run motor_control roboclaw_control_node --ros-args --params-file ros2_ws/src/motor_control/config/params.yaml
 
+    # ros2 run twist_mux twist_mux --ros-args --params-file ros2_ws/src/motor_control/config/twist_mux.yaml -r cmd_vel_out:=cmd_vel
+
   bfb_joy_to_twist:
     build:
       context: ../..

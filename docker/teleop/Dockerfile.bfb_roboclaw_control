@@ -32,9 +32,6 @@ RUN mkdir -p ${ROS_WS}/src
 COPY src/motor_control ${ROS_WS}/src/motor_control
 COPY src/bfb_interfaces ${ROS_WS}/src/bfb_interfaces
 
-# 20.06.2025 fix
-RUN wget -O /usr/share/keyrings/ros2-latest-archive-keyring.gpg https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
-
 # Install wget and pip
 RUN apt-get update \
     && apt-get install -y wget unzip ros-humble-twist-mux \

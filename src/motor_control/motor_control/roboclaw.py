@@ -44,8 +44,7 @@ class Roboclaw:
         :param value: Speed value (0-127).
         :return: True if successful, False otherwise.
         """
-        print("forward_m1")
-        return self.send_drive_command(address, Cmd.M1_FORWARD, value)
+        return self.send_1bytes_drive_command(address, Cmd.M1_FORWARD, value)
 
     def backward_m1(self, address, value):
         """
@@ -55,7 +54,7 @@ class Roboclaw:
         :param value: Speed value (0-127).
         :return: True if successful, False otherwise.
         """
-        return self.send_drive_command(address, Cmd.M1_BACKWARD, value)
+        return self.send_1bytes_drive_command(address, Cmd.M1_BACKWARD, value)
 
     def forward_m2(self, address, value):
         """
@@ -65,7 +64,7 @@ class Roboclaw:
         :param value: Speed value (0-127).
         :return: True if successful, False otherwise.
         """
-        return self.send_drive_command(address, Cmd.M2_FORWARD, value)
+        return self.send_1bytes_drive_command(address, Cmd.M2_FORWARD, value)
 
     def backward_m2(self, address, value):
         """
@@ -75,7 +74,27 @@ class Roboclaw:
         :param value: Speed value (0-127).
         :return: True if successful, False otherwise.
         """
-        return self.send_drive_command(address, Cmd.M2_BACKWARD, value)
+        return self.send_1bytes_drive_command(address, Cmd.M2_BACKWARD, value)
+
+    def duty_m1(self, address, value):
+        """
+        Drive motor 1 forward/backward
+
+        :param address: The address of the RoboClaw controller.
+        :param value: Duty value -32768 to +32767 (eg. +-100% duty).
+        :return: True if successful, False otherwise.
+        """
+        return self.send_2bytes_drive_command(address, Cmd.M1_DUTY, value)
+
+    def duty_m2(self, address, value):
+        """
+        Drive motor 2 forward/backward
+
+        :param address: The address of the RoboClaw controller.
+        :param value: Duty value -32768 to +32767 (eg. +-100% duty).
+        :return: True if successful, False otherwise.
+        """
+        return self.send_2bytes_drive_command(address, Cmd.M2_DUTY, value)
 
     def read_version(self, address):
         """
@@ -173,9 +192,9 @@ class Roboclaw:
             # print(f"Error sending read command: {e}")
             return False
         
-    def send_drive_command(self, address, command, value):
+    def send_1bytes_drive_command(self, address, command, value):
         """
-        Sends a drive command to the RoboClaw controller.
+        Sends a drive command to the RoboClaw controller (1 byte).
         This includes the command for driving M1 or M2 forwards or backwards.
         
         :param address: The address of the RoboClaw controller.
@@ -183,7 +202,6 @@ class Roboclaw:
         :param value: The speed value (0-127).
         :return: True if the command was acknowledged (0xFF), False otherwise.
         """
-        print("send_drive_command")
         try:
             start_time = time.time()
             self.ser.flushInput()  # Clear the input buffer
@@ -201,23 +219,72 @@ class Roboclaw:
             
             # Read the acknowledgment
             ack = self.ser.read(1)
-            print(ack)
             with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
                 if ack == b'\xFF':
                     # elapsed_time = time.time() - start_time
                     # log_file.write(f"True, time: {elapsed_time}\n")
-                    print("Drive command acknowledged (0xFF).")
+                    #print("Drive command acknowledged (0xFF).")
                     # log_file.write(f"OK\n")
                     return True
                 else:
                     # tries -= 1
                     # elapsed_time = time.time() - start_time
-                    print(f"Received byte: {ack}")
                     log_file.write(f"Received byte: {ack}; left tries: {tries}. Time: {elapsed_time}\n")
                     # logger.info(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
                     return False
 
             # with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
+            #     elapsed_time = time.time() - start_time
+            #     log_file.write(f"Failed after multiple attempts, time: {elapsed_time}\n")        
+            # # print("Failed to send drive command after multiple attempts.")
+            # return False
+        
+        except Exception as e:
+            # print(f"Error sending drive command: {e}")
+            return False
+
+    def send_2bytes_drive_command(self, address, command, value):
+        """
+        Sends a drive command to the RoboClaw controller (2 bytes).
+        This includes the command for driving M1 or M2 forwards or backwards (duty cycle).
+        
+        :param address: The address of the RoboClaw controller.
+        :param command: The drive command (32 for M1 forward/backward, 33 for M2 forward/backward).
+        :param value: The speed value (-32768 to +32767).
+        :return: True if the command was acknowledged (0xFF), False otherwise.
+        """
+        try:
+            start_time = time.time()
+            self.ser.flushInput()  # Clear the input buffer
+
+            # Prepare the data to send
+            data = bytes([address, command]) + struct.pack('>h', value)
+            crc = self._crc16(data)  # Use the existing _crc16 method
+            crc_bytes = struct.pack('>H', crc)  # Convert CRC to 2-byte array
+            
+            # tries = self.tries
+            # while tries:
+            
+            # Send the data + CRC
+            self.ser.write(data + crc_bytes)
+            
+            # Read the acknowledgment
+            ack = self.ser.read(1)
+            with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
+                if ack == b'\xFF':
+                    # elapsed_time = time.time() - start_time
+                    # log_file.write(f"True, time: {elapsed_time}\n")
+                    #print("Drive command acknowledged (0xFF).")
+                    # log_file.write(f"OK\n")
+                    return True
+                else:
+                    # tries -= 1
+                    # elapsed_time = time.time() - start_time
+                    log_file.write(f"Received byte: {ack}; left tries: {tries}. Time: {elapsed_time}\n")
+                    # logger.info(f"Unexpected response: {ack}. Expected 0xFF. Remaining tries: {tries}")
+                    return False
+
+        # with open('/ros2_ws/src/motor_control/motor_control/log.txt', 'a') as log_file:
             #     elapsed_time = time.time() - start_time
             #     log_file.write(f"Failed after multiple attempts, time: {elapsed_time}\n")        
             # # print("Failed to send drive command after multiple attempts.")

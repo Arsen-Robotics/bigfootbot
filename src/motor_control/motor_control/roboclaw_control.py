@@ -25,7 +25,7 @@ class RoboclawControlNode(Node):
         self.declare_parameter("wheel_track", 0.65)
         self.declare_parameter("wheel_diameter", 0.33)
         self.declare_parameter("max_rpm", 177.5)
-        self.declare_parameter("max_motor_command", 126)
+        self.declare_parameter("max_motor_command", 32767)
         self.declare_parameter("turn_compensation_factor", 0.5)
 
         self.declare_parameter("comport", "/dev/ttyAMA0")
@@ -274,7 +274,7 @@ class RoboclawControlNode(Node):
             # self.get_logger().info(f"{self.rclaw.ser.in_waiting}")
 
             # Unpack the tuple returned by twist_to_motor_commands function into two variables
-            # left_motor_command and right_motor_command [-127, 127]
+            # left_motor_command and right_motor_command [-32767, 32767]
             left_motor_command, right_motor_command = self.twist_to_motor_commands(msg)
 
             if self.motor_overcurrent:
@@ -285,24 +285,27 @@ class RoboclawControlNode(Node):
             self.abs_last_m1_command = abs(left_motor_command)
             self.abs_last_m2_command = abs(right_motor_command)
 
-            # self.get_logger().info(f"Cmd: {left_motor_command} {right_motor_command}")
-
             # Send motor commands to Roboclaw
-            if left_motor_command < 0:
-                # self.rclaw.BackwardM1(self.address, abs(left_motor_command))
-                self.rclaw.backward_m1(self.address, abs(left_motor_command))
+            self.rclaw.duty_m1(self.address, left_motor_command)
+            self.rclaw.duty_m2(self.address, right_motor_command)
+            # Using duty (commands 32 and 33) instead of drive forward/backward (commands 0,1 and 4,5)
+            # because as of RoboClaw firmware update from 4.2.8 to 4.3.6 on 20.06.2025, drive forward/backward don't work anymore
 
-            if right_motor_command < 0:
-                # self.rclaw.BackwardM2(self.address, abs(right_motor_command))
-                self.rclaw.backward_m2(self.address, abs(right_motor_command))
+            # if left_motor_command < 0:
+            #     # self.rclaw.BackwardM1(self.address, abs(left_motor_command))
+            #     self.rclaw.backward_m1(self.address, abs(left_motor_command))
 
-            if left_motor_command >= 0:
-                # self.rclaw.ForwardM1(self.address, left_motor_command)
-                self.rclaw.forward_m1(self.address, left_motor_command)
+            # if right_motor_command < 0:
+            #     # self.rclaw.BackwardM2(self.address, abs(right_motor_command))
+            #     self.rclaw.backward_m2(self.address, abs(right_motor_command))
 
-            if right_motor_command >= 0:
-                # self.rclaw.ForwardM2(self.address, right_motor_command)
-                self.rclaw.forward_m2(self.address, right_motor_command)
+            # if left_motor_command >= 0:
+            #     # self.rclaw.ForwardM1(self.address, left_motor_command)
+            #     self.rclaw.forward_m1(self.address, left_motor_command)
+
+            # if right_motor_command >= 0:
+            #     # self.rclaw.ForwardM2(self.address, right_motor_command)
+            #     self.rclaw.forward_m2(self.address, right_motor_command)
 
         # Even though the connection is checked in the connect_to_roboclaw function,
         # the connection can be lost while program is communicating with Roboclaw,
@@ -369,11 +372,11 @@ class RoboclawControlNode(Node):
         left_motor_command = int(left_motor_speed_rpm / self.max_rpm * self.max_motor_command)
         right_motor_command = int(right_motor_speed_rpm / self.max_rpm * self.max_motor_command)
 
-        # If some of the commands are over 127 or under -127,
+        # If some of the commands are over 32767 or under -32767,
         # modify them to maintain the angular speed but reducing linear speed
         left_motor_command, right_motor_command = self.adjust_motor_commands(left_motor_command, right_motor_command)
             
-        # Ensure the motor commands are within the valid range (-127 to +127)
+        # Ensure the motor commands are within the valid range (-32767 to +32767)
         left_motor_command = max(min(left_motor_command, self.max_motor_command), -self.max_motor_command)
         right_motor_command = max(min(right_motor_command, self.max_motor_command), -self.max_motor_command)
 
@@ -385,7 +388,7 @@ class RoboclawControlNode(Node):
 
         return left_motor_command, right_motor_command
 
-    # If some of the commands are over 127 or under -127,
+    # If some of the commands are over 32767 or under -32767,
     # modify them to maintain the angular speed but reducing linear speed
     def adjust_motor_commands(self, left_motor_command, right_motor_command):
         if left_motor_command != right_motor_command:

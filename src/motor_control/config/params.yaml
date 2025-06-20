@@ -4,7 +4,7 @@ roboclaw_control_node:
     wheel_track: 0.65 # Distance between left and right wheel in meters
     wheel_diameter: 0.33 # Wheel diameter in meters
     max_rpm: 177.5
-    max_motor_command: 126
+    max_motor_command: 32767
     turn_compensation_factor: 0.5
 
     # Serial

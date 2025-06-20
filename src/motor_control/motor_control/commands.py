@@ -40,8 +40,8 @@ class Cmd:
     SET_MAXIMUM_LOGIC_VOLTAGE = 27  # Set maximum logic battery voltage
     SET_M1_PID = 28       # Set Motor 1 PID constants
     SET_M2_PID = 29       # Set Motor 2 PID constants
-    DRIVE_M1_WITH_SIGNED_DUTY = 32  # Drive Motor 1 with signed duty cycle
-    DRIVE_M2_WITH_SIGNED_DUTY = 33  # Drive Motor 2 with signed duty cycle
+    M1_DUTY = 32  # Drive Motor 1 with signed duty cycle
+    M2_DUTY = 33  # Drive Motor 2 with signed duty cycle
     DRIVE_M1_WITH_SIGNED_SPEED = 35  # Drive Motor 1 with signed speed
     DRIVE_M2_WITH_SIGNED_SPEED = 36  # Drive Motor 2 with signed speed
     DRIVE_M1_WITH_SIGNED_SPEED_ACCEL = 38  # Drive Motor 1 with signed speed and acceleration

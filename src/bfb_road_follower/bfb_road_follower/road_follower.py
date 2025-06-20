@@ -10,7 +10,7 @@ class RoadFollowerNode(Node):
     def __init__(self):
         super().__init__('road_follower_node')
         self.sub_image = self.create_subscription(Image, 'seg_image', self.image_callback, 10)
-        self.twist_pub = self.create_publisher(Twist, 'seg_vel', 10)
+        self.twist_pub = self.create_publisher(Twist, 'nav_vel', 10)
         self.bridge = CvBridge()
 
     def image_callback(self, msg):

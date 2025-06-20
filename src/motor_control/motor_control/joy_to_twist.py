@@ -98,10 +98,10 @@ class JoyToTwistNode(Node):
             self.command_callback,
             10)
 
-        # Create a publisher that will publish Twist messages to the cmd_vel topic
+        # Create a publisher that will publish Twist messages to the joy_vel topic
         self.twist_publisher = self.create_publisher(
             Twist,
-            'cmd_vel',
+            'joy_vel',
             10)
 
         # Create a publisher that will publish String messages to the arduino_gateway topic

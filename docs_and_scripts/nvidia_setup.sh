@@ -12,6 +12,15 @@ echo "Updating system and installing dependencies..."
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y git-all jq v4l-utils v4l2loopback-dkms
 
+# Create partition and format to ext4
+sudo wipefs --all /dev/nvme0n1
+sudo sgdisk --zap-all /dev/nvme0n1
+sudo parted -s /dev/nvme0n1 mklabel gpt
+sudo parted -s /dev/nvme0n1 mkpart primary ext4 0% 100%
+sleep 2
+sudo wipefs --all /dev/nvme0n1p1
+sudo mkfs.ext4 -F /dev/nvme0n1p1
+
 # Mount SSD
 echo "Mounting the SSD..."
 sudo mkdir /mnt/nvme
@@ -96,7 +105,6 @@ sudo jq '. + {"data-root": "/mnt/nvme/docker"}' /etc/docker/daemon.json > temp.j
 sudo systemctl start docker
 
 # Configure NVIDIA Docker runtime
-sudo apt install nvidia-jetpack -y
 echo "Configuring NVIDIA Docker runtime"
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker

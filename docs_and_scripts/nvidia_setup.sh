@@ -14,7 +14,7 @@ echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH' >> ~/.
 # Update and install dependencies
 echo "Updating system and installing dependencies..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git-all jq v4l-utils v4l2loopback-dkms nano python3-pip ca-certificates curl
+sudo apt install -y git-all jq v4l-utils v4l2loopback-dkms nano python3-pip
 
 # Install JTOP
 sudo -H pip3 install -U jetson-stats
@@ -67,30 +67,47 @@ echo "Storing Git credentials..."
 git config --global credential.helper store
 git push
 
-# Install Docker
-echo "Installing Docker..."
+# # Install Docker
+# echo "Installing Docker..."
 
-# Uninstall conflicting packages
-for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+# # Uninstall conflicting packages
+# for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+
+# # Add Docker's official GPG key:
+# sudo apt-get update
+# sudo apt-get install -y ca-certificates curl
+# sudo install -m 0755 -d /etc/apt/keyrings
+# sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+# sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# # Add the repository to Apt sources:
+# echo \
+# "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+# $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+# sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# sudo apt-get update
+
+# # Install Docker
+# sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# echo "Docker installed successfully!"
 
 # Add Docker's official GPG key:
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl
+sudo apt-get install ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 
 # Add the repository to Apt sources:
 echo \
-"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-$(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update
 
-# Install Docker
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-echo "Docker installed successfully!"
+# Install docker compose plugin
+sudo apt install docker-compose-plugin
 
 # Add the current user to the Docker group
 echo "Adding user to the Docker group..."
@@ -110,6 +127,9 @@ sudo systemctl start docker
 echo "Configuring NVIDIA Docker runtime"
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
+
+# Hold the pre-installed NVIDIA Docker packages to prevent overwrite by apt upgrade
+sudo apt-mark hold docker.io containerd docker-buildx-plugin docker-compose-plugin nvidia-container-toolkit nvidia-docker2
 
 # Udev rules
 echo "Installing necessary Udev rules..."

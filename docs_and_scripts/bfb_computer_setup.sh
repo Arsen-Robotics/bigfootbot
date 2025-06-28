@@ -19,12 +19,7 @@ mkdir -p ~/ros2_ws/src
 # Navigate to the workspace and clone the repository
 cd ~/ros2_ws/src
 echo "Cloning bigfootbot repository..."
-git clone https://github.com/arsenikalbin/bigfootbot.git
-
-# Change to the develop branch
-cd bigfootbot
-echo "Switching to the 'develop' branch..."
-git checkout develop
+git clone https://github.com/Arsen-Robotics/bigfootbot.git
 
 # Set Git username and email
 echo "Configuring Git user..."
@@ -120,9 +115,9 @@ sudo usermod -aG docker ${USER}
 echo "Installing necessary Udev rules..."
 
 # Copy udev rules
-sudo cp ~/ros2_ws/src/bigfootbot/motor_control/udev/99-roboclaw.rules /etc/udev/rules.d
-sudo cp ~/ros2_ws/src/bigfootbot/bfb_gps/udev/99-gps-module.rules /etc/udev/rules.d
-sudo cp ~/ros2_ws/src/bigfootbot/bfb_arduino_gateway/udev/99-arduino-mega.rules /etc/udev/rules.d
+sudo cp ~/ros2_ws/src/bigfootbot/src/motor_control/udev/99-roboclaw.rules /etc/udev/rules.d
+sudo cp ~/ros2_ws/src/bigfootbot/src/bfb_gps/udev/99-gps-module.rules /etc/udev/rules.d
+sudo cp ~/ros2_ws/src/bigfootbot/src/bfb_arduino_gateway/udev/99-arduino-mega.rules /etc/udev/rules.d
 # sudo cp ~/ros2_ws/src/bigfootbot/docker/web/transitive_robotics/udev/99-usb-cameras.rules /etc/udev/rules.d
 
 # Reload rules

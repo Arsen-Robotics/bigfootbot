@@ -7,10 +7,18 @@ if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
     exit 1
 fi
 
+# Add CUDA versions to .bashrc
+echo 'export PATH=/usr/local/cuda-11.4/bin:$PATH' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
+
 # Update and install dependencies
 echo "Updating system and installing dependencies..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git-all jq v4l-utils v4l2loopback-dkms
+sudo apt install -y git-all jq v4l-utils v4l2loopback-dkms nano python3-pip ca-certificates curl
+
+# Install JTOP
+sudo -H pip3 install -U jetson-stats
+sudo systemctl restart jtop.service
 
 # Create partition and format to ext4
 sudo wipefs --all /dev/nvme0n1
@@ -24,16 +32,15 @@ sudo mkfs.ext4 -F /dev/nvme0n1p1
 # Mount SSD
 echo "Mounting the SSD..."
 sudo mkdir /mnt/nvme
-sudo chmod 777 /mnt/nvme
 sudo mount /dev/nvme0n1p1 /mnt/nvme
+sudo chown -R bigfootbot:bigfootbot /mnt/nvme
 
 echo "Adding entry to FSTAB..."
 echo "/dev/nvme0n1p1  /mnt/nvme  ext4  defaults  0  2" | sudo tee -a /etc/fstab > /dev/null
 
 # Delete existing folders on the SSD to avoid conflicts
 echo "Deleting existing folders on the SSD..."
-sudo rm -rf /mnt/nvme/ros2_ws
-sudo rm -rf /mnt/nvme/docker
+sudo rm -rf /mnt/nvme/*
 
 # Create ROS2 workspace
 echo "Creating ROS2 workspace..."
@@ -42,7 +49,7 @@ mkdir -p /mnt/nvme/ros2_ws/src
 # Navigate to the workspace and clone the repository
 cd /mnt/nvme/ros2_ws/src
 echo "Cloning bigfootbot repository..."
-git clone https://github.com/arsenikalbin/bigfootbot.git
+git clone https://github.com/Arsen-Robotics/bigfootbot.git
 
 # Change to the develop branch
 cd bigfootbot
@@ -129,10 +136,6 @@ echo 'xhost +local:root' >> ~/.bashrc
 
 # Change NVIDIA fan control profile to "cool"
 sudo sed -i.bak -E "s/^(.*FAN_DEFAULT_PROFILE[[:space:]]+)(quiet|cool)(.*)$/\1cool\3/" /etc/nvfancontrol.conf
-
-# Upgrade system packages
-echo "Upgrading system packages..."
-sudo apt update && sudo apt full-upgrade -y
 
 # Notify user to setup Docker network
 echo "After reboot, follow instructions in the end of this file."

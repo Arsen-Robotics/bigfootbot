@@ -51,11 +51,6 @@ cd /mnt/nvme/ros2_ws/src
 echo "Cloning bigfootbot repository..."
 git clone https://github.com/Arsen-Robotics/bigfootbot.git
 
-# Change to the develop branch
-cd bigfootbot
-echo "Switching to the 'develop' branch..."
-git checkout develop
-
 # Set Git username and email
 echo "Configuring Git user..."
 

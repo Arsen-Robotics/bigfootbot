@@ -8,3 +8,8 @@ docker/husarnet-config
 
 *.log
 **/bin/
+
+# Any nested build, install, or log directories in subdirectories are ignored
+**/build/
+**/install/
+**/log/

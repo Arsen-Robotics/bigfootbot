@@ -115,9 +115,9 @@ sudo systemctl restart docker
 echo "Installing necessary Udev rules..."
 
 # Copy udev rules
-sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/motor_control/udev/99-roboclaw.rules /etc/udev/rules.d
-sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/bfb_gps/udev/99-gps-module.rules /etc/udev/rules.d
-sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/bfb_arduino_gateway/udev/99-arduino-mega.rules /etc/udev/rules.d
+sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/src/motor_control/udev/99-roboclaw.rules /etc/udev/rules.d
+sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/src/bfb_gps/udev/99-gps-module.rules /etc/udev/rules.d
+sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/src/bfb_arduino_gateway/udev/99-arduino-mega.rules /etc/udev/rules.d
 sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/docker/web/webrtc_video/udev/99-cameras.rules /etc/udev/rules.d
 # sudo cp /mnt/nvme/ros2_ws/src/bigfootbot/docker/web/transitive_robotics/udev/99-usb-cameras.rules /etc/udev/rules.d
 # sudo cp ~/ros2_ws/src/bigfootbot/docker/web/transitive_robotics/udev/99-usb-cameras.rules /etc/udev/rules.d
@@ -130,7 +130,10 @@ echo 'export DISPLAY=:0' >> ~/.bashrc
 echo 'xhost +local:root' >> ~/.bashrc
 
 # Change NVIDIA fan control profile to "cool"
+sudo systemctl stop nvfancontrol
 sudo sed -i.bak -E "s/^(.*FAN_DEFAULT_PROFILE[[:space:]]+)(quiet|cool)(.*)$/\1cool\3/" /etc/nvfancontrol.conf
+sudo rm /var/lib/nvfancontrol/status
+sudo systemctl start nvfancontrol
 
 # Notify user to setup Docker network
 echo "After reboot, follow instructions in the end of this file."

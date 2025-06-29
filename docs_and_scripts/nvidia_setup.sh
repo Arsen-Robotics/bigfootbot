@@ -128,9 +128,6 @@ echo "Configuring NVIDIA Docker runtime"
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 
-# Hold the pre-installed NVIDIA Docker packages to prevent overwrite by apt upgrade
-sudo apt-mark hold docker.io containerd docker-buildx-plugin docker-compose-plugin nvidia-container-toolkit nvidia-docker2
-
 # Udev rules
 echo "Installing necessary Udev rules..."
 
@@ -204,3 +201,5 @@ done
 # docker run --rm -d --net=macnet <IMAGE>
 
 # ---------- 2. Enable Jetson Clocks on boot in jtop -------------
+
+# ---------- 3. Optional: sudo apt update && sudo apt upgrade ----

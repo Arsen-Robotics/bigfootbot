@@ -10,8 +10,7 @@ services:
           #- BASE_IMAGE=ros:humble-ros-base
           
           # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
-          #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
-          - BASE_IMAGE=nvcr.io/nvidia/l4t-jetpack:r35.4.1
+          - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
       
       # The name of the Docker image to be created from the Dockerfile
       image: bfb_webrtc:latest
@@ -26,8 +25,8 @@ services:
         - QT_X11_NO_MITSHM=1
         - NVIDIA_DRIVER_CAPABILITIES=all
         - XDG_RUNTIME_DIR=/tmp/runtime-${USER}
-        # - LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/tegra:/usr/lib/aarch64-linux-gnu/tegra-egl:$LD_LIBRARY_PATH
-        # - GST_PLUGIN_PATH=/usr/lib/aarch64-linux-gnu/gstreamer-1.0
+        - LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/tegra:/usr/lib/aarch64-linux-gnu/tegra-egl:$LD_LIBRARY_PATH
+        - GST_PLUGIN_PATH=/usr/lib/aarch64-linux-gnu/gstreamer-1.0
 
       deploy:
         resources:
@@ -58,8 +57,8 @@ services:
         - /usr/lib/aarch64-linux-gnu/tegra-egl:/usr/lib/aarch64-linux-gnu/tegra-egl
         - /lib/modules:/lib/modules
         - /tmp/argus_socket:/tmp/argus_socket
-        #- /usr/local/cuda:/usr/local/cuda:ro
-        #- /opt/nvidia:/opt/nvidia
+        - /usr/local/cuda:/usr/local/cuda:ro
+        - /opt/nvidia:/opt/nvidia
 
       devices:
         - /dev/nvhost-ctrl

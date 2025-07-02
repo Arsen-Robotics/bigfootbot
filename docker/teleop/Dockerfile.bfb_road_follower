@@ -35,54 +35,62 @@ COPY src/bfb_road_follower ${ROS_WS}/src/bfb_road_follower
 #     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
 
 # 06.06.2025 fix
-RUN curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor --batch --yes -o /usr/share/keyrings/kitware-archive-keyring.gpg \
-    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' > /etc/apt/sources.list.d/kitware.list \
-    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | gpg --dearmor --batch --yes -o /usr/share/keyrings/ros-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu focal main" > /etc/apt/sources.list.d/ros2-testing.list
+# RUN curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor --batch --yes -o /usr/share/keyrings/kitware-archive-keyring.gpg \
+#     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' > /etc/apt/sources.list.d/kitware.list \
+#     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | gpg --dearmor --batch --yes -o /usr/share/keyrings/ros-archive-keyring.gpg \
+#     && echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu focal main" > /etc/apt/sources.list.d/ros2-testing.list
+
+# 02.07.2025 fix
+# RUN apt-key del F42ED6FBAB17C654 \
+#     && curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | \
+#     gpg --yes --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
+#     && sed -i '/isaac-ros/d' /etc/apt/sources.list \
+#     && curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | \
+#     gpg --yes --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg
 
 # Install dependencies
-RUN apt-get update \
-    && apt-get install -y wget python3-opencv ros-humble-image-transport* ros-humble-librealsense2* ros-humble-realsense2-* \
-    gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-    gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev libsoup2.4-dev libjson-glib-dev \
-    libnice-dev autoconf libtool gtk-doc-tools libglib2.0-dev gstreamer1.0-nice libssl-dev \
-    libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good libjsoncpp-dev \
-    gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
-    gstreamer1.0-qt5 gstreamer1.0-pulseaudio nlohmann-json3-dev libwebsocketpp-dev libboost-dev \
-    libopenblas-base libopenmpi-dev libomp-dev libjpeg-dev zlib1g-dev libpython3-dev libopenblas-dev \
-    libavcodec-dev libavformat-dev libswscale-dev \
-    && cd / \
-    && wget https://bootstrap.pypa.io/pip/3.8/get-pip.py \
-    && python3 get-pip.py \
-    && rm get-pip.py
+# RUN apt-get update \
+#     && apt-get install -y wget python3-opencv ros-humble-image-transport* ros-humble-librealsense2* ros-humble-realsense2-* \
+#     gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+#     gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev libsoup2.4-dev libjson-glib-dev \
+#     libnice-dev autoconf libtool gtk-doc-tools libglib2.0-dev gstreamer1.0-nice libssl-dev \
+#     libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good libjsoncpp-dev \
+#     gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
+#     gstreamer1.0-qt5 gstreamer1.0-pulseaudio nlohmann-json3-dev libwebsocketpp-dev libboost-dev \
+#     libopenblas-base libopenmpi-dev libomp-dev libjpeg-dev zlib1g-dev libpython3-dev libopenblas-dev \
+#     libavcodec-dev libavformat-dev libswscale-dev \
+#     && cd / \
+#     && wget https://bootstrap.pypa.io/pip/3.8/get-pip.py \
+#     && python3 get-pip.py \
+#     && rm get-pip.py
 
-# Install PyTorch
-RUN wget https://developer.download.nvidia.cn/compute/redist/jp/v512/pytorch/torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl \
-    && pip3 install 'Cython<3' \
-    && pip install 'numpy>=1.19.5,<1.27.0' torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl
+# # Install PyTorch
+# RUN wget https://developer.download.nvidia.cn/compute/redist/jp/v512/pytorch/torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl \
+#     && pip3 install 'Cython<3' \
+#     && pip install 'numpy>=1.19.5,<1.27.0' torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl
 
-# Install TorchVision
-COPY docker/teleop/torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl ./torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
-RUN pip3 install torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
+# # Install TorchVision
+# COPY docker/teleop/torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl ./torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
+# RUN pip3 install torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
 
-# Install transformers
-RUN pip3 install transformers
+# # Install transformers
+# RUN pip3 install transformers
 
 # Install dependencies for all packages in the workspace
-RUN apt-get update \
-    && cd ${ROS_WS} \
-    && source /opt/ros/${ROS_DISTRO}/setup.bash \
-    && rosdep update \
-    && rosdep install -y \
-      --ignore-src \
-      --from-path src \ 
-      --rosdistro ${ROS_DISTRO} \
-    # with --symlink-install you don't have to rebuild the package 
-    # when Python source file is changed
-    # NB! package needs to be rebuilt if a new file is added to the package
-    && colcon build --symlink-install \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+# RUN apt-get update \
+#     && cd ${ROS_WS} \
+#     && source /opt/ros/${ROS_DISTRO}/setup.bash \
+#     && rosdep update \
+#     && rosdep install -y \
+#       --ignore-src \
+#       --from-path src \ 
+#       --rosdistro ${ROS_DISTRO} \
+#     # with --symlink-install you don't have to rebuild the package 
+#     # when Python source file is changed
+#     # NB! package needs to be rebuilt if a new file is added to the package
+#     && colcon build --symlink-install \
+#     && rm -rf /var/lib/apt/lists/* \
+#     && apt-get clean
 
 # Setup entrypoint
 COPY docker/ros_entrypoint.sh /

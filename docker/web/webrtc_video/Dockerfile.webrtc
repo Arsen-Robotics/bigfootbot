@@ -34,6 +34,14 @@ COPY docker/web/webrtc_video/build.sh webrtc_video/
 #     && echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu focal main" > /etc/apt/sources.list.d/ros2-testing.list
 # Fix above is needed for Nvidia ROS base image only
 
+# 02.07.2025 fix
+RUN apt-key del F42ED6FBAB17C654 \
+    && rm -f /usr/share/keyrings/ros-archive-keyring.gpg \
+    && curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && sed -i '/isaac-ros/d' /etc/apt/sources.list \
+    && curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | \
+    gpg --yes --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg
+
 # Install dependencies
 RUN apt-get update \
     && apt install -y gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \

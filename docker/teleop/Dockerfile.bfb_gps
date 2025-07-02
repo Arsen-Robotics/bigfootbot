@@ -33,10 +33,18 @@ RUN mkdir -p ${ROS_WS}/src
 #     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
 
 # 06.06.2025 fix
-RUN curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor --batch --yes -o /usr/share/keyrings/kitware-archive-keyring.gpg \
-    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' > /etc/apt/sources.list.d/kitware.list \
-    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | gpg --dearmor --batch --yes -o /usr/share/keyrings/ros-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu focal main" > /etc/apt/sources.list.d/ros2-testing.list
+# RUN curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor --batch --yes -o /usr/share/keyrings/kitware-archive-keyring.gpg \
+#     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' > /etc/apt/sources.list.d/kitware.list \
+#     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | gpg --dearmor --batch --yes -o /usr/share/keyrings/ros-archive-keyring.gpg \
+#     && echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu focal main" > /etc/apt/sources.list.d/ros2-testing.list
+
+# 02.07.2025 fix
+RUN apt-key del F42ED6FBAB17C654 \
+    && rm -f /usr/share/keyrings/ros-archive-keyring.gpg \
+    && curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && sed -i '/isaac-ros/d' /etc/apt/sources.list \
+    && curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | \
+    gpg --yes --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg
 
 # -------- Build and install packages --------
 COPY src/bfb_gps ${ROS_WS}/src/bfb_gps

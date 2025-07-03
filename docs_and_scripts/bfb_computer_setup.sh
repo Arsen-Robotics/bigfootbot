@@ -23,6 +23,7 @@ git clone https://github.com/Arsen-Robotics/bigfootbot.git
 
 # Set Git username and email
 echo "Configuring Git user..."
+cd /mnt/nvme/ros2_ws/src/bigfootbot
 
 # Ask for the Git username
 read -p "Enter your Git username: " git_username

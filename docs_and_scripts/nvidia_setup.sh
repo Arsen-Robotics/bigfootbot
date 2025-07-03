@@ -10,6 +10,7 @@ fi
 # Add CUDA versions to .bashrc
 echo 'export PATH=/usr/local/cuda-11.4/bin:$PATH' >> ~/.bashrc
 echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
+source ~/.bashrc
 
 # Update and install dependencies
 echo "Updating system and installing dependencies..."
@@ -53,6 +54,7 @@ git clone https://github.com/Arsen-Robotics/bigfootbot.git
 
 # Set Git username and email
 echo "Configuring Git user..."
+cd /mnt/nvme/ros2_ws/src/bigfootbot
 
 # Ask for the Git username
 read -p "Enter your Git username: " git_username
@@ -94,7 +96,7 @@ git push
 
 # Add Docker's official GPG key:
 sudo apt-get update
-sudo apt-get install ca-certificates curl
+sudo apt-get install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -107,7 +109,7 @@ echo \
 sudo apt-get update
 
 # Install docker compose plugin
-sudo apt install docker-compose-plugin
+sudo apt install -y docker-compose-plugin
 
 # Add the current user to the Docker group
 echo "Adding user to the Docker group..."
@@ -201,5 +203,3 @@ done
 # docker run --rm -d --net=macnet <IMAGE>
 
 # ---------- 2. Enable Jetson Clocks on boot in jtop -------------
-
-# ---------- 3. Optional: sudo apt update && sudo apt upgrade ----

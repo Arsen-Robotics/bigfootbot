@@ -49,8 +49,8 @@ RUN apt-key del F42ED6FBAB17C654 \
 # -------- Build and install packages --------
 COPY src/bfb_gps ${ROS_WS}/src/bfb_gps
 COPY src/bfb_interfaces ${ROS_WS}/src/bfb_interfaces
-RUN cd ${ROS_WS}/src \
-    && git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
+# RUN cd ${ROS_WS}/src \
+#     && git clone -b ros2 https://github.com/ros-drivers/nmea_navsat_driver.git
 
 # Install wget and pip
 RUN apt-get update \

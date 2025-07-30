@@ -48,90 +48,33 @@ RUN apt-key del F42ED6FBAB17C654 \
     && curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | \
     gpg --yes --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg
 
-# RUN apt update && apt install -y locales \
-#     && locale-gen en_US en_US.UTF-8 \
-#     && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
-#     && export LANG=en_US.UTF-8
+# Install dependencies (ros-humble-librealsense2* ros-humble-realsense2-*)
+RUN apt-get update \
+    && apt-get install -y wget python3-opencv ros-humble-image-transport* \
+    gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+    gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev libsoup2.4-dev libjson-glib-dev \
+    libnice-dev autoconf libtool gtk-doc-tools libglib2.0-dev gstreamer1.0-nice libssl-dev \
+    libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good libjsoncpp-dev \
+    gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
+    gstreamer1.0-qt5 gstreamer1.0-pulseaudio nlohmann-json3-dev libwebsocketpp-dev libboost-dev \
+    libopenblas-base libopenmpi-dev libomp-dev libjpeg-dev zlib1g-dev libpython3-dev libopenblas-dev \
+    libavcodec-dev libavformat-dev libswscale-dev \
+    && cd / \
+    && wget https://bootstrap.pypa.io/pip/3.8/get-pip.py \
+    && python3 get-pip.py \
+    && rm get-pip.py
 
-# RUN apt install -y software-properties-common \
-#     && add-apt-repository universe
+# Install PyTorch
+RUN wget https://developer.download.nvidia.cn/compute/redist/jp/v512/pytorch/torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl \
+    && pip3 install 'Cython<3' \
+    && pip install 'numpy>=1.19.5,<1.27.0' torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl
 
-# RUN apt update && apt install curl -y \
-#     && export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}') \
-#     && curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $VERSION_CODENAME)_all.deb" \
-#     && dpkg -i /tmp/ros2-apt-source.deb
+# Install TorchVision
+COPY docker/teleop/torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl ./torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
+RUN pip3 install torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
 
-# RUN apt update && apt install -y \
-#     python3-flake8-docstrings \
-#     python3-pip \
-#     python3-pytest-cov \
-#     ros-dev-tools
-
-# RUN python3 -m pip install -U \
-#     flake8-blind-except \
-#     flake8-builtins \
-#     flake8-class-newline \
-#     flake8-comprehensions \
-#     flake8-deprecated \
-#     flake8-import-order \
-#     flake8-quotes \
-#     "pytest>=5.3" \
-#     pytest-repeat \
-#     pytest-rerunfailures \
-#     empy==3.3.4
-
-# RUN mkdir -p ~/ros2_humble/src \
-#     && cd ~/ros2_humble \
-#     && vcs import --input https://raw.githubusercontent.com/ros2/ros2/humble/ros2.repos src \
-#     && cd src \
-#     && rm -rf demo_nodes_* examples* image_* launch_* perception* navigation2* rviz* teleop* turtle* rqt* visualization*
-
-# RUN apt upgrade -y
-
-# RUN cd ~/ros2_humble \
-#     && rosdep init \
-#     && rosdep fix-permissions \
-#     && rosdep update \
-#     && rosdep install --from-paths src --ignore-src -y --skip-keys "fastcdr rti-connext-dds-6.0.1 urdfdom_headers"
-
-# RUN apt update && apt install -y \
-#     python3-pybind11 \
-#     pybind11-dev \
-#     python3-dev
-
-# RUN apt install -y clang llvm
-# ENV LLVM_INSTALL_DIR=/usr/lib/llvm-10
-
-# RUN cd ~/ros2_humble/ \
-#     && colcon build --symlink-install --event-handlers console_direct+
-
-# Install dependencies
-# RUN apt-get update \
-#     && apt-get install -y wget python3-opencv ros-humble-image-transport* ros-humble-librealsense2* ros-humble-realsense2-* \
-#     gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-#     gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev libsoup2.4-dev libjson-glib-dev \
-#     libnice-dev autoconf libtool gtk-doc-tools libglib2.0-dev gstreamer1.0-nice libssl-dev \
-#     libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good libjsoncpp-dev \
-#     gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
-#     gstreamer1.0-qt5 gstreamer1.0-pulseaudio nlohmann-json3-dev libwebsocketpp-dev libboost-dev \
-#     libopenblas-base libopenmpi-dev libomp-dev libjpeg-dev zlib1g-dev libpython3-dev libopenblas-dev \
-#     libavcodec-dev libavformat-dev libswscale-dev \
-#     && cd / \
-#     && wget https://bootstrap.pypa.io/pip/3.8/get-pip.py \
-#     && python3 get-pip.py \
-#     && rm get-pip.py
-
-# # Install PyTorch
-# RUN wget https://developer.download.nvidia.cn/compute/redist/jp/v512/pytorch/torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl \
-#     && pip3 install 'Cython<3' \
-#     && pip install 'numpy>=1.19.5,<1.27.0' torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl
-
-# # Install TorchVision
-# COPY docker/teleop/torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl ./torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
-# RUN pip3 install torchvision-0.16.1+fdea156-cp38-cp38-linux_aarch64.whl
-
-# # Install transformers
-# RUN pip3 install transformers
+# Install transformers
+RUN pip3 install transformers
 
 # Install dependencies for all packages in the workspace
 RUN apt-get update \

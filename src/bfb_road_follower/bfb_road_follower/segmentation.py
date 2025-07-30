@@ -16,7 +16,7 @@ class SegmentationNode(Node):
         self.bridge = CvBridge()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Using device: {self.device}")
+        self.get_logger().info(f"Using device: {self.device}")
 
         # Load processor and model
         self.processor = AutoImageProcessor.from_pretrained("ayoubkirouane/Segments-Sidewalk-SegFormer-B0")

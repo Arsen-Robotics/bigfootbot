@@ -194,56 +194,21 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            nvarguscamerasrc sensor-mode=4 \
-            ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
-            ! nvvidconv \
-            ! video/x-raw(memory:NVMM),format=NV12 \
-            ! nvv4l2h264enc \
-                maxperf-enable=true \
-                idrinterval=5 \
-                iframeinterval=5 \
-                insert-sps-pps=true \
-                insert-aud=true \
-                insert-vui=true \
-                preset-level=1 \
-                control-rate=0 \
-            ! h264parse config-interval=1 \
-            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            ! sendrecv. \
+            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
             \
-            v4l2src device=/dev/cam-arducam io-mode=2 \
-            ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! nvvidconv \
-            ! video/x-raw(memory:NVMM),format=NV12 \
-            ! nvv4l2h264enc \
-                maxperf-enable=true \
-                idrinterval=5 \
-                iframeinterval=5 \
-                insert-sps-pps=true \
-                insert-aud=true \
-                insert-vui=true \
-                preset-level=1 \
-                control-rate=0 \
-            ! h264parse config-interval=1 \
-            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            ! sendrecv. \
-            \
-            v4l2src device=/dev/cam-microdia io-mode=2 \
-            ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! nvvidconv \
-            ! video/x-raw(memory:NVMM),format=NV12 \
-            ! nvv4l2h264enc \
-                maxperf-enable=true \
-                idrinterval=5 \
-                iframeinterval=5 \
-                insert-sps-pps=true \
-                insert-aud=true \
-                insert-vui=true \
-                preset-level=1 \
-                control-rate=0 \
-            ! h264parse config-interval=1 \
-            ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            ! sendrecv.", &error);
+            nvarguscamerasrc sensor-mode=4 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.", &error);
 
             // v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
             // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
@@ -539,14 +504,17 @@ int main() {
         return 1;
     }
 
+    // WebRTCSend recv;
+    // std::thread t([&]() { recv.connect(); });
+
+    // GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
+    // g_main_loop_run(loop);
+    // g_main_loop_unref(loop);
+
+    // t.join();
+
     WebRTCSend recv;
-    std::thread t([&]() { recv.connect(); });
-
-    GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
-    g_main_loop_run(loop);
-    g_main_loop_unref(loop);
-
-    t.join();
+    recv.connect();
 
     return 0;
 }

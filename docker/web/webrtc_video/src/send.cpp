@@ -115,18 +115,39 @@ public:
 
             if (jsonMsg.isMember("status") && jsonMsg["status"].asString() == "HELLO") {
                 std::cout << "Received HELLO." << std::endl;
-                Json::Value msg;
-                msg["status"] = "OK";
+                Json::Value reply;
+                reply["status"] = "OK";
                 Json::StreamWriterBuilder writer;
-                std::string message = Json::writeString(writer, msg);
+                std::string message = Json::writeString(writer, reply);
                 queue_ws(message);
-                setup_pipeline();
+
+                // Post pipeline setup to main thread
+                g_idle_add([](gpointer data) -> gboolean {
+                    static_cast<WebRTCSend*>(data)->setup_pipeline();
+                    return G_SOURCE_REMOVE;
+                }, this);
+
             } else if (jsonMsg.isMember("ice")) {
                 std::cout << "Received ICE candidate." << std::endl;
-                handle_ice(payload);
+                // Copy payload for lambda capture
+                std::string payload_copy = payload;
+                g_idle_add([](gpointer data) -> gboolean {
+                    auto* pair = static_cast<std::pair<WebRTCSend*, std::string>*>(data);
+                    pair->first->handle_ice(pair->second);
+                    delete pair;
+                    return G_SOURCE_REMOVE;
+                }, new std::pair<WebRTCSend*, std::string>(this, payload_copy));
+
             } else if (jsonMsg.isMember("sdp")) {
                 std::cout << "Received SDP answer." << std::endl;
-                handle_sdp(payload);
+                std::string payload_copy = payload;
+                g_idle_add([](gpointer data) -> gboolean {
+                    auto* pair = static_cast<std::pair<WebRTCSend*, std::string>*>(data);
+                    pair->first->handle_sdp(pair->second);
+                    delete pair;
+                    return G_SOURCE_REMOVE;
+                }, new std::pair<WebRTCSend*, std::string>(this, payload_copy));
+
             } else {
                 std::cout << "Unknown JSON message type" << std::endl;
             }
@@ -208,7 +229,16 @@ public:
             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
             ! queue max-size-buffers=2 leaky=downstream \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.", &error);
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            \
+            v4l2src device=/dev/cam-aveo ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.",
+            &error);
 
             // v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
             // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
@@ -498,23 +528,18 @@ private:
  * and runs the main loop
  */
 int main() {
-    // Call XInitThreads() to enable thread safety in X11
     if (!XInitThreads()) {
         std::cerr << "Failed to initialize X11 threading!" << std::endl;
         return 1;
     }
 
-    // WebRTCSend recv;
-    // std::thread t([&]() { recv.connect(); });
-
-    // GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
-    // g_main_loop_run(loop);
-    // g_main_loop_unref(loop);
-
-    // t.join();
-
     WebRTCSend recv;
-    recv.connect();
+    std::thread ws_thread([&]() { recv.connect(); });
 
+    GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
+    g_main_loop_run(loop);
+    g_main_loop_unref(loop);
+
+    ws_thread.join();
     return 0;
 }

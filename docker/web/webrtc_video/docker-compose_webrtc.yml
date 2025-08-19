@@ -1,16 +1,108 @@
 services:
+  # bfb_webrtc:
+  #     build:
+  #       context: ../../..
+  #       dockerfile: docker/web/webrtc_video/Dockerfile.webrtc
+
+  #       # Pass arguments to Dockerfile to use different base images
+  #       args:
+  #         # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+  #         #- BASE_IMAGE=ros:humble-ros-base
+          
+  #         # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
+  #         - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+      
+  #     # The name of the Docker image to be created from the Dockerfile
+  #     image: bfb_webrtc:latest
+
+  #     # The name to be given to the container created from the image
+  #     container_name: bfb_webrtc_cntr
+
+  #     environment:
+  #       - DISPLAY=${DISPLAY}
+  #       - NVIDIA_VISIBLE_DEVICES=all
+  #       - XAUTHORITY=/root/.Xauthority
+  #       - QT_X11_NO_MITSHM=1
+  #       - NVIDIA_DRIVER_CAPABILITIES=all
+  #       - XDG_RUNTIME_DIR=/tmp/runtime-${USER}
+  #       - LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/tegra:/usr/lib/aarch64-linux-gnu/tegra-egl:$LD_LIBRARY_PATH
+  #       - GST_PLUGIN_PATH=/usr/lib/aarch64-linux-gnu/gstreamer-1.0
+
+  #     deploy:
+  #       resources:
+  #         reservations:
+  #           devices:
+  #             - driver: nvidia
+  #               count: all
+  #               capabilities: [gpu]
+
+  #     # Map all devices from host to container
+  #     volumes:
+  #       - '/dev:/dev'
+  #       # Mount Python source files to be able to update them inside the container without rebuilding the image
+  #       - ./src:/webrtc_video/src
+
+  #       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
+  #       #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
+  #       - $HOME/.Xauthority:/root/.Xauthority  # Allow access to X11
+  #       - /var/run:/var/run
+  #       - /run:/run
+  #       - /dev/nvhost-ctrl:/dev/nvhost-ctrl
+  #       - /dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu
+  #       - /dev/nvhost-prof:/dev/nvhost-prof
+  #       - /dev/nvhost-as-gpu:/dev/nvhost-as-gpu
+  #       - /etc/enctune.conf:/etc/enctune.conf
+  #       - /etc/nv_tegra_release:/etc/nv_tegra_release
+  #       - /usr/lib/aarch64-linux-gnu/tegra:/usr/lib/aarch64-linux-gnu/tegra
+  #       - /usr/lib/aarch64-linux-gnu/tegra-egl:/usr/lib/aarch64-linux-gnu/tegra-egl
+  #       - /lib/modules:/lib/modules
+  #       - /tmp/argus_socket:/tmp/argus_socket
+  #       - /usr/local/cuda:/usr/local/cuda:ro
+  #       - /opt/nvidia:/opt/nvidia
+
+  #     devices:
+  #       - /dev/nvhost-ctrl
+  #       - /dev/nvhost-ctrl-gpu
+  #       - /dev/nvhost-gpu
+  #       - /dev/nvmap
+  #       - /dev/nvhost-prof-gpu
+  #       - /dev/nvhost-as-gpu
+  #       - /dev/nvargus-daemon
+  #       - /dev/tegra-uvc
+  #       - /dev/tegra_camera_ctrl
+  #       - /dev/nvhost-vi
+  #       - /dev/nvhost-vic
+  #       - /dev/nvhost-isp
+
+  #     # NVIDIA GPU-accelerated container
+  #     runtime: nvidia
+
+  #     privileged: true
+
+  #     stdin_open: true # docker run -i
+  #     tty: true        # docker run -t
+
+  #     ports:
+  #       - "8765:8765"  # WebSocket server
+
+  #     networks:
+  #       macnet:
+  #         ipv4_address: 192.168.5.77
+
+  #     #command: python3 /src/signaling.py
+
   bfb_webrtc:
       build:
         context: ../../..
-        dockerfile: docker/web/webrtc_video/Dockerfile.webrtc
+        dockerfile: docker/web/webrtc_video/Dockerfile.webrtc_ros2
 
         # Pass arguments to Dockerfile to use different base images
         args:
           # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
-          #- BASE_IMAGE=ros:humble-ros-base
+          - BASE_IMAGE=ros:humble-ros-base
           
           # Build the docker image for ONLY Jetson device (Nvidia GPU accelerated)
-          - BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
+          #- BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c7392479291c035
       
       # The name of the Docker image to be created from the Dockerfile
       image: bfb_webrtc:latest
@@ -20,62 +112,21 @@ services:
 
       environment:
         - DISPLAY=${DISPLAY}
-        - NVIDIA_VISIBLE_DEVICES=all
         - XAUTHORITY=/root/.Xauthority
         - QT_X11_NO_MITSHM=1
-        - NVIDIA_DRIVER_CAPABILITIES=all
         - XDG_RUNTIME_DIR=/tmp/runtime-${USER}
-        - LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/tegra:/usr/lib/aarch64-linux-gnu/tegra-egl:$LD_LIBRARY_PATH
-        - GST_PLUGIN_PATH=/usr/lib/aarch64-linux-gnu/gstreamer-1.0
-
-      deploy:
-        resources:
-          reservations:
-            devices:
-              - driver: nvidia
-                count: all
-                capabilities: [gpu]
 
       # Map all devices from host to container
       volumes:
-        - '/dev:/dev'
-        # Mount Python source files to be able to update them inside the container without rebuilding the image
-        - ./src:/webrtc_video/src
+        # Mount C++ source files to be able to update them inside the container without rebuilding the image
+        - ../../../src/bfb_webrtc/src:/ros2_ws/src/bfb_webrtc/src
+        - ../../../src/bfb_webrtc/CMakeLists.txt:/ros2_ws/src/bfb_webrtc/CMakeLists.txt
 
+        - '/dev:/dev'
         - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
-        #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
         - $HOME/.Xauthority:/root/.Xauthority  # Allow access to X11
         - /var/run:/var/run
         - /run:/run
-        - /dev/nvhost-ctrl:/dev/nvhost-ctrl
-        - /dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu
-        - /dev/nvhost-prof:/dev/nvhost-prof
-        - /dev/nvhost-as-gpu:/dev/nvhost-as-gpu
-        - /etc/enctune.conf:/etc/enctune.conf
-        - /etc/nv_tegra_release:/etc/nv_tegra_release
-        - /usr/lib/aarch64-linux-gnu/tegra:/usr/lib/aarch64-linux-gnu/tegra
-        - /usr/lib/aarch64-linux-gnu/tegra-egl:/usr/lib/aarch64-linux-gnu/tegra-egl
-        - /lib/modules:/lib/modules
-        - /tmp/argus_socket:/tmp/argus_socket
-        - /usr/local/cuda:/usr/local/cuda:ro
-        - /opt/nvidia:/opt/nvidia
-
-      devices:
-        - /dev/nvhost-ctrl
-        - /dev/nvhost-ctrl-gpu
-        - /dev/nvhost-gpu
-        - /dev/nvmap
-        - /dev/nvhost-prof-gpu
-        - /dev/nvhost-as-gpu
-        - /dev/nvargus-daemon
-        - /dev/tegra-uvc
-        - /dev/tegra_camera_ctrl
-        - /dev/nvhost-vi
-        - /dev/nvhost-vic
-        - /dev/nvhost-isp
-
-      # NVIDIA GPU-accelerated container
-      runtime: nvidia
 
       privileged: true
 
@@ -90,6 +141,7 @@ services:
           ipv4_address: 192.168.5.77
 
       #command: python3 /src/signaling.py
+
 
 networks:
   macnet:

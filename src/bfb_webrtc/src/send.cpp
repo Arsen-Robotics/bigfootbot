@@ -124,32 +124,18 @@ public:
                 std::string message = Json::writeString(writer, reply);
                 queue_ws(message);
 
-                // Post pipeline setup to main thread
-                g_idle_add([](gpointer data) -> gboolean {
-                    static_cast<WebRTCSendNode*>(data)->setup_pipeline();
-                    return G_SOURCE_REMOVE;
-                }, this);
+                setup_pipeline();
 
             } else if (jsonMsg.isMember("ice")) {
                 RCLCPP_INFO(this->get_logger(), "Received ICE candidate.");
                 // Copy payload for lambda capture
                 std::string payload_copy = payload;
-                g_idle_add([](gpointer data) -> gboolean {
-                    auto* pair = static_cast<std::pair<WebRTCSendNode*, std::string>*>(data);
-                    pair->first->handle_ice(pair->second);
-                    delete pair;
-                    return G_SOURCE_REMOVE;
-                }, new std::pair<WebRTCSendNode*, std::string>(this, payload_copy));
+                handle_ice(payload_copy);
 
             } else if (jsonMsg.isMember("sdp")) {
                 RCLCPP_INFO(this->get_logger(), "Received SDP answer.");
                 std::string payload_copy = payload;
-                g_idle_add([](gpointer data) -> gboolean {
-                    auto* pair = static_cast<std::pair<WebRTCSendNode*, std::string>*>(data);
-                    pair->first->handle_sdp(pair->second);
-                    delete pair;
-                    return G_SOURCE_REMOVE;
-                }, new std::pair<WebRTCSendNode*, std::string>(this, payload_copy));
+                handle_sdp(payload_copy);
 
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
@@ -218,8 +204,11 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            videotestsrc pattern=ball ! video/x-raw,width=640,height=480,framerate=30/1 \
-            ! videoconvert ! x264enc speed-preset=ultrafast tune=zerolatency bitrate=1000 \
+            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
+            ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            ! queue max-size-buffers=2 leaky=downstream \
+            ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            ! queue max-size-buffers=2 leaky=downstream \
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.",
             &error);

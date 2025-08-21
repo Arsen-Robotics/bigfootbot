@@ -30,8 +30,6 @@ public:
         pipeline = nullptr;
         webrtcbin = nullptr;
         ws_running = true;
-
-        this->connect();
     }
 
     /**
@@ -124,18 +122,32 @@ public:
                 std::string message = Json::writeString(writer, reply);
                 queue_ws(message);
 
-                setup_pipeline();
+                // Post pipeline setup to main thread
+                g_idle_add([](gpointer data) -> gboolean {
+                    static_cast<WebRTCSend*>(data)->setup_pipeline();
+                    return G_SOURCE_REMOVE;
+                }, this);
 
             } else if (jsonMsg.isMember("ice")) {
                 RCLCPP_INFO(this->get_logger(), "Received ICE candidate.");
                 // Copy payload for lambda capture
                 std::string payload_copy = payload;
-                handle_ice(payload_copy);
+                g_idle_add([](gpointer data) -> gboolean {
+                    auto* pair = static_cast<std::pair<WebRTCSend*, std::string>*>(data);
+                    pair->first->handle_ice(pair->second);
+                    delete pair;
+                    return G_SOURCE_REMOVE;
+                }, new std::pair<WebRTCSend*, std::string>(this, payload_copy));
 
             } else if (jsonMsg.isMember("sdp")) {
                 RCLCPP_INFO(this->get_logger(), "Received SDP answer.");
                 std::string payload_copy = payload;
-                handle_sdp(payload_copy);
+                g_idle_add([](gpointer data) -> gboolean {
+                    auto* pair = static_cast<std::pair<WebRTCSend*, std::string>*>(data);
+                    pair->first->handle_sdp(pair->second);
+                    delete pair;
+                    return G_SOURCE_REMOVE;
+                }, new std::pair<WebRTCSend*, std::string>(this, payload_copy));
 
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
@@ -508,9 +520,26 @@ int main(int argc, char* argv[]) {
         RCLCPP_FATAL(rclcpp::get_logger("WebRTCSendNode"), "Failed to initialize X11 threading!");
         return 1;
     }
+
+    // Initialize ROS 2
     rclcpp::init(argc, argv);
     auto node = std::make_shared<WebRTCSendNode>();
+
+    // Start WebSocket connection in a separate thread
+    std::thread ws_thread([&]() { node.connect(); });
+
+    // Create a GMainLoop for handling GStreamer events
+    GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
+    std::thread gloop_thread([&]() { g_main_loop_run(loop); });
+    
+    // Spin the ROS 2 node to handle callbacks
     rclcpp::spin(node);
+
+    // Clean up and shutdown
     rclcpp::shutdown();
+    g_main_loop_quit(loop);
+    gloop_thread.join();
+    g_main_loop_unref(loop);
+    ws_thread.join();
     return 0;
 }

@@ -38,12 +38,12 @@ services:
 
     # Map all devices from host to container
     volumes:
-      - '/dev:/dev'
-      # Mount Python source files to be able to update them inside the container without rebuilding the image
-      - ./src:/webrtc_video/src
+      # Mount C++ source files to be able to update them inside the container without rebuilding the image
+      - ../../../src/bfb_webrtc/src:/ros2_ws/src/bfb_webrtc/src
+      - ../../../src/bfb_webrtc/CMakeLists.txt:/ros2_ws/src/bfb_webrtc/CMakeLists.txt
 
+      - '/dev:/dev'
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
-      #- ../../bfb_road_follower/config:/ros2_ws/src/bfb_road_follower/config
       - $HOME/.Xauthority:/root/.Xauthority  # Allow access to X11
       - /var/run:/var/run
       - /run:/run

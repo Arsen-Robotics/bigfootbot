@@ -124,7 +124,7 @@ public:
 
                 // Post pipeline setup to main thread
                 g_idle_add([](gpointer data) -> gboolean {
-                    static_cast<WebRTCSend*>(data)->setup_pipeline();
+                    static_cast<WebRTCSendNode*>(data)->setup_pipeline();
                     return G_SOURCE_REMOVE;
                 }, this);
 
@@ -133,21 +133,21 @@ public:
                 // Copy payload for lambda capture
                 std::string payload_copy = payload;
                 g_idle_add([](gpointer data) -> gboolean {
-                    auto* pair = static_cast<std::pair<WebRTCSend*, std::string>*>(data);
+                    auto* pair = static_cast<std::pair<WebRTCSendNode*, std::string>*>(data);
                     pair->first->handle_ice(pair->second);
                     delete pair;
                     return G_SOURCE_REMOVE;
-                }, new std::pair<WebRTCSend*, std::string>(this, payload_copy));
+                }, new std::pair<WebRTCSendNode*, std::string>(this, payload_copy));
 
             } else if (jsonMsg.isMember("sdp")) {
                 RCLCPP_INFO(this->get_logger(), "Received SDP answer.");
                 std::string payload_copy = payload;
                 g_idle_add([](gpointer data) -> gboolean {
-                    auto* pair = static_cast<std::pair<WebRTCSend*, std::string>*>(data);
+                    auto* pair = static_cast<std::pair<WebRTCSendNode*, std::string>*>(data);
                     pair->first->handle_sdp(pair->second);
                     delete pair;
                     return G_SOURCE_REMOVE;
-                }, new std::pair<WebRTCSend*, std::string>(this, payload_copy));
+                }, new std::pair<WebRTCSendNode*, std::string>(this, payload_copy));
 
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
@@ -526,7 +526,7 @@ int main(int argc, char* argv[]) {
     auto node = std::make_shared<WebRTCSendNode>();
 
     // Start WebSocket connection in a separate thread
-    std::thread ws_thread([&]() { node.connect(); });
+    std::thread ws_thread([&]() { node->connect(); });
 
     // Create a GMainLoop for handling GStreamer events
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);

@@ -70,7 +70,10 @@ public:
             }
 
             client.connect(con);
-            client.run();
+            
+            while (rclcpp::ok() && ws_running) {
+                client.poll();
+            }
 
         } catch (const std::exception& e) {
             RCLCPP_ERROR(this->get_logger(), "Failed to connect: %s", e.what());
@@ -123,31 +126,39 @@ public:
                 queue_ws(message);
 
                 // Post pipeline setup to main thread
-                g_idle_add([](gpointer data) -> gboolean {
-                    static_cast<WebRTCSendNode*>(data)->setup_pipeline();
+                auto setup_func = [this]() { this->setup_pipeline(); };
+                auto* func_ptr = new std::function<void()>(setup_func);
+                g_main_context_invoke(nullptr, [](gpointer data) -> gboolean {
+                    auto* f = static_cast<std::function<void()>*>(data);
+                    (*f)();
+                    delete f;
                     return G_SOURCE_REMOVE;
-                }, this);
+                }, func_ptr);
 
             } else if (jsonMsg.isMember("ice")) {
                 RCLCPP_INFO(this->get_logger(), "Received ICE candidate.");
                 // Copy payload for lambda capture
                 std::string payload_copy = payload;
-                g_idle_add([](gpointer data) -> gboolean {
-                    auto* pair = static_cast<std::pair<WebRTCSendNode*, std::string>*>(data);
-                    pair->first->handle_ice(pair->second);
-                    delete pair;
+                auto ice_func = [this, payload_copy]() { this->handle_ice(payload_copy); };
+                auto* func_ptr = new std::function<void()>(ice_func);
+                g_main_context_invoke(nullptr, [](gpointer data) -> gboolean {
+                    auto* f = static_cast<std::function<void()>*>(data);
+                    (*f)();
+                    delete f;
                     return G_SOURCE_REMOVE;
-                }, new std::pair<WebRTCSendNode*, std::string>(this, payload_copy));
+                }, func_ptr);
 
             } else if (jsonMsg.isMember("sdp")) {
                 RCLCPP_INFO(this->get_logger(), "Received SDP answer.");
                 std::string payload_copy = payload;
-                g_idle_add([](gpointer data) -> gboolean {
-                    auto* pair = static_cast<std::pair<WebRTCSendNode*, std::string>*>(data);
-                    pair->first->handle_sdp(pair->second);
-                    delete pair;
+                auto sdp_func = [this, payload_copy]() { this->handle_sdp(payload_copy); };
+                auto* func_ptr = new std::function<void()>(sdp_func);
+                g_main_context_invoke(nullptr, [](gpointer data) -> gboolean {
+                    auto* f = static_cast<std::function<void()>*>(data);
+                    (*f)();
+                    delete f;
                     return G_SOURCE_REMOVE;
-                }, new std::pair<WebRTCSendNode*, std::string>(this, payload_copy));
+                }, func_ptr);
 
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
@@ -525,21 +536,25 @@ int main(int argc, char* argv[]) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<WebRTCSendNode>();
 
-    // Start WebSocket connection in a separate thread
-    std::thread ws_thread([&]() { node->connect(); });
-
-    // Create a GMainLoop for handling GStreamer events
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
-    std::thread gloop_thread([&]() { g_main_loop_run(loop); });
-    
-    // Spin the ROS 2 node to handle callbacks
+
+    // Start GStreamer loop first, then WebSocket connection
+    std::thread gloop_thread([&]() { 
+        g_main_loop_run(loop); 
+    });
+
+    // Start WebSocket in separate thread
+    std::thread ws_thread([&]() { 
+        node->connect(); 
+    });
+
     rclcpp::spin(node);
 
-    // Clean up and shutdown
+    // Cleanup
     rclcpp::shutdown();
-    g_main_loop_quit(loop);
-    gloop_thread.join();
-    g_main_loop_unref(loop);
+    // g_main_loop_quit(loop);
+    // gloop_thread.join();
+    // g_main_loop_unref(loop);
     ws_thread.join();
     return 0;
 }

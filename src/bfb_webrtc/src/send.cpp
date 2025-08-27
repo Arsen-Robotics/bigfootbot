@@ -12,6 +12,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <gst/app/gstappsrc.h>
 
 /**
  * @brief Main class handling WebRTC video streaming
@@ -46,7 +47,8 @@ public:
             gst_object_unref(pipeline);
         }
         if (webrtcbin) {
-            gst_object_unref(webrtcbin);
+            gst_object_unref
+            (webrtcbin);
         }
     }
 
@@ -214,20 +216,12 @@ public:
         ws_cv.notify_one();
     }
 
-    /**
-     * @brief Sets up the GStreamer pipeline for video streaming
-     * 
-     * Creates and configures a pipeline with:
-     * - Multiple v4l2src sources for different cameras
-     * - NVIDIA video conversion and H264 encoding
-     * - WebRTC transmission
-     */
-    void setup_pipeline() {
+    void create_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
+            appsrc ! video/x-raw,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
             ! queue max-size-buffers=2 leaky=downstream \
             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
@@ -235,59 +229,7 @@ public:
             ! h264parse ! rtph264pay config-interval=1 pt=96 \
             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.",
             &error);
-
-            // v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            // \
-            // v4l2src device=/dev/cam-microdia ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            // \
-            // nvarguscamerasrc sensor-mode=4 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
-            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.
-
-            // nvcompositor name=mix sync-import-streams=false \
-            // sink_0::xpos=0   sink_0::ypos=0   sink_0::width=640  sink_0::height=480 \
-            // sink_1::xpos=640 sink_1::ypos=0   sink_1::width=640  sink_1::height=480 \
-            // sink_2::xpos=1280 sink_2::ypos=0  sink_2::width=640  sink_2::height=480 \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! video/x-raw(memory:NVMM), width=1920, height=480, framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM), format=NV12 \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! nvv4l2h264enc maxperf-enable=true bitrate=4000000 idrinterval=5 iframeinterval=5 insert-sps-pps=true insert-aud=true insert-vui=true \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! h264parse config-interval=1 \
-            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            // ! sendrecv. \
-            // \
-            // nvarguscamerasrc sensor-mode=4 \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! mix.sink_0 \
-            // \
-            // v4l2src device=/dev/video9 io-mode=4 \
-            // ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! mix.sink_1 \
-            // \
-            // v4l2src device=/dev/video7 io-mode=4 \
-            // ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! mix.sink_2", &error);
-
+        
         if (error) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline: %s", error->message);
             g_error_free(error);
@@ -298,7 +240,17 @@ public:
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline.");
             return;
         }
+    }
 
+    /**
+     * @brief Sets up the GStreamer pipeline for video streaming
+     * 
+     * Creates and configures a pipeline with:
+     * - Multiple v4l2src sources for different cameras
+     * - NVIDIA video conversion and H264 encoding
+     * - WebRTC transmission
+     */
+    void setup_pipeline() {
         // Get webrtcbin element
         webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "sendrecv");
 
@@ -507,8 +459,60 @@ public:
         gst_caps_unref(caps);
     }
 
+    void start_camera_stream() {
+        // Get appsrc once, before starting the camera loop
+        this->appsrc = gst_bin_get_by_name(GST_BIN(this->pipeline), "appsrc");
+        if (!GST_IS_ELEMENT(this->appsrc)) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to get appsrc from pipeline!");
+            return;
+        }
+
+        const int width = 640;
+        const int height = 480;
+        const int frame_size = width * height * 3; // assuming RGB
+        uint8_t buffer[frame_size];
+
+        while (rclcpp::ok()) {
+            // Open camera
+            int fd = open("/dev/cam-arducam", O_RDWR);
+            if (fd < 0) {
+                RCLCPP_ERROR(this->get_logger(), "Failed to open camera device");
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                continue;
+            }
+            RCLCPP_INFO(this->get_logger(), "Camera device opened successfully");
+
+            while (rclcpp::ok()) {
+                // Read frame from camera
+                ssize_t ret = read(fd, buffer, frame_size);
+                if (ret <= 0) {
+                    RCLCPP_WARN(this->get_logger(), "Camera read failed, reconnecting...");
+                    close(fd);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    break; // go back and reopen camera
+                }
+
+                // Wrap the frame in a GstBuffer
+                GstBuffer* gst_buffer = gst_buffer_new_allocate(NULL, frame_size, NULL);
+                GstMapInfo map;
+                gst_buffer_map(gst_buffer, &map, GST_MAP_WRITE);
+                std::memcpy(map.data, buffer, frame_size);
+                gst_buffer_unmap(gst_buffer, &map);
+
+                // Push buffer to appsrc
+                GstFlowReturn flow_ret = gst_app_src_push_buffer(GST_APP_SRC(this->appsrc), gst_buffer);
+                if (flow_ret != GST_FLOW_OK) {
+                    RCLCPP_WARN(this->get_logger(), "Failed to push buffer to appsrc");
+                    gst_buffer_unref(gst_buffer);
+                }
+            }
+            close(fd);
+        }
+    }
+
 private:
     GstElement* pipeline;                // Main GStreamer pipeline
+    GstElement* appsrc;                  // App source element for feeding camera frames
     GstElement* webrtcbin;              // WebRTC element
     websocketpp::connection_hdl global_hdl;  // WebSocket connection handle
     websocketpp::client<websocketpp::config::asio_client>* global_client;  // WebSocket client
@@ -535,15 +539,21 @@ int main(int argc, char* argv[]) {
     // Initialize ROS 2
     rclcpp::init(argc, argv);
     auto node = std::make_shared<WebRTCSendNode>();
+    node->create_pipeline();
 
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
 
-    // Start GStreamer loop first, then WebSocket connection
+    // Start GStreamer loop
     std::thread gloop_thread([&]() { 
         g_main_loop_run(loop); 
     });
 
-    // Start WebSocket in separate thread
+    // Start camera thread
+    std::thread camera_thread([&]() {
+        node->start_camera_stream();
+    });
+
+    // Start WebSocket loop
     std::thread ws_thread([&]() { 
         node->connect(); 
     });

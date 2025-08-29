@@ -129,7 +129,7 @@ public:
                 queue_ws(message);
 
                 // Post pipeline setup to main thread
-                auto setup_func = [this]() { this->start_pipeline(); };
+                auto setup_func = [this]() { this->setup_pipeline(); };
                 auto* func_ptr = new std::function<void()>(setup_func);
                 g_main_context_invoke(nullptr, [](gpointer data) -> gboolean {
                     auto* f = static_cast<std::function<void()>*>(data);
@@ -217,12 +217,20 @@ public:
         ws_cv.notify_one();
     }
 
-    void create_pipeline() {
+    /**
+     * @brief Sets up and starts the GStreamer pipeline for video streaming
+     * 
+     * Creates and configures a pipeline with:
+     * - Multiple v4l2src sources for different cameras
+     * - NVIDIA video conversion and H264 encoding
+     * - WebRTC transmission
+     */
+    void setup_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            appsrc name=cam_src0 ! video/x-raw,width=640,height=480,framerate=30/1 \
+            appsrc name=cam_src0 caps=video/x-raw,format=YUY2,width=640,height=480,framerate=30/1 \
             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
             ! queue max-size-buffers=2 leaky=downstream \
             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
@@ -235,8 +243,6 @@ public:
             RCLCPP_ERROR(this->get_logger(), "Could not create WebRTC pipeline: %s", error->message);
             g_error_free(error);
             return;
-        } else {
-            RCLCPP_INFO(this->get_logger(), "Created WebRTC pipeline.");
         }
 
         if (!pipeline) {
@@ -251,21 +257,27 @@ public:
             RCLCPP_ERROR(this->get_logger(), "Could not get WebRTC element.");
             return;
         }
-    }
 
-    /**
-     * @brief Sets up and starts the GStreamer pipeline for video streaming
-     * 
-     * Creates and configures a pipeline with:
-     * - Multiple v4l2src sources for different cameras
-     * - NVIDIA video conversion and H264 encoding
-     * - WebRTC transmission
-     */
-    void start_pipeline() {
+        // Use system clock for the pipeline
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
         // Set WebRTC properties
         g_object_set(G_OBJECT(webrtcbin), "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", nullptr);
+
+        // Get appsrc element for camera 0
+        this->cam_src0 = gst_bin_get_by_name(GST_BIN(this->pipeline), "cam_src0");
+
+        if (!this->cam_src0) {
+            RCLCPP_ERROR(this->get_logger(), "Could not get appsrc element.");
+            return;
+        }
+
+        g_object_set(this->cam_src0,
+            "is-live", TRUE,
+            "format", GST_FORMAT_TIME,
+            "do-timestamp", TRUE,
+            "block", TRUE,
+            nullptr);
 
         // Connect to signals
         g_signal_connect(webrtcbin, "on-negotiation-needed", G_CALLBACK(&WebRTCSendNode::on_negotiation_needed), this);
@@ -274,6 +286,8 @@ public:
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
+        webrtc_pipeline_started = true;
+        RCLCPP_INFO(this->get_logger(), "WebRTC pipeline started.");
     }
 
     /**
@@ -463,6 +477,11 @@ public:
     }
 
     void start_camera_stream() {
+        while (!webrtc_pipeline_started) {
+            RCLCPP_INFO(this->get_logger(), "Waiting for WebRTC pipeline to start...");
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+
         cam_pipeline = gst_parse_launch(
             "v4l2src device=/dev/cam-arducam ! appsink name=cam_sink0",
             nullptr);
@@ -473,24 +492,18 @@ public:
         }
 
         cam_sink0 = gst_bin_get_by_name(GST_BIN(cam_pipeline), "cam_sink0");
-        this->cam_src0 = gst_bin_get_by_name(GST_BIN(this->pipeline), "cam_src0");
         
         if (!cam_sink0) {
             RCLCPP_ERROR(this->get_logger(), "Could not get cam_sink0 element");
             return;
         }
 
-        if (!this->cam_src0) {
-            RCLCPP_ERROR(this->get_logger(), "Could not get appsrc element.");
-            return;
-        }
-
         g_object_set(cam_sink0,
-             "emit-signals", TRUE,   // optional: can use callbacks
-             "max-buffers", 1,       // drop old frames if late
-             "drop", TRUE,           // drop instead of blocking
-             "sync", FALSE,          // don’t wait on clock
-             nullptr);
+            "emit-signals", TRUE,   // optional: can use callbacks
+            "max-buffers", 1,       // drop old frames if late
+            "drop", TRUE,           // drop instead of blocking
+            "sync", FALSE,          // don’t wait on clock
+            nullptr);
 
         g_signal_connect(cam_sink0, "new-sample", G_CALLBACK(on_new_sample), this);
 
@@ -514,7 +527,7 @@ public:
         // }
     }
 
-    GstFlowReturn on_new_sample(GstAppSink* sink, gpointer user_data) {
+    static GstFlowReturn on_new_sample(GstAppSink* sink, gpointer user_data) {
         auto self = static_cast<WebRTCSendNode*>(user_data);
 
         GstSample* sample = gst_app_sink_pull_sample(sink);
@@ -551,6 +564,7 @@ private:
     std::condition_variable ws_cv;       // Condition variable for message queue
     std::thread ws_thread;               // Thread for processing WebSocket messages
     std::atomic<bool> ws_running{true};  // Flag to control WebSocket thread
+    std::atomic<bool> webrtc_pipeline_started{false}; // Flag to indicate if pipeline has started
 };
 
 /**
@@ -568,9 +582,6 @@ int main(int argc, char* argv[]) {
     // Initialize ROS 2
     rclcpp::init(argc, argv);
     auto node = std::make_shared<WebRTCSendNode>();
-
-    // Create WebRTC pipeline
-    node->create_pipeline();
 
     // Create GLib main loop
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);

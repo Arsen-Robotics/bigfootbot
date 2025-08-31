@@ -529,6 +529,7 @@ public:
 
     static GstFlowReturn on_new_sample(GstAppSink* sink, gpointer user_data) {
         auto self = static_cast<WebRTCSendNode*>(user_data);
+        self->last_frame_time = std::chrono::steady_clock::now();
 
         GstSample* sample = gst_app_sink_pull_sample(sink);
         if (!sample) return GST_FLOW_OK;
@@ -550,6 +551,17 @@ public:
         return GST_FLOW_OK;
     }
 
+    void camera_watchdog() {
+        while (rclcpp::ok()) {
+            if (std::chrono::steady_clock::now() - last_frame_time > std::chrono::seconds(3)) {
+                RCLCPP_WARN(get_logger(), "Camera stalled, restarting feeder...");
+                gst_element_set_state(cam_pipeline, GST_STATE_NULL);
+                gst_element_set_state(cam_pipeline, GST_STATE_PLAYING);
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+    }
+
 private:
     GstElement* pipeline;                // Main GStreamer pipeline
     GstElement* cam_src0;                // App source element for feeding camera frames
@@ -565,6 +577,7 @@ private:
     std::thread ws_thread;               // Thread for processing WebSocket messages
     std::atomic<bool> ws_running{true};  // Flag to control WebSocket thread
     std::atomic<bool> webrtc_pipeline_started{false}; // Flag to indicate if pipeline has started
+    std::chrono::steady_clock::time_point last_frame_time = std::chrono::steady_clock::now(); // Timestamp of last received frame
 };
 
 /**
@@ -594,6 +607,11 @@ int main(int argc, char* argv[]) {
     // Start camera thread
     std::thread camera_thread([&]() {
         node->start_camera_stream();
+    });
+
+    // Start camera watchdog thread
+    std::thread watchdog_thread([&]() {
+        node->camera_watchdog();
     });
 
     // Start WebSocket loop

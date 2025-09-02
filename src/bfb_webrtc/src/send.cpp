@@ -12,8 +12,6 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <gst/app/gstappsrc.h>
-#include <gst/app/gstappsink.h>
 
 /**
  * @brief Main class handling WebRTC video streaming
@@ -31,14 +29,14 @@ public:
         gst_init(nullptr, nullptr);
         pipeline = nullptr;
         webrtcbin = nullptr;
-        ws_running = true;
+        running = true;
     }
 
     /**
      * @brief Destructor - cleans up resources
      */
     ~WebRTCSendNode() {
-        ws_running = false;
+        running = false;
         ws_cv.notify_all();
         if (ws_thread.joinable()) {
             ws_thread.join();
@@ -48,8 +46,7 @@ public:
             gst_object_unref(pipeline);
         }
         if (webrtcbin) {
-            gst_object_unref
-            (webrtcbin);
+            gst_object_unref(webrtcbin);
         }
     }
 
@@ -74,7 +71,7 @@ public:
 
             client.connect(con);
             
-            while (rclcpp::ok() && ws_running) {
+            while (rclcpp::ok() && running) {
                 client.poll();
             }
 
@@ -177,9 +174,9 @@ public:
      * Runs in a separate thread to handle outgoing WebSocket messages
      */
     void process_ws_queue() {
-        while (ws_running) {
+        while (running) {
             std::unique_lock<std::mutex> lock(ws_mutex);
-            ws_cv.wait(lock, [this] { return !msg_queue.empty() || !ws_running; });
+            ws_cv.wait(lock, [this] { return !msg_queue.empty() || !running; });
 
             std::string msg = msg_queue.front();
             msg_queue.pop();
@@ -218,7 +215,7 @@ public:
     }
 
     /**
-     * @brief Sets up and starts the GStreamer pipeline for video streaming
+     * @brief Sets up the GStreamer pipeline for video streaming
      * 
      * Creates and configures a pipeline with:
      * - Multiple v4l2src sources for different cameras
@@ -240,46 +237,82 @@ public:
             v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector.sink_0 \
             videotestsrc ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector.sink_1",
             &error);
-        
+
+            // v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            // \
+            // v4l2src device=/dev/cam-microdia ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+            // \
+            // nvarguscamerasrc sensor-mode=4 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
+            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
+            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.
+
+            // nvcompositor name=mix sync-import-streams=false \
+            // sink_0::xpos=0   sink_0::ypos=0   sink_0::width=640  sink_0::height=480 \
+            // sink_1::xpos=640 sink_1::ypos=0   sink_1::width=640  sink_1::height=480 \
+            // sink_2::xpos=1280 sink_2::ypos=0  sink_2::width=640  sink_2::height=480 \
+            // ! queue max-size-buffers=7 leaky=upstream \
+            // ! video/x-raw(memory:NVMM), width=1920, height=480, framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM), format=NV12 \
+            // ! queue max-size-buffers=7 leaky=upstream \
+            // ! nvv4l2h264enc maxperf-enable=true bitrate=4000000 idrinterval=5 iframeinterval=5 insert-sps-pps=true insert-aud=true insert-vui=true \
+            // ! queue max-size-buffers=7 leaky=upstream \
+            // ! h264parse config-interval=1 \
+            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
+            // ! sendrecv. \
+            // \
+            // nvarguscamerasrc sensor-mode=4 \
+            // ! queue max-size-buffers=7 leaky=upstream \
+            // ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! mix.sink_0 \
+            // \
+            // v4l2src device=/dev/video9 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! mix.sink_1 \
+            // \
+            // v4l2src device=/dev/video7 io-mode=4 \
+            // ! video/x-raw,width=640,height=480,framerate=30/1 \
+            // ! nvvidconv \
+            // ! video/x-raw(memory:NVMM),format=NV12 \
+            // ! mix.sink_2", &error);
+
         if (error) {
-            RCLCPP_ERROR(this->get_logger(), "Could not create WebRTC pipeline: %s", error->message);
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline: %s", error->message);
             g_error_free(error);
             return;
         }
 
         if (!pipeline) {
-            RCLCPP_ERROR(this->get_logger(), "Could not create WebRTC pipeline.");
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline.");
             return;
         }
 
-        // Get WebRTC element
+        // Get webrtcbin element
         webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "sendrecv");
 
         if (!webrtcbin) {
-            RCLCPP_ERROR(this->get_logger(), "Could not get WebRTC element.");
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
             return;
         }
 
-        // Use system clock for the pipeline
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
         // Set WebRTC properties
         g_object_set(G_OBJECT(webrtcbin), "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE, "stun-server", "stun://stun.l.google.com:19302", nullptr);
-
-        // Get appsrc element for camera 0
-        // this->cam_src0 = gst_bin_get_by_name(GST_BIN(this->pipeline), "cam_src0");
-
-        // if (!this->cam_src0) {
-        //     RCLCPP_ERROR(this->get_logger(), "Could not get appsrc element.");
-        //     return;
-        // }
-
-        // g_object_set(this->cam_src0,
-        //     "is-live", TRUE,
-        //     "format", GST_FORMAT_TIME,
-        //     "do-timestamp", TRUE,
-        //     "block", TRUE,
-        //     nullptr);
 
         // Connect to signals
         g_signal_connect(webrtcbin, "on-negotiation-needed", G_CALLBACK(&WebRTCSendNode::on_negotiation_needed), this);
@@ -288,8 +321,18 @@ public:
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
-        webrtc_pipeline_started = true;
-        RCLCPP_INFO(this->get_logger(), "WebRTC pipeline started.");
+
+        // Start camera watchdog thread
+        std::thread camera_watchdog_thread([&]() { 
+            this->camera_watchdog(); 
+        });
+        camera_watchdog_thread.detach();
+    }
+
+    void camera_watchdog() {
+        while (running) {
+            
+        }
     }
 
     /**
@@ -330,7 +373,7 @@ public:
             int sdpMLineIndex = jsonMsg["ice"]["sdpMLineIndex"].asInt();
 
             if (!webrtcbin) {
-                RCLCPP_ERROR(this->get_logger(), "Could not get WebRTC element.");
+                RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
                 return;
             }
 
@@ -478,97 +521,8 @@ public:
         gst_caps_unref(caps);
     }
 
-    // void start_camera_stream() {
-    //     while (!webrtc_pipeline_started) {
-    //         RCLCPP_INFO(this->get_logger(), "Waiting for WebRTC pipeline to start...");
-    //         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    //     }
-
-    //     cam_pipeline = gst_parse_launch(
-    //         "v4l2src device=/dev/cam-arducam ! appsink name=cam_sink0",
-    //         nullptr);
-
-    //     if (!cam_pipeline) {
-    //         RCLCPP_ERROR(this->get_logger(), "Could not create camera source pipeline");
-    //         return;
-    //     }
-
-    //     cam_sink0 = gst_bin_get_by_name(GST_BIN(cam_pipeline), "cam_sink0");
-        
-    //     if (!cam_sink0) {
-    //         RCLCPP_ERROR(this->get_logger(), "Could not get cam_sink0 element");
-    //         return;
-    //     }
-
-    //     g_object_set(cam_sink0,
-    //         "emit-signals", TRUE,   // optional: can use callbacks
-    //         "max-buffers", 1,       // drop old frames if late
-    //         "drop", TRUE,           // drop instead of blocking
-    //         "sync", FALSE,          // don’t wait on clock
-    //         nullptr);
-
-    //     g_signal_connect(cam_sink0, "new-sample", G_CALLBACK(on_new_sample), this);
-
-    //     gst_element_set_state(cam_pipeline, GST_STATE_PLAYING);
-
-    //     // while (rclcpp::ok()) {
-    //     //     GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(cam_sink0));
-    //     //     if (!sample) {
-    //     //         // camera disconnected -> try to restart the pipeline
-    //     //         RCLCPP_ERROR(this->get_logger(), "Could not get sample from camera. Restarting camera pipeline...");
-    //     //         gst_element_set_state(cam_pipeline, GST_STATE_NULL);
-    //     //         gst_element_set_state(cam_pipeline, GST_STATE_PLAYING);
-    //     //         continue;
-    //     //     }
-
-    //     //     GstBuffer* buffer = gst_sample_get_buffer(sample);
-    //     //     GstBuffer* buffer_copy = gst_buffer_copy(buffer);
-    //     //     gst_app_src_push_buffer(GST_APP_SRC(this->cam_src0), buffer_copy);
-
-    //     //     gst_sample_unref(sample);
-    //     // }
-    // }
-
-    // static GstFlowReturn on_new_sample(GstAppSink* sink, gpointer user_data) {
-    //     auto self = static_cast<WebRTCSendNode*>(user_data);
-    //     self->last_frame_time = std::chrono::steady_clock::now();
-
-    //     GstSample* sample = gst_app_sink_pull_sample(sink);
-    //     if (!sample) return GST_FLOW_OK;
-
-    //     GstBuffer* buffer = gst_sample_get_buffer(sample);
-    //     if (!buffer) {
-    //         gst_sample_unref(sample);
-    //         return GST_FLOW_OK;
-    //     }
-
-    //     gst_buffer_ref(buffer);
-
-    //     // push to WebRTC pipeline if appsrc is ready
-    //     if (self->cam_src0 && GST_IS_APP_SRC(self->cam_src0)) {
-    //         gst_app_src_push_buffer(GST_APP_SRC(self->cam_src0), buffer);
-    //     }
-
-    //     gst_sample_unref(sample);
-    //     return GST_FLOW_OK;
-    // }
-
-    // void camera_watchdog() {
-    //     while (rclcpp::ok()) {
-    //         if (std::chrono::steady_clock::now() - last_frame_time > std::chrono::seconds(3)) {
-    //             RCLCPP_WARN(get_logger(), "Camera stalled, restarting feeder...");
-    //             gst_element_set_state(cam_pipeline, GST_STATE_NULL);
-    //             gst_element_set_state(cam_pipeline, GST_STATE_PLAYING);
-    //         }
-    //         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    //     }
-    // }
-
 private:
     GstElement* pipeline;                // Main GStreamer pipeline
-    GstElement* cam_src0;                // App source element for feeding camera frames
-    GstElement* cam_sink0;               // App sink element for capturing camera frames
-    GstElement* cam_pipeline;            // Camera source pipeline
     GstElement* webrtcbin;              // WebRTC element
     websocketpp::connection_hdl global_hdl;  // WebSocket connection handle
     websocketpp::client<websocketpp::config::asio_client>* global_client;  // WebSocket client
@@ -576,10 +530,7 @@ private:
     std::queue<std::string> msg_queue;   // Queue for outgoing WebSocket messages
     std::mutex ws_mutex;                 // Mutex for thread safety
     std::condition_variable ws_cv;       // Condition variable for message queue
-    std::thread ws_thread;               // Thread for processing WebSocket messages
-    std::atomic<bool> ws_running{true};  // Flag to control WebSocket thread
-    std::atomic<bool> webrtc_pipeline_started{false}; // Flag to indicate if pipeline has started
-    std::chrono::steady_clock::time_point last_frame_time = std::chrono::steady_clock::now(); // Timestamp of last received frame
+    std::atomic<bool> running{true};  // Flag to control WebSocket thread
 };
 
 /**
@@ -598,26 +549,15 @@ int main(int argc, char* argv[]) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<WebRTCSendNode>();
 
-    // Create GLib main loop
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
 
-    // Start GStreamer loop
+    // Start GStreamer loop first, then WebSocket connection
     std::thread gloop_thread([&]() { 
         g_main_loop_run(loop); 
     });
 
-    // // Start camera thread
-    // std::thread camera_thread([&]() {
-    //     node->start_camera_stream();
-    // });
-
-    // // Start camera watchdog thread
-    // std::thread watchdog_thread([&]() {
-    //     node->camera_watchdog();
-    // });
-
-    // Start WebSocket loop
-    std::thread ws_thread([&]() { 
+    // Start WebSocket in separate thread
+    std::thread ws_connect_thread([&]() { 
         node->connect(); 
     });
 
@@ -626,8 +566,8 @@ int main(int argc, char* argv[]) {
     // Cleanup
     rclcpp::shutdown();
     // g_main_loop_quit(loop);
-    // gloop_thread.join();
     // g_main_loop_unref(loop);
-    ws_thread.join();
+    gloop_thread.join();
+    ws_connect_thread.join();
     return 0;
 }

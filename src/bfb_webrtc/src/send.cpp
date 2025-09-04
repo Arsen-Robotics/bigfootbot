@@ -93,6 +93,7 @@ public:
         global_client = c;
 
         ws_thread = std::thread(&WebRTCSendNode::process_ws_queue, this);
+        ws_thread.detach();
     }
 
     /**
@@ -303,9 +304,22 @@ public:
 
         // Get webrtcbin element
         webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "sendrecv");
-
         if (!webrtcbin) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
+            return;
+        }
+
+        // Get v4l2src element for camera monitoring
+        v4l2src0 = gst_bin_get_by_name(GST_BIN(pipeline), "v4l2src0");
+        if (!v4l2src0) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get v4l2src0 element.");
+            return;
+        }
+
+        // Get input-selector element for camera switching
+        input_selector0 = gst_bin_get_by_name(GST_BIN(pipeline), "input_selector");
+        if (!input_selector0) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get input-selector element.");
             return;
         }
 
@@ -331,7 +345,24 @@ public:
 
     void camera_watchdog() {
         while (running) {
-            
+            bool cam0_ok = check_camera_alive("/dev/cam-arducam");
+
+            if (!cam0_ok) {
+                RCLCPP_WARN(this->get_logger(), "Camera /dev/cam-arducam not responding. Attempting to reset...");
+                
+                // Attempt to reset camera by cycling input-selector
+                g_object_set(G_OBJECT(input_selector), "active-pad", 1, nullptr); // Switch to test source
+
+                // Restart v4l2src0 element
+                gst_element_set_state(v4l2src0, GST_STATE_NULL);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                gst_element_set_state(v4l2src0, GST_STATE_PLAYING);
+
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                g_object_set(G_OBJECT(input_selector), "active-pad", 0, nullptr); // Switch back to camera
+                gst_object_unref(input_selector);
+                RCLCPP_INFO(this->get_logger(), "Reset attempt complete.");
+            }
         }
     }
 
@@ -507,6 +538,8 @@ public:
             gst_element_sync_state_with_parent(conv);
             gst_element_sync_state_with_parent(sink);
 
+            g_object_set(G_OBJECT(sink), "sync", FALSE, nullptr);
+
             GstPad* sinkpad = gst_element_get_static_pad(conv, "sink");
             gst_pad_link(pad, sinkpad);
             gst_object_unref(sinkpad);
@@ -526,6 +559,8 @@ private:
     GstElement* webrtcbin;              // WebRTC element
     websocketpp::connection_hdl global_hdl;  // WebSocket connection handle
     websocketpp::client<websocketpp::config::asio_client>* global_client;  // WebSocket client
+    GstElement* v4l2src0;               // Video source element
+    GstElement* input_selector0;         // Input selector for switching sources
 
     std::queue<std::string> msg_queue;   // Queue for outgoing WebSocket messages
     std::mutex ws_mutex;                 // Mutex for thread safety

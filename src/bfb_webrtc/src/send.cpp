@@ -12,6 +12,10 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <fcntl.h>              // open()
+#include <unistd.h>             // close()
+#include <sys/ioctl.h>          // ioctl()
+#include <linux/videodev2.h>    // v4l2_capability, VIDIOC_QUERYCAP
 
 /**
  * @brief Main class handling WebRTC video streaming
@@ -21,6 +25,9 @@
  */
 class WebRTCSendNode : public rclcpp::Node {
 public:
+    // Flag to control threads
+    std::atomic<bool> running{true};
+
     /**
      * @brief Constructor - initializes GStreamer and member variables
      */
@@ -175,7 +182,7 @@ public:
      * Runs in a separate thread to handle outgoing WebSocket messages
      */
     void process_ws_queue() {
-        while (running) {
+        while (rclcpp::ok()) {
             std::unique_lock<std::mutex> lock(ws_mutex);
             ws_cv.wait(lock, [this] { return !msg_queue.empty() || !running; });
 
@@ -228,68 +235,16 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            input-selector name=input_selector \
+            input-selector name=input_selector0 \
                 ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
                 ! queue max-size-buffers=2 leaky=downstream \
                 ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
                 ! queue max-size-buffers=2 leaky=downstream \
                 ! h264parse ! rtph264pay config-interval=1 pt=96 \
                 ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector.sink_0 \
-            videotestsrc ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector.sink_1",
+            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector0.sink_0 \
+            videotestsrc ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector0.sink_1",
             &error);
-
-            // v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            // \
-            // v4l2src device=/dev/cam-microdia ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            // \
-            // nvarguscamerasrc sensor-mode=4 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
-            // ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! nvv4l2h264enc bitrate=3000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-            // ! h264parse ! rtph264pay config-interval=1 pt=96 \
-            // ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.
-
-            // nvcompositor name=mix sync-import-streams=false \
-            // sink_0::xpos=0   sink_0::ypos=0   sink_0::width=640  sink_0::height=480 \
-            // sink_1::xpos=640 sink_1::ypos=0   sink_1::width=640  sink_1::height=480 \
-            // sink_2::xpos=1280 sink_2::ypos=0  sink_2::width=640  sink_2::height=480 \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! video/x-raw(memory:NVMM), width=1920, height=480, framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM), format=NV12 \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! nvv4l2h264enc maxperf-enable=true bitrate=4000000 idrinterval=5 iframeinterval=5 insert-sps-pps=true insert-aud=true insert-vui=true \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! h264parse config-interval=1 \
-            // ! rtph264pay pt=96 mtu=1200 config-interval=1 \
-            // ! sendrecv. \
-            // \
-            // nvarguscamerasrc sensor-mode=4 \
-            // ! queue max-size-buffers=7 leaky=upstream \
-            // ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! mix.sink_0 \
-            // \
-            // v4l2src device=/dev/video9 io-mode=4 \
-            // ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! mix.sink_1 \
-            // \
-            // v4l2src device=/dev/video7 io-mode=4 \
-            // ! video/x-raw,width=640,height=480,framerate=30/1 \
-            // ! nvvidconv \
-            // ! video/x-raw(memory:NVMM),format=NV12 \
-            // ! mix.sink_2", &error);
 
         if (error) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline: %s", error->message);
@@ -317,7 +272,7 @@ public:
         }
 
         // Get input-selector element for camera switching
-        input_selector0 = gst_bin_get_by_name(GST_BIN(pipeline), "input_selector");
+        input_selector0 = gst_bin_get_by_name(GST_BIN(pipeline), "input_selector0");
         if (!input_selector0) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get input-selector element.");
             return;
@@ -336,34 +291,80 @@ public:
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
+        GstBus *bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+        gst_bus_add_watch(bus, bus_call, input_selector0);
+        gst_object_unref(bus);
+
         // Start camera watchdog thread
-        std::thread camera_watchdog_thread([&]() { 
-            this->camera_watchdog(); 
-        });
-        camera_watchdog_thread.detach();
+        // camera_watchdog_thread = std::thread(&WebRTCSendNode::camera_watchdog, this);
+        // camera_watchdog_thread.detach();
+    }
+
+    static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data) {
+        RCLCPP_INFO(rclcpp::get_logger("WebRTCSendNode"), "GstBus message received: %s", GST_MESSAGE_TYPE_NAME(msg));
+        GstElement *input_selector = GST_ELEMENT(data);
+        GstPad *fallback_pad = gst_element_get_static_pad(input_selector, "sink_1");
+        GstPad *camera_pad   = gst_element_get_static_pad(input_selector, "sink_0");
+
+        switch (GST_MESSAGE_TYPE(msg)) {
+            case GST_MESSAGE_ERROR: {
+                GError *err;
+                gchar *dbg;
+                gst_message_parse_error(msg, &err, &dbg);
+                g_printerr("Camera error: %s\n", err->message);
+                g_object_set(G_OBJECT(input_selector), "active-pad", fallback_pad, NULL);
+                g_error_free(err);
+                g_free(dbg);
+                break;
+            }
+            case GST_MESSAGE_EOS:
+                g_print("Camera EOS, switching to fallback\n");
+                g_object_set(G_OBJECT(input_selector), "active-pad", fallback_pad, NULL);
+                break;
+            default:
+                break;
+        }
+
+        gst_object_unref(fallback_pad);
+        gst_object_unref(camera_pad);
+        return TRUE;
     }
 
     void camera_watchdog() {
         while (running) {
-            bool cam0_ok = check_camera_alive("/dev/cam-arducam");
+            if (!check_camera_ok("/dev/cam-arducam")) {
+            RCLCPP_WARN(this->get_logger(), "Camera not responding. Attempting to reset...");
 
-            if (!cam0_ok) {
-                RCLCPP_WARN(this->get_logger(), "Camera /dev/cam-arducam not responding. Attempting to reset...");
-                
-                // Attempt to reset camera by cycling input-selector
-                g_object_set(G_OBJECT(input_selector), "active-pad", 1, nullptr); // Switch to test source
+                // Schedule work in the GLib main loop
+                g_idle_add([](gpointer user_data) -> gboolean {
+                    auto self = static_cast<WebRTCSendNode*>(user_data);
 
-                // Restart v4l2src0 element
-                gst_element_set_state(v4l2src0, GST_STATE_NULL);
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-                gst_element_set_state(v4l2src0, GST_STATE_PLAYING);
+                    if (self->input_selector0) {
+                        GstPad *pad = gst_element_get_static_pad(self->input_selector0, "sink_1");
+                        if (pad) {
+                            g_object_set(self->input_selector0, "active-pad", pad, nullptr);
+                            gst_object_unref(pad);
+                        }
+                    }
 
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-                g_object_set(G_OBJECT(input_selector), "active-pad", 0, nullptr); // Switch back to camera
-                gst_object_unref(input_selector);
-                RCLCPP_INFO(this->get_logger(), "Reset attempt complete.");
+                    return G_SOURCE_REMOVE; // run once, then remove
+                }, this);
             }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
+    }
+
+    bool check_camera_ok(const std::string& device) {
+        int fd = open(device.c_str(), O_RDWR | O_NONBLOCK, 0);
+        if (fd == -1) {
+            return false; // device missing or busy
+        }
+
+        struct v4l2_capability cap;
+        bool ok = (ioctl(fd, VIDIOC_QUERYCAP, &cap) == 0);
+        close(fd);
+
+        return ok;
     }
 
     /**
@@ -555,6 +556,8 @@ public:
     }
 
 private:
+    std::thread ws_thread;               // Thread for WebSocket message processing
+    std::thread camera_watchdog_thread; // Thread for camera monitoring
     GstElement* pipeline;                // Main GStreamer pipeline
     GstElement* webrtcbin;              // WebRTC element
     websocketpp::connection_hdl global_hdl;  // WebSocket connection handle
@@ -565,7 +568,6 @@ private:
     std::queue<std::string> msg_queue;   // Queue for outgoing WebSocket messages
     std::mutex ws_mutex;                 // Mutex for thread safety
     std::condition_variable ws_cv;       // Condition variable for message queue
-    std::atomic<bool> running{true};  // Flag to control WebSocket thread
 };
 
 /**
@@ -591,7 +593,7 @@ int main(int argc, char* argv[]) {
         g_main_loop_run(loop); 
     });
 
-    // Start WebSocket in separate thread
+    // Start WebSocket connect in separate thread
     std::thread ws_connect_thread([&]() { 
         node->connect(); 
     });
@@ -599,10 +601,8 @@ int main(int argc, char* argv[]) {
     rclcpp::spin(node);
 
     // Cleanup
-    rclcpp::shutdown();
-    // g_main_loop_quit(loop);
-    // g_main_loop_unref(loop);
-    gloop_thread.join();
+    node->running = false;
     ws_connect_thread.join();
+    rclcpp::shutdown();
     return 0;
 }

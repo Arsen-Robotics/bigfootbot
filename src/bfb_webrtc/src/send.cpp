@@ -236,14 +236,13 @@ public:
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
             input-selector name=input_selector0 \
-                ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
                 ! queue max-size-buffers=2 leaky=downstream \
                 ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
                 ! queue max-size-buffers=2 leaky=downstream \
                 ! h264parse ! rtph264pay config-interval=1 pt=96 \
                 ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector0.sink_0 \
-            videotestsrc ! video/x-raw,width=640,height=480,framerate=30/1 ! input_selector0.sink_1",
+            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv name=nvvidconv0 ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_0 \
+            videotestsrc is-live=true ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_1",
             &error);
 
         if (error) {
@@ -278,6 +277,20 @@ public:
             return;
         }
 
+        // Get nvvidconv element for camera monitoring
+        nvvidconv0 = gst_bin_get_by_name(GST_BIN(pipeline), "nvvidconv0");
+        if (!nvvidconv0) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get nvvidconv0 element.");
+            return;
+        }
+
+        // Get sink pad for input-selector
+        input_selector0_sink0 = gst_element_get_static_pad(input_selector0, "sink_0");
+        if (!input_selector0_sink0) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get input-selector sink pad.");
+            return;
+        }
+
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
         // Set WebRTC properties
@@ -291,43 +304,9 @@ public:
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-        GstBus *bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-        gst_bus_add_watch(bus, bus_call, input_selector0);
-        gst_object_unref(bus);
-
         // Start camera watchdog thread
-        // camera_watchdog_thread = std::thread(&WebRTCSendNode::camera_watchdog, this);
-        // camera_watchdog_thread.detach();
-    }
-
-    static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data) {
-        RCLCPP_INFO(rclcpp::get_logger("WebRTCSendNode"), "GstBus message received: %s", GST_MESSAGE_TYPE_NAME(msg));
-        GstElement *input_selector = GST_ELEMENT(data);
-        GstPad *fallback_pad = gst_element_get_static_pad(input_selector, "sink_1");
-        GstPad *camera_pad   = gst_element_get_static_pad(input_selector, "sink_0");
-
-        switch (GST_MESSAGE_TYPE(msg)) {
-            case GST_MESSAGE_ERROR: {
-                GError *err;
-                gchar *dbg;
-                gst_message_parse_error(msg, &err, &dbg);
-                g_printerr("Camera error: %s\n", err->message);
-                g_object_set(G_OBJECT(input_selector), "active-pad", fallback_pad, NULL);
-                g_error_free(err);
-                g_free(dbg);
-                break;
-            }
-            case GST_MESSAGE_EOS:
-                g_print("Camera EOS, switching to fallback\n");
-                g_object_set(G_OBJECT(input_selector), "active-pad", fallback_pad, NULL);
-                break;
-            default:
-                break;
-        }
-
-        gst_object_unref(fallback_pad);
-        gst_object_unref(camera_pad);
-        return TRUE;
+        camera_watchdog_thread = std::thread(&WebRTCSendNode::camera_watchdog, this);
+        camera_watchdog_thread.detach();
     }
 
     void camera_watchdog() {
@@ -349,6 +328,54 @@ public:
 
                     return G_SOURCE_REMOVE; // run once, then remove
                 }, this);
+
+                // Remove old branch
+                gst_element_set_state(v4l2src0, GST_STATE_NULL);
+                gst_bin_remove(GST_BIN(pipeline), v4l2src0);
+                gst_object_unref(v4l2src0);
+                gst_bin_remove(GST_BIN(pipeline), nvvidconv0);
+                gst_object_unref(nvvidconv0);
+
+                // Recreate elements
+                v4l2src0 = gst_element_factory_make("v4l2src", "v4l2src0");
+                g_object_set(v4l2src0, "device", "/dev/cam-arducam", nullptr);
+                nvvidconv0 = gst_element_factory_make("nvvidconv", "nvvidconv0");
+
+                // Add to pipeline and link
+                gst_bin_add_many(GST_BIN(pipeline), v4l2src0, nvvidconv0, nullptr);
+
+                GstPad* src_pad = gst_element_get_static_pad(nvvidconv0, "src");
+                GstPad* sink_pad = gst_element_get_static_pad(input_selector0, "sink_0");
+                gst_pad_link(src_pad, sink_pad);
+                gst_object_unref(src_pad);
+                gst_object_unref(sink_pad);
+
+                // Set to PLAYING
+                gst_element_set_state(v4l2src0, GST_STATE_PLAYING);
+                gst_element_set_state(nvvidconv0, GST_STATE_PLAYING);
+
+                std::this_thread::sleep_for(std::chrono::seconds(5)); // wait for camera to stabilize
+                if (check_camera_ok("/dev/cam-arducam")) {
+                    RCLCPP_INFO(this->get_logger(), "Camera reset successful.");
+
+                    // Switch back to camera input
+                    g_idle_add([](gpointer user_data) -> gboolean {
+                        auto self = static_cast<WebRTCSendNode*>(user_data);
+
+                        if (self->input_selector0) {
+                            GstPad *pad = gst_element_get_static_pad(self->input_selector0, "sink_0");
+                            if (pad) {
+                                g_object_set(self->input_selector0, "active-pad", pad, nullptr);
+                                gst_object_unref(pad);
+                            }
+                        }
+
+                        return G_SOURCE_REMOVE; // run once, then remove
+                    }, this);
+
+                } else {
+                    RCLCPP_ERROR(this->get_logger(), "Camera reset failed. Will retry...");
+                }
             }
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
@@ -564,6 +591,8 @@ private:
     websocketpp::client<websocketpp::config::asio_client>* global_client;  // WebSocket client
     GstElement* v4l2src0;               // Video source element
     GstElement* input_selector0;         // Input selector for switching sources
+    GstElement* nvvidconv0;             // NVIDIA video converter
+    GstPad* input_selector0_sink0;      // Sink pad for input selector
 
     std::queue<std::string> msg_queue;   // Queue for outgoing WebSocket messages
     std::mutex ws_mutex;                 // Mutex for thread safety

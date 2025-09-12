@@ -333,6 +333,7 @@ public:
                 gst_element_set_state(v4l2src0, GST_STATE_NULL);
                 gst_bin_remove(GST_BIN(pipeline), v4l2src0);
                 gst_object_unref(v4l2src0);
+                gst_element_set_state(nvvidconv0, GST_STATE_NULL);
                 gst_bin_remove(GST_BIN(pipeline), nvvidconv0);
                 gst_object_unref(nvvidconv0);
 
@@ -343,6 +344,7 @@ public:
 
                 // Add to pipeline and link
                 gst_bin_add_many(GST_BIN(pipeline), v4l2src0, nvvidconv0, nullptr);
+                gst_element_link(v4l2src0, nvvidconv0);
 
                 GstPad* src_pad = gst_element_get_static_pad(nvvidconv0, "src");
                 GstPad* sink_pad = gst_element_get_static_pad(input_selector0, "sink_0");
@@ -350,13 +352,13 @@ public:
                 gst_object_unref(src_pad);
                 gst_object_unref(sink_pad);
 
-                // Set to PLAYING
-                gst_element_set_state(v4l2src0, GST_STATE_PLAYING);
-                gst_element_set_state(nvvidconv0, GST_STATE_PLAYING);
-
                 std::this_thread::sleep_for(std::chrono::seconds(5)); // wait for camera to stabilize
                 if (check_camera_ok("/dev/cam-arducam")) {
                     RCLCPP_INFO(this->get_logger(), "Camera reset successful.");
+
+                    // Set to PLAYING
+                    gst_element_set_state(v4l2src0, GST_STATE_PLAYING);
+                    gst_element_set_state(nvvidconv0, GST_STATE_PLAYING);
 
                     // Switch back to camera input
                     g_idle_add([](gpointer user_data) -> gboolean {

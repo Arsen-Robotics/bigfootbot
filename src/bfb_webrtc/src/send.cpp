@@ -337,28 +337,37 @@ public:
                 gst_bin_remove(GST_BIN(pipeline), nvvidconv0);
                 gst_object_unref(nvvidconv0);
 
-                // Recreate elements
+                // Create new elements
                 v4l2src0 = gst_element_factory_make("v4l2src", "v4l2src0");
                 g_object_set(v4l2src0, "device", "/dev/cam-arducam", nullptr);
                 nvvidconv0 = gst_element_factory_make("nvvidconv", "nvvidconv0");
 
-                // Add to pipeline and link
-                gst_bin_add_many(GST_BIN(pipeline), v4l2src0, nvvidconv0, nullptr);
-                gst_element_link(v4l2src0, nvvidconv0);
+                // Create capsfilter for nvvidconv output
+                GstElement *capsfilter = gst_element_factory_make("capsfilter", "capsfilter0");
+                GstCaps *caps = gst_caps_from_string("video/x-raw(memory:NVMM),format=NV12");
+                g_object_set(capsfilter, "caps", caps, nullptr);
+                gst_caps_unref(caps);
 
-                GstPad* src_pad = gst_element_get_static_pad(nvvidconv0, "src");
-                GstPad* sink_pad = gst_element_get_static_pad(input_selector0, "sink_0");
-                gst_pad_link(src_pad, sink_pad);
-                gst_object_unref(src_pad);
-                gst_object_unref(sink_pad);
+                // Add to pipeline
+                gst_bin_add_many(GST_BIN(pipeline), v4l2src0, nvvidconv0, capsfilter, nullptr);
+
+                // Link: v4l2src → nvvidconv → capsfilter → input-selector
+                if (!gst_element_link_many(v4l2src0, nvvidconv0, capsfilter, input_selector0, nullptr)) {
+                    RCLCPP_ERROR(this->get_logger(), "Failed to link camera branch into input-selector");
+                    return;
+                }
 
                 std::this_thread::sleep_for(std::chrono::seconds(5)); // wait for camera to stabilize
                 if (check_camera_ok("/dev/cam-arducam")) {
                     RCLCPP_INFO(this->get_logger(), "Camera reset successful.");
 
                     // Set to PLAYING
-                    gst_element_set_state(v4l2src0, GST_STATE_PLAYING);
-                    gst_element_set_state(nvvidconv0, GST_STATE_PLAYING);
+                    if (!gst_element_set_state(v4l2src0, GST_STATE_PLAYING)) {
+                        RCLCPP_ERROR(this->get_logger(), "Failed to set v4l2src0 to PLAYING");
+                    }
+                    if (!gst_element_set_state(nvvidconv0, GST_STATE_PLAYING)) {
+                        RCLCPP_ERROR(this->get_logger(), "Failed to set nvvidconv0 to PLAYING");
+                    }
 
                     // Switch back to camera input
                     g_idle_add([](gpointer user_data) -> gboolean {

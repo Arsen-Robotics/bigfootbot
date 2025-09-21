@@ -16,6 +16,7 @@
 #include <unistd.h>             // close()
 #include <sys/ioctl.h>          // ioctl()
 #include <linux/videodev2.h>    // v4l2_capability, VIDIOC_QUERYCAP
+#include <sensor_msgs/msg/image.hpp>
 
 /**
  * @brief Main class handling WebRTC video streaming
@@ -37,6 +38,12 @@ public:
         pipeline = nullptr;
         webrtcbin = nullptr;
         running = true;
+
+        // Create camera image topic ros2 subscriber below:
+        cam0_sub = this->create_subscription<sensor_msgs::msg::Image>(
+            "camera0/image/raw", 10,
+            std::bind(&WebRTCSendNode::camera0_callback, this, std::placeholders::_1)
+        );
     }
 
     /**
@@ -55,6 +62,25 @@ public:
         if (webrtcbin) {
             gst_object_unref(webrtcbin);
         }
+    }
+
+    void camera0_callback(const sensor_msgs::msg::Image::SharedPtr msg) {
+        if (!appsrc0) return;
+
+        GstBuffer *buffer = gst_buffer_new_allocate(NULL, msg->data.size(), NULL);
+
+        GstMapInfo map;
+        gst_buffer_map(buffer, &map, GST_MAP_WRITE);
+        memcpy(map.data, msg->data.data(), msg->data.size());
+        gst_buffer_unmap(buffer, &map);
+
+        GST_BUFFER_PTS(buffer) = gst_util_uint64_scale(msg->header.stamp.sec * 1000000000ULL + msg->header.stamp.nanosec,
+                                                    GST_USECOND, 1);
+        GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale_int(1, GST_SECOND, 30); // assume 30 fps
+
+        GstFlowReturn ret;
+        g_signal_emit_by_name(appsrc0, "push-buffer", buffer, &ret);
+    gst_buffer_unref(buffer);
     }
 
     /**
@@ -235,15 +261,26 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            input-selector name=input_selector0 \
-                ! queue max-size-buffers=2 leaky=downstream \
-                ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-                ! queue max-size-buffers=2 leaky=downstream \
-                ! h264parse ! rtph264pay config-interval=1 pt=96 \
-                ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv name=nvvidconv0 ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_0 \
-            videotestsrc is-live=true ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_1",
+                appsrc name=appsrc0 ! video/x-raw,width=640,height=480,framerate=30/1 \
+                    ! nvvidconv name=nvvidconv0 ! video/x-raw(memory:NVMM),format=NV12 \
+                    ! queue max-size-buffers=2 leaky=downstream \
+                    ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+                    ! queue max-size-buffers=2 leaky=downstream \
+                    ! h264parse ! rtph264pay config-interval=1 pt=96 \
+                    ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.",
             &error);
+        
+        // pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+        //     stun-server=stun://stun.l.google.com:19302 \
+        //     input-selector name=input_selector0 \
+        //         ! queue max-size-buffers=2 leaky=downstream \
+        //         ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
+        //         ! queue max-size-buffers=2 leaky=downstream \
+        //         ! h264parse ! rtph264pay config-interval=1 pt=96 \
+        //         ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+        //     v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv name=nvvidconv0 ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_0 \
+        //     videotestsrc is-live=true ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_1",
+        //     &error);
 
         if (error) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline: %s", error->message);
@@ -263,33 +300,40 @@ public:
             return;
         }
 
-        // Get v4l2src element for camera monitoring
-        v4l2src0 = gst_bin_get_by_name(GST_BIN(pipeline), "v4l2src0");
-        if (!v4l2src0) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get v4l2src0 element.");
+        // Get appsrc element for camera 0
+        appsrc0 = gst_bin_get_by_name(GST_BIN(pipeline), "appsrc0");
+        if (!appsrc0) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get appsrc0 element.");
             return;
         }
 
-        // Get input-selector element for camera switching
-        input_selector0 = gst_bin_get_by_name(GST_BIN(pipeline), "input_selector0");
-        if (!input_selector0) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get input-selector element.");
-            return;
-        }
+        // // Get v4l2src element for camera monitoring
+        // v4l2src0 = gst_bin_get_by_name(GST_BIN(pipeline), "v4l2src0");
+        // if (!v4l2src0) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get v4l2src0 element.");
+        //     return;
+        // }
 
-        // Get nvvidconv element for camera monitoring
-        nvvidconv0 = gst_bin_get_by_name(GST_BIN(pipeline), "nvvidconv0");
-        if (!nvvidconv0) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get nvvidconv0 element.");
-            return;
-        }
+        // // Get input-selector element for camera switching
+        // input_selector0 = gst_bin_get_by_name(GST_BIN(pipeline), "input_selector0");
+        // if (!input_selector0) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get input-selector element.");
+        //     return;
+        // }
 
-        // Get sink pad for input-selector
-        input_selector0_sink0 = gst_element_get_static_pad(input_selector0, "sink_0");
-        if (!input_selector0_sink0) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get input-selector sink pad.");
-            return;
-        }
+        // // Get nvvidconv element for camera monitoring
+        // nvvidconv0 = gst_bin_get_by_name(GST_BIN(pipeline), "nvvidconv0");
+        // if (!nvvidconv0) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get nvvidconv0 element.");
+        //     return;
+        // }
+
+        // // Get sink pad for input-selector
+        // input_selector0_sink0 = gst_element_get_static_pad(input_selector0, "sink_0");
+        // if (!input_selector0_sink0) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get input-selector sink pad.");
+        //     return;
+        // }
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
@@ -304,106 +348,106 @@ public:
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-        // Start camera watchdog thread
-        camera_watchdog_thread = std::thread(&WebRTCSendNode::camera_watchdog, this);
-        camera_watchdog_thread.detach();
+        // // Start camera watchdog thread
+        // camera_watchdog_thread = std::thread(&WebRTCSendNode::camera_watchdog, this);
+        // camera_watchdog_thread.detach();
     }
 
-    void camera_watchdog() {
-        while (running) {
-            if (!check_camera_ok("/dev/cam-arducam")) {
-            RCLCPP_WARN(this->get_logger(), "Camera not responding. Attempting to reset...");
+    // void camera_watchdog() {
+    //     while (running) {
+    //         if (!check_camera_ok("/dev/cam-arducam")) {
+    //         RCLCPP_WARN(this->get_logger(), "Camera not responding. Attempting to reset...");
 
-                // Schedule work in the GLib main loop
-                g_idle_add([](gpointer user_data) -> gboolean {
-                    auto self = static_cast<WebRTCSendNode*>(user_data);
+    //             // Schedule work in the GLib main loop
+    //             g_idle_add([](gpointer user_data) -> gboolean {
+    //                 auto self = static_cast<WebRTCSendNode*>(user_data);
 
-                    if (self->input_selector0) {
-                        GstPad *pad = gst_element_get_static_pad(self->input_selector0, "sink_1");
-                        if (pad) {
-                            g_object_set(self->input_selector0, "active-pad", pad, nullptr);
-                            gst_object_unref(pad);
-                        }
-                    }
+    //                 if (self->input_selector0) {
+    //                     GstPad *pad = gst_element_get_static_pad(self->input_selector0, "sink_1");
+    //                     if (pad) {
+    //                         g_object_set(self->input_selector0, "active-pad", pad, nullptr);
+    //                         gst_object_unref(pad);
+    //                     }
+    //                 }
 
-                    return G_SOURCE_REMOVE; // run once, then remove
-                }, this);
+    //                 return G_SOURCE_REMOVE; // run once, then remove
+    //             }, this);
 
-                // Remove old branch
-                gst_element_set_state(v4l2src0, GST_STATE_NULL);
-                gst_bin_remove(GST_BIN(pipeline), v4l2src0);
-                gst_object_unref(v4l2src0);
-                gst_element_set_state(nvvidconv0, GST_STATE_NULL);
-                gst_bin_remove(GST_BIN(pipeline), nvvidconv0);
-                gst_object_unref(nvvidconv0);
+    //             // Remove old branch
+    //             gst_element_set_state(v4l2src0, GST_STATE_NULL);
+    //             gst_bin_remove(GST_BIN(pipeline), v4l2src0);
+    //             gst_object_unref(v4l2src0);
+    //             gst_element_set_state(nvvidconv0, GST_STATE_NULL);
+    //             gst_bin_remove(GST_BIN(pipeline), nvvidconv0);
+    //             gst_object_unref(nvvidconv0);
 
-                // Create new elements
-                v4l2src0 = gst_element_factory_make("v4l2src", "v4l2src0");
-                g_object_set(v4l2src0, "device", "/dev/cam-arducam", nullptr);
-                nvvidconv0 = gst_element_factory_make("nvvidconv", "nvvidconv0");
+    //             // Create new elements
+    //             v4l2src0 = gst_element_factory_make("v4l2src", "v4l2src0");
+    //             g_object_set(v4l2src0, "device", "/dev/cam-arducam", nullptr);
+    //             nvvidconv0 = gst_element_factory_make("nvvidconv", "nvvidconv0");
 
-                // Create capsfilter for nvvidconv output
-                GstElement *capsfilter = gst_element_factory_make("capsfilter", "capsfilter0");
-                GstCaps *caps = gst_caps_from_string("video/x-raw(memory:NVMM),format=NV12");
-                g_object_set(capsfilter, "caps", caps, nullptr);
-                gst_caps_unref(caps);
+    //             // Create capsfilter for nvvidconv output
+    //             GstElement *capsfilter = gst_element_factory_make("capsfilter", "capsfilter0");
+    //             GstCaps *caps = gst_caps_from_string("video/x-raw(memory:NVMM),format=NV12");
+    //             g_object_set(capsfilter, "caps", caps, nullptr);
+    //             gst_caps_unref(caps);
 
-                // Add to pipeline
-                gst_bin_add_many(GST_BIN(pipeline), v4l2src0, nvvidconv0, capsfilter, nullptr);
+    //             // Add to pipeline
+    //             gst_bin_add_many(GST_BIN(pipeline), v4l2src0, nvvidconv0, capsfilter, nullptr);
 
-                // Link: v4l2src → nvvidconv → capsfilter → input-selector
-                if (!gst_element_link_many(v4l2src0, nvvidconv0, capsfilter, input_selector0, nullptr)) {
-                    RCLCPP_ERROR(this->get_logger(), "Failed to link camera branch into input-selector");
-                    return;
-                }
+    //             // Link: v4l2src → nvvidconv → capsfilter → input-selector
+    //             if (!gst_element_link_many(v4l2src0, nvvidconv0, capsfilter, input_selector0, nullptr)) {
+    //                 RCLCPP_ERROR(this->get_logger(), "Failed to link camera branch into input-selector");
+    //                 return;
+    //             }
 
-                std::this_thread::sleep_for(std::chrono::seconds(5)); // wait for camera to stabilize
-                if (check_camera_ok("/dev/cam-arducam")) {
-                    RCLCPP_INFO(this->get_logger(), "Camera reset successful.");
+    //             std::this_thread::sleep_for(std::chrono::seconds(5)); // wait for camera to stabilize
+    //             if (check_camera_ok("/dev/cam-arducam")) {
+    //                 RCLCPP_INFO(this->get_logger(), "Camera reset successful.");
 
-                    // Set to PLAYING
-                    if (!gst_element_set_state(v4l2src0, GST_STATE_PLAYING)) {
-                        RCLCPP_ERROR(this->get_logger(), "Failed to set v4l2src0 to PLAYING");
-                    }
-                    if (!gst_element_set_state(nvvidconv0, GST_STATE_PLAYING)) {
-                        RCLCPP_ERROR(this->get_logger(), "Failed to set nvvidconv0 to PLAYING");
-                    }
+    //                 // Set to PLAYING
+    //                 if (!gst_element_set_state(v4l2src0, GST_STATE_PLAYING)) {
+    //                     RCLCPP_ERROR(this->get_logger(), "Failed to set v4l2src0 to PLAYING");
+    //                 }
+    //                 if (!gst_element_set_state(nvvidconv0, GST_STATE_PLAYING)) {
+    //                     RCLCPP_ERROR(this->get_logger(), "Failed to set nvvidconv0 to PLAYING");
+    //                 }
 
-                    // Switch back to camera input
-                    g_idle_add([](gpointer user_data) -> gboolean {
-                        auto self = static_cast<WebRTCSendNode*>(user_data);
+    //                 // Switch back to camera input
+    //                 g_idle_add([](gpointer user_data) -> gboolean {
+    //                     auto self = static_cast<WebRTCSendNode*>(user_data);
 
-                        if (self->input_selector0) {
-                            GstPad *pad = gst_element_get_static_pad(self->input_selector0, "sink_0");
-                            if (pad) {
-                                g_object_set(self->input_selector0, "active-pad", pad, nullptr);
-                                gst_object_unref(pad);
-                            }
-                        }
+    //                     if (self->input_selector0) {
+    //                         GstPad *pad = gst_element_get_static_pad(self->input_selector0, "sink_0");
+    //                         if (pad) {
+    //                             g_object_set(self->input_selector0, "active-pad", pad, nullptr);
+    //                             gst_object_unref(pad);
+    //                         }
+    //                     }
 
-                        return G_SOURCE_REMOVE; // run once, then remove
-                    }, this);
+    //                     return G_SOURCE_REMOVE; // run once, then remove
+    //                 }, this);
 
-                } else {
-                    RCLCPP_ERROR(this->get_logger(), "Camera reset failed. Will retry...");
-                }
-            }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    }
+    //             } else {
+    //                 RCLCPP_ERROR(this->get_logger(), "Camera reset failed. Will retry...");
+    //             }
+    //         }
+    //         std::this_thread::sleep_for(std::chrono::seconds(1));
+    //     }
+    // }
 
-    bool check_camera_ok(const std::string& device) {
-        int fd = open(device.c_str(), O_RDWR | O_NONBLOCK, 0);
-        if (fd == -1) {
-            return false; // device missing or busy
-        }
+    // bool check_camera_ok(const std::string& device) {
+    //     int fd = open(device.c_str(), O_RDWR | O_NONBLOCK, 0);
+    //     if (fd == -1) {
+    //         return false; // device missing or busy
+    //     }
 
-        struct v4l2_capability cap;
-        bool ok = (ioctl(fd, VIDIOC_QUERYCAP, &cap) == 0);
-        close(fd);
+    //     struct v4l2_capability cap;
+    //     bool ok = (ioctl(fd, VIDIOC_QUERYCAP, &cap) == 0);
+    //     close(fd);
 
-        return ok;
-    }
+    //     return ok;
+    // }
 
     /**
      * @brief Callback for sending ICE candidates
@@ -595,15 +639,17 @@ public:
 
 private:
     std::thread ws_thread;               // Thread for WebSocket message processing
-    std::thread camera_watchdog_thread; // Thread for camera monitoring
+    // std::thread camera_watchdog_thread; // Thread for camera monitoring
     GstElement* pipeline;                // Main GStreamer pipeline
     GstElement* webrtcbin;              // WebRTC element
     websocketpp::connection_hdl global_hdl;  // WebSocket connection handle
     websocketpp::client<websocketpp::config::asio_client>* global_client;  // WebSocket client
-    GstElement* v4l2src0;               // Video source element
-    GstElement* input_selector0;         // Input selector for switching sources
-    GstElement* nvvidconv0;             // NVIDIA video converter
-    GstPad* input_selector0_sink0;      // Sink pad for input selector
+    GstElement* appsrc0;                 // App source for camera 0
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr cam0_sub; // Subscription for camera 0 images
+    // GstElement* v4l2src0;               // Video source element
+    // GstElement* input_selector0;         // Input selector for switching sources
+    // GstElement* nvvidconv0;             // NVIDIA video converter
+    // GstPad* input_selector0_sink0;      // Sink pad for input selector
 
     std::queue<std::string> msg_queue;   // Queue for outgoing WebSocket messages
     std::mutex ws_mutex;                 // Mutex for thread safety

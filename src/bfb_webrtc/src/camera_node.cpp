@@ -2,6 +2,8 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
+#include <gst/gst.h>
+#include <gst/app/gstappsink.h>
 
 class CameraNode : public rclcpp::Node {
 public:
@@ -15,24 +17,53 @@ public:
         
         // Get parameters
         std::string device_path = this->get_parameter("device_path").as_string();
-        int width = this->get_parameter("width").as_int();
-        int height = this->get_parameter("height").as_int();
-        double fps = this->get_parameter("fps").as_double();
+        width = this->get_parameter("width").as_int();
+        height = this->get_parameter("height").as_int();
+        fps = this->get_parameter("fps").as_double();
         frame_id = this->get_parameter("frame_id").as_string();
-        std::string topic_name = "camera/image/raw";
+        std::string topic_name = "camera0/image/raw";
         
-        // Initialize camera
-        cap = std::make_shared<cv::VideoCapture>(device_path, cv::CAP_V4L2);
+        // // Initialize camera
+        // cap = std::make_shared<cv::VideoCapture>(device_path, cv::CAP_V4L2);
 
-        if (!cap->isOpened()) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to open camera device %s", device_path.c_str());
-            throw std::runtime_error("Failed to open camera");
+        // if (!cap->isOpened()) {
+        //     RCLCPP_ERROR(this->get_logger(), "Failed to open camera device %s", device_path.c_str());
+        //     throw std::runtime_error("Failed to open camera");
+        // }
+
+        // // Set camera properties
+        // cap->set(cv::CAP_PROP_FRAME_WIDTH, width);
+        // cap->set(cv::CAP_PROP_FRAME_HEIGHT, height);
+        // cap->set(cv::CAP_PROP_FPS, fps);
+
+        gst_init(nullptr, nullptr);
+        std::string pipeline_str =
+            "v4l2src device=" + device_path +
+            " ! videoconvert ! video/x-raw,format=RGB,width=" + std::to_string(width) +
+            ",height=" + std::to_string(height) +
+            ",framerate=" + std::to_string(static_cast<int>(fps)) + "/1 " +
+            "! appsink name=appsink0 emit-signals=true sync=false";
+        GError* error = nullptr;
+        GstElement* pipeline = gst_parse_launch(pipeline_str.c_str(), &error);
+        if (error) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline: %s", error->message);
+            g_error_free(error);
+            return;
         }
 
-        // Set camera properties
-        cap->set(cv::CAP_PROP_FRAME_WIDTH, width);
-        cap->set(cv::CAP_PROP_FRAME_HEIGHT, height);
-        cap->set(cv::CAP_PROP_FPS, fps);
+        if (!pipeline) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline.");
+            return;
+        }
+
+        appsink = gst_bin_get_by_name(GST_BIN(pipeline), "appsink0");
+        if (!appsink) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get appsink from pipeline.");
+            gst_object_unref(pipeline);
+            return;
+        }
+
+        gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
         // Create publisher
         pub = this->create_publisher<sensor_msgs::msg::Image>(topic_name, 10);
@@ -55,30 +86,65 @@ public:
 
 private:
     void capture_and_publish() {
-        cv::Mat frame;
-        if (!cap->read(frame)) {
-            RCLCPP_WARN(this->get_logger(), "Failed to capture image from camera");
+        // Pull one sample from appsink (non-blocking)
+        GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(appsink), GST_SECOND / 30);
+        if (!sample) {
+            RCLCPP_WARN(this->get_logger(), "No frame available from appsink");
             return;
         }
 
-        if (frame.empty()) {
-            RCLCPP_WARN(this->get_logger(), "Captured empty frame");
+        GstBuffer* buffer = gst_sample_get_buffer(sample);
+        GstMapInfo map;
+        if (!gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+            RCLCPP_WARN(this->get_logger(), "Failed to map GstBuffer");
+            gst_sample_unref(sample);
             return;
         }
 
-        // Convert OpenCV Mat to ROS2 Image message
-        auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
+        // Wrap the raw buffer into a cv::Mat
+        cv::Mat frame(height, width, CV_8UC3, map.data); // RGB format
+
+        // Convert to ROS2 Image message
+        auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "rgb8", frame).toImageMsg();
         msg->header.stamp = this->get_clock()->now();
         msg->header.frame_id = frame_id;
-        
+
         // Publish the image
         pub->publish(*msg);
+
+        // Cleanup
+        gst_buffer_unmap(buffer, &map);
+        gst_sample_unref(sample);
     }
+    // void capture_and_publish() {
+    //     cv::Mat frame;
+    //     if (!cap->read(frame)) {
+    //         RCLCPP_WARN(this->get_logger(), "Failed to capture image from camera");
+    //         return;
+    //     }
+
+    //     if (frame.empty()) {
+    //         RCLCPP_WARN(this->get_logger(), "Captured empty frame");
+    //         return;
+    //     }
+
+    //     // Convert OpenCV Mat to ROS2 Image message
+    //     auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
+    //     msg->header.stamp = this->get_clock()->now();
+    //     msg->header.frame_id = frame_id;
+        
+    //     // Publish the image
+    //     pub->publish(*msg);
+    // }
 
     std::shared_ptr<cv::VideoCapture> cap;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub;
     rclcpp::TimerBase::SharedPtr timer;
     std::string frame_id;
+    GstElement* appsink;
+    int width;
+    int height;
+    double fps;
 };
 
 int main(int argc, char** argv) {

@@ -154,6 +154,16 @@ sudo sed -i.bak -E "s/^(.*FAN_DEFAULT_PROFILE[[:space:]]+)(quiet|cool)(.*)$/\1co
 sudo rm /var/lib/nvfancontrol/status
 sudo systemctl start nvfancontrol
 
+# Set SSH keepalive to avoid disconnections
+echo "Setting SSH keepalive to avoid disconnections..."
+if grep -q "^ServerAliveInterval" /etc/ssh/ssh_config; then
+    sed -i "s/^ServerAliveInterval.*/ServerAliveInterval 60/" /etc/ssh/ssh_config
+else
+    echo "ServerAliveInterval 60" >> /etc/ssh/ssh_config
+fi
+echo "ServerAliveInterval is now set to 60"
+
+
 # Notify user to setup Docker network
 echo "After reboot, follow instructions in the end of this file."
 

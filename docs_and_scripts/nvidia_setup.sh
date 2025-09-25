@@ -212,4 +212,5 @@ done
 
 # docker run --rm -d --net=macnet <IMAGE>
 
-# ---------- 2. Enable Jetson Clocks on boot in jtop -------------
+# ---------- 2. Enable Jetson Clocks on boot in jtop ----------
+# ---------- 3. Select 20W 8CORE mode in jtop ----------

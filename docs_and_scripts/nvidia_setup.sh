@@ -14,8 +14,8 @@ source ~/.bashrc
 
 # Update and install dependencies
 echo "Updating system and installing dependencies..."
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y git-all jq v4l-utils v4l2loopback-dkms nano python3-pip
+sudo apt-get update && sudo apt-get upgrade -y
+sudo apt-get install -y git-all jq v4l-utils v4l2loopback-dkms nano python3-pip
 
 # Install JTOP
 sudo -H pip3 install -U jetson-stats
@@ -109,7 +109,7 @@ echo \
 sudo apt-get update
 
 # Install docker compose plugin
-sudo apt install -y docker-compose-plugin
+sudo apt-get install -y docker-compose-plugin
 
 # Add the current user to the Docker group
 echo "Adding user to the Docker group..."

@@ -1,0 +1,24 @@
+{
+    "tabnine.experimentalAutoImports": true,
+    "editor.inlineSuggest.enabled": true,
+    "github.copilot.enable": {
+        "*": true,
+        "plaintext": true,
+        "markdown": false,
+        "scminput": false
+    },
+    "github.copilot.advanced": {},
+    "explorer.confirmDragAndDrop": false,
+    "terminal.integrated.enableMultiLinePasteWarning": false,
+    
+    // Remote SSH settings:
+    "remote.SSH.connectTimeout": 60,
+    "remote.SSH.useLocalServer": false,
+    "remote.SSH.useExecServer": false,
+    "remote.SSH.lockfilesInTmp": true,
+    "remote.SSH.showLoginTerminal": true,
+    "remote.SSH.remotePlatform": {
+        "bfb_nvidia_external": "linux",
+        "bfb_rpi5_external": "linux"
+    }
+}

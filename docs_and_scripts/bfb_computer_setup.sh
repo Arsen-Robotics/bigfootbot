@@ -9,8 +9,8 @@ fi
 
 # Update and install git
 echo "Updating system and installing Git..."
-sudo apt update && sudo apt upgrade -y
-sudo apt install git-all -y
+sudo apt-get update && sudo apt-get upgrade -y
+sudo apt-get install git-all -y
 
 # Create ROS2 workspace
 echo "Creating ROS2 workspace..."

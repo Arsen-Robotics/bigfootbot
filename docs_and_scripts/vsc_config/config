@@ -1,0 +1,26 @@
+# Read more about SSH config files: https://linux.die.net/man/5/ssh_config
+  Host bfb_nvidia_external
+    HostName 87.119.173.184
+    User bigfootbot
+    Port 22
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    ConnectTimeout 30
+    TCPKeepAlive yes
+    ControlMaster auto
+    ControlPath ~/.ssh/master-%r@%h:%p
+    ControlPersist 10m
+    PreferredAuthentications password,publickey
+
+  Host bfb_rpi5_external
+    HostName 87.119.173.184
+    User bigfootbot
+    Port 23
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    ConnectTimeout 30
+    TCPKeepAlive yes
+    ControlMaster auto
+    ControlPath ~/.ssh/master-%r@%h:%p
+    ControlPersist 10m
+    PreferredAuthentications password,publickey

@@ -8,6 +8,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 # The reason is that the environment variable persists after the build
 # ARG is only available during the build of the image
 
+ENV ROS_WS=/ros2_ws
+
 # If you only need to set the SHELL environment variable for other purposes, such as in a 
 # script that will be run inside the container
 # NB! This command sets the SHELL environment variable to /bin/bash, but it does not change 
@@ -19,20 +21,11 @@ ENV SHELL=/bin/bash
 # -c: This option specifies that the next argument is the command to execute.
 SHELL ["/bin/bash", "-c"]
 
-RUN mkdir -p webrtc_video/src
-COPY docker/web/webrtc_video/src /webrtc_video/src
-COPY docker/web/webrtc_video/build.sh webrtc_video/
+# Create ROS2 working directory
+RUN mkdir -p ${ROS_WS}/src
 
-# !!! Not valid anymore: Workaround as of 19.01.2025 there was a GPG error ONLY with nvcr base image
-# RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
-#     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
-
-# 06.06.2025 fix
-# RUN curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor --batch --yes -o /usr/share/keyrings/kitware-archive-keyring.gpg \
-#     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' > /etc/apt/sources.list.d/kitware.list \
-#     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | gpg --dearmor --batch --yes -o /usr/share/keyrings/ros-archive-keyring.gpg \
-#     && echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2-testing/ubuntu focal main" > /etc/apt/sources.list.d/ros2-testing.list
-# Fix above is needed for Nvidia ROS base image only
+# -------- Build and install packages --------
+COPY src/bfb_webrtc ${ROS_WS}/src/bfb_webrtc
 
 # 02.07.2025 fix
 RUN apt-key del F42ED6FBAB17C654 \
@@ -59,11 +52,26 @@ RUN apt-get update \
 # Install WebSocket Python package
 RUN pip3 install websockets
 
-# Install libnice for GStreamer WebRTC
-# RUN git clone https://github.com/libnice/libnice.git && \
-#     cd libnice && \
-#     git checkout 0.1.15 && \
-#     ./autogen.sh --prefix /usr/ --libdir /usr/lib/aarch64-linux-gnu/ ; make -j$(nproc) ; sudo make install ; cd ..
+# Install dependencies for all packages in the workspace
+RUN apt-get update \
+    && cd ${ROS_WS} \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && rosdep update \
+    && rosdep install -y \
+      --ignore-src \
+      --from-path src \
+      --rosdistro ${ROS_DISTRO} \
+    && colcon build \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-#CMD ["ros2", "launch", "bfb_arduino_gateway", "arduino_gateway_node.py"]
+# Setup entrypoint
+COPY docker/ros_entrypoint.sh /
+
+# [] - is exec form
+# exec form vs shell form - the difference is whether the specified command is invoked inside a shell or not
+# Exec - runs the process directly (not inside a shell) (doesn't create separate process to run a command/program)
+# So shell process with PID 1 is replaced by the process of running program in exec mode
+ENTRYPOINT ["/ros_entrypoint.sh"]
+
 CMD ["bash"]

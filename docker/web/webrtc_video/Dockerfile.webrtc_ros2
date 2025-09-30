@@ -27,14 +27,6 @@ RUN mkdir -p ${ROS_WS}/src
 # -------- Build and install packages --------
 COPY src/bfb_webrtc ${ROS_WS}/src/bfb_webrtc
 
-# 02.07.2025 fix
-RUN apt-key del F42ED6FBAB17C654 \
-    && rm -f /usr/share/keyrings/ros-archive-keyring.gpg \
-    && curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
-    && sed -i '/isaac-ros/d' /etc/apt/sources.list \
-    && curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | \
-    gpg --yes --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg
-
 # Install dependencies
 RUN apt-get update \
     && apt install -y gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \

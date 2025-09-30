@@ -1,3 +1,8 @@
 {
-    "cmake.sourceDirectory": "/home/jevgeni/workspaces/bigfootbot/bigfootbot_base_OLD"
+    "cmake.sourceDirectory": "/home/jevgeni/workspaces/bigfootbot/bigfootbot_base_OLD",
+    "files.associations": {
+        "array": "cpp",
+        "string": "cpp",
+        "string_view": "cpp"
+    }
 }

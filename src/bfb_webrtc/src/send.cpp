@@ -261,7 +261,7 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-                appsrc name=appsrc0 ! video/x-raw,width=640,height=480,framerate=30/1 \
+                v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
                     ! nvvidconv name=nvvidconv0 ! video/x-raw(memory:NVMM),format=NV12 \
                     ! queue max-size-buffers=2 leaky=downstream \
                     ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \

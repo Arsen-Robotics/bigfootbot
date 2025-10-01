@@ -2,7 +2,7 @@ services:
   bfb_webrtc_ros2_nvidia:
     build:
       context: ../../..
-      dockerfile: docker/web/webrtc_video/Dockerfile.webrtc_ros2
+      dockerfile: docker/web/webrtc_video/Dockerfile.webrtc_ros2_nvidia
 
       # Pass arguments to Dockerfile to use different base images
       args:

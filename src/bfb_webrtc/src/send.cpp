@@ -297,11 +297,11 @@ public:
         }
 
         // Get appsrc element for camera 0
-        appsrc0 = gst_bin_get_by_name(GST_BIN(pipeline), "appsrc0");
-        if (!appsrc0) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get appsrc0 element.");
-            return;
-        }
+        // appsrc0 = gst_bin_get_by_name(GST_BIN(pipeline), "appsrc0");
+        // if (!appsrc0) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get appsrc0 element.");
+        //     return;
+        // }
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 

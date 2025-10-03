@@ -66,7 +66,7 @@ public:
             client.set_message_handler(std::bind(&WebRTCRecvNode::on_msg, this, std::placeholders::_1, std::placeholders::_2));
 
             websocketpp::lib::error_code ec;
-            websocketpp::client<websocketpp::config::asio_client>::connection_ptr con = client.get_connection("ws://87.119.173.184:8765", ec);
+            websocketpp::client<websocketpp::config::asio_client>::connection_ptr con = client.get_connection("ws://0.0.0.0:8765", ec);
 
             if (ec) {
                 RCLCPP_ERROR(this->get_logger(), "Connection error: %s", ec.message().c_str());
@@ -161,7 +161,7 @@ public:
             } else if (jsonMsg.isMember("sdp")) {
                 RCLCPP_INFO(this->get_logger(), "Received SDP offer.");
                 std::string payload_copy = payload;
-                auto sdp_func = [this, payload_copy]() { this->handle_sdp(payload_copy); };
+                auto sdp_func = [this, payload_copy]() { this->handle_sdp_offer(payload_copy); };
                 auto* func_ptr = new std::function<void()>(sdp_func);
                 g_main_context_invoke(nullptr, [](gpointer data) -> gboolean {
                     auto* f = static_cast<std::function<void()>*>(data);
@@ -344,7 +344,7 @@ public:
 
                 // Create answer
                 GstPromise *promise = gst_promise_new_with_change_func([](GstPromise *promise, gpointer user_data) {
-                    WebRTCRecv* self = static_cast<WebRTCRecv*>(user_data);
+                    WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
                     GstStructure const *reply = gst_promise_get_reply(promise);
                     
                     GstWebRTCSessionDescription *answer = nullptr;
@@ -498,7 +498,7 @@ int main(int argc, char* argv[]) {
 
     // Initialize ROS 2
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<WebRTCSRecvNode>();
+    auto node = std::make_shared<WebRTCRecvNode>();
 
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
 

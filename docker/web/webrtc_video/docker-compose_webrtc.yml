@@ -114,6 +114,8 @@ services:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/root/.Xauthority
       - QT_X11_NO_MITSHM=1
+      - LIBVA_DRIVER_NAME=none
+      - XDG_RUNTIME_DIR=/tmp/runtime-${USER}
 
     # Map all devices from host to container
     volumes:

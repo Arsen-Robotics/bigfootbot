@@ -1,0 +1,6 @@
+Configutation instructions for the remote device
+
+1. Install VSC
+2. Install VSC vsc_config using Ctrl+Shift+P
+3. Add xhost +local:root to ~/.bashrc
+4. Add export LIBVA_DRIVER_NAME=none to ~/.bashrc

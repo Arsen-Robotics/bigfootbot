@@ -66,7 +66,7 @@ public:
             client.set_message_handler(std::bind(&WebRTCRecvNode::on_msg, this, std::placeholders::_1, std::placeholders::_2));
 
             websocketpp::lib::error_code ec;
-            websocketpp::client<websocketpp::config::asio_client>::connection_ptr con = client.get_connection("ws://0.0.0.0:8765", ec);
+            websocketpp::client<websocketpp::config::asio_client>::connection_ptr con = client.get_connection("ws://87.119.173.184:8765", ec);
 
             if (ec) {
                 RCLCPP_ERROR(this->get_logger(), "Connection error: %s", ec.message().c_str());
@@ -422,53 +422,111 @@ public:
      * Sets up appropriate elements for handling decoded audio/video streams
      */
     static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCRecvNode* self) {
-        GstClock* clock = gst_system_clock_obtain();
-        gst_pipeline_use_clock(GST_PIPELINE(self->pipeline), clock);
-        g_object_set(self->pipeline, "latency", 0, NULL); // 1ms target latency
-
+        // Get caps once and reuse
         GstCaps* caps = gst_pad_get_current_caps(pad);
+        if (!caps) return;
+        
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
-
+        
+        GstElement* queue = nullptr;
         GstElement* conv = nullptr;
         GstElement* sink = nullptr;
-        GstElement* queue = nullptr;
-
+        GstPad* sink_pad = nullptr;
+        
         if (g_str_has_prefix(name, "video")) {
-            // Create queue to help absorb jitter
+            // Minimal queue with aggressive dropping
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
-                "max-size-buffers", 20, // yesterday was 20 when testing outside
-                "max-size-time", 0,
+                "max-size-buffers", 3,        // Minimal buffering: only 2-3 frames
+                "max-size-time", G_GUINT64_CONSTANT(0),
                 "max-size-bytes", 0,
-                "leaky", 2, // downstream
+                "leaky", 2,                    // Drop old frames (downstream leak)
+                "silent", TRUE,
+                "flush-on-eos", TRUE,
                 NULL);
             
             conv = gst_element_factory_make("videoconvert", nullptr);
-
+            
+            // Optimize converter
+            if (conv) {
+                g_object_set(conv,
+                    "qos", TRUE,               // Enable Quality of Service
+                    NULL);
+            }
+            
             sink = gst_element_factory_make("xvimagesink", nullptr);
+            
             g_object_set(sink,
-                "sync", FALSE,
-                "max-lateness", 100000000,  // Drop immediately if late
+                "sync", FALSE,                 // No A/V sync for lowest latency
+                "max-lateness", G_GINT64_CONSTANT(-1),  // Drop all late frames immediately
+                "qos", TRUE,                   // Enable QoS dropping
+                "throttle-time", 0,            // No throttling
+                "processing-deadline", G_GUINT64_CONSTANT(0),
+                "render-delay", G_GUINT64_CONSTANT(0),
                 NULL);
-
+                
         } else if (g_str_has_prefix(name, "audio")) {
+            // Minimal audio queue
+            queue = gst_element_factory_make("queue", nullptr);
+            g_object_set(queue,
+                "max-size-buffers", 5,
+                "max-size-time", G_GUINT64_CONSTANT(0),
+                "leaky", 2,
+                "silent", TRUE,
+                NULL);
+            
             conv = gst_element_factory_make("audioconvert", nullptr);
-            sink = gst_element_factory_make("autoaudiosink", nullptr);
+            
+            // Use low-latency audio sink
+            sink = gst_element_factory_make("pulsesink", nullptr);
+            if (!sink) {
+                sink = gst_element_factory_make("autoaudiosink", nullptr);
+            }
+            
+            if (sink && g_object_class_find_property(G_OBJECT_GET_CLASS(sink), "latency-time")) {
+                g_object_set(sink,
+                    "latency-time", G_GINT64_CONSTANT(10000),    // 10ms
+                    "buffer-time", G_GINT64_CONSTANT(20000),     // 20ms
+                    "provide-clock", FALSE,
+                    NULL);
+            }
         }
-
-        // Add elements to the pipeline
-        gst_bin_add_many(GST_BIN(self->pipeline), queue, conv, sink, nullptr);
+        
+        if (!queue || !conv || !sink) {
+            g_printerr("Failed to create pipeline elements\n");
+            gst_caps_unref(caps);
+            if (queue) gst_object_unref(queue);
+            if (conv) gst_object_unref(conv);
+            if (sink) gst_object_unref(sink);
+            return;
+        }
+        
+        // Add all elements before linking
+        gst_bin_add_many(GST_BIN(self->pipeline), queue, conv, sink, NULL);
+        
+        // Link elements
+        if (!gst_element_link_many(queue, conv, sink, NULL)) {
+            g_printerr("Failed to link pipeline elements\n");
+            gst_caps_unref(caps);
+            return;
+        }
+        
+        // Sync states before linking pad
         gst_element_sync_state_with_parent(queue);
         gst_element_sync_state_with_parent(conv);
         gst_element_sync_state_with_parent(sink);
-
-        // Link: decodebin pad → queue → conv → sink
-        GstPad* sinkpad = gst_element_get_static_pad(queue, "sink");
-        gst_pad_link(pad, sinkpad);
-        gst_object_unref(sinkpad);
-
-        gst_element_link_many(queue, conv, sink, nullptr);
+        
+        // Link the pad
+        sink_pad = gst_element_get_static_pad(queue, "sink");
+        if (sink_pad) {
+            GstPadLinkReturn ret = gst_pad_link(pad, sink_pad);
+            if (ret != GST_PAD_LINK_OK) {
+                g_printerr("Failed to link pads: %d\n", ret);
+            }
+            gst_object_unref(sink_pad);
+        }
+        
         gst_caps_unref(caps);
     }
 

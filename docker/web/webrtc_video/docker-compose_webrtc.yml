@@ -132,9 +132,6 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
 
-    ports:
-      - "8765:8765"  # WebSocket server
-
     # networks:
     #   macnet:
     #     ipv4_address: 192.168.5.77

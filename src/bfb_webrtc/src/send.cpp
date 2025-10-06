@@ -13,6 +13,7 @@
 #include <atomic>
 #include <mutex>
 #include <sensor_msgs/msg/image.hpp>
+#include <sys/resource.h>
 
 /**
  * @brief Main class handling WebRTC video streaming
@@ -29,6 +30,13 @@ public:
      * @brief Constructor - initializes GStreamer and member variables
      */
     WebRTCSendNode() : Node("webrtc_send_node") {
+        // Set this process to higher priority
+        if (setpriority(PRIO_PROCESS, 0, -10) == 0) {
+            RCLCPP_INFO(this->get_logger(), "Running at high priority.");
+        } else {
+            RCLCPP_WARN(this->get_logger(), "Could not set priority.");
+        }
+
         // Initialize GStreamer
         gst_init(nullptr, nullptr);
         pipeline = nullptr;

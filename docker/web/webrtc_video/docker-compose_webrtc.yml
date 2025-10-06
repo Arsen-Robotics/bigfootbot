@@ -110,12 +110,15 @@ services:
     # The name to be given to the container created from the image
     container_name: bfb_webrtc_ros2_cntr
 
+    ipc: host
+    shm_size: '2gb'
+
     environment:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/root/.Xauthority
-      - QT_X11_NO_MITSHM=1
-      - LIBVA_DRIVER_NAME=none
-      - XDG_RUNTIME_DIR=/tmp/runtime-${USER}
+      - QT_X11_NO_MITSHM=0 # Enable MIT-SHM for better performance
+      - LIBVA_DRIVER_NAME=
+      - XDG_RUNTIME_DIR=/tmp/runtime-root
 
     # Map all devices from host to container
     volumes:
@@ -123,14 +126,20 @@ services:
       - ../../../src/bfb_webrtc/src:/ros2_ws/src/bfb_webrtc/src
       - ../../../src/bfb_webrtc/CMakeLists.txt:/ros2_ws/src/bfb_webrtc/CMakeLists.txt
 
-      - '/dev:/dev'
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
-      - $HOME/.Xauthority:/root/.Xauthority  # Allow access to X11
+      - $HOME/.Xauthority:/root/.Xauthority:ro  # Allow access to X11
+      - /dev/shm:/dev/shm
+
+    devices:
+      - /dev/dri:/dev/dri
 
     privileged: true
 
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+
+    cap_add:
+      - SYS_NICE
 
     # networks:
     #   macnet:

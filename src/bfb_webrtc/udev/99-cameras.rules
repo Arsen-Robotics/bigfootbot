@@ -1,8 +1,11 @@
 # Arducam (Microdia webcam) main video interface
-SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6366", ATTR{index}=="0", SYMLINK+="cam-arducam"
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6366", ATTR{index}=="0", SYMLINK+="cam-arducam", MODE="0666"
 
 # Aveo camera main video interface
-SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="1871", ATTRS{idProduct}=="0143", ATTR{index}=="0", SYMLINK+="cam-aveo"
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="1871", ATTRS{idProduct}=="0143", ATTR{index}=="0", SYMLINK+="cam-aveo", MODE="0666"
 
 # Microdia camera main video interface
-SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6340", ATTR{index}=="0", SYMLINK+="cam-microdia"
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6340", ATTR{index}=="0", SYMLINK+="cam-microdia", MODE="0666"
+
+# Raspberry Pi Camera Module v2 (Sony IMX219) main video interface
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", ATTR{name}=="vi-output, imx219 10-0010", ATTR{index}=="0", SYMLINK+="cam-csi", MODE="0666"

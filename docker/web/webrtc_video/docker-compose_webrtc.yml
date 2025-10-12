@@ -111,7 +111,7 @@ services:
     container_name: bfb_webrtc_ros2_cntr
 
     ipc: host
-    shm_size: '512m'
+    shm_size: '1g'
 
     environment:
       - DISPLAY=${DISPLAY}

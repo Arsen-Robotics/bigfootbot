@@ -279,7 +279,7 @@ public:
                     ! queue max-size-buffers=2 leaky=downstream \
                     ! h264parse ! rtph264pay config-interval=1 pt=96 \
                     ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-                nvarguscamerasrc sensor-mode=4 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
+                nvarguscamerasrc sensor-mode=3 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
                     ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
                     ! queue max-size-buffers=2 leaky=downstream \
                     ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \

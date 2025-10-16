@@ -366,7 +366,7 @@ public:
     static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCRecv* self) {
         GstClock* clock = gst_system_clock_obtain();
         gst_pipeline_use_clock(GST_PIPELINE(self->pipeline), clock);
-        g_object_set(self->pipeline, "latency", 0, NULL); // 1ms target latency
+        g_object_set(self->pipeline, "latency", 0, NULL);
 
         GstCaps* caps = gst_pad_get_current_caps(pad);
         const GstStructure* str = gst_caps_get_structure(caps, 0);

@@ -433,6 +433,10 @@ public:
         GstCaps* caps = gst_pad_get_current_caps(pad);
         if (!caps) return;
 
+        GstClock* clock = gst_system_clock_obtain();
+        gst_pipeline_use_clock(GST_PIPELINE(self->pipeline), clock);
+        g_object_set(self->pipeline, "latency", 0, NULL);
+
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
 
@@ -445,7 +449,7 @@ public:
             // Create queue to help absorb jitter
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
-                "max-size-buffers", 3, // Small buffer to reduce latency
+                "max-size-buffers", 20, // Small buffer to reduce latency
                 "max-size-time", G_GUINT64_CONSTANT(0),
                 "max-size-bytes", 0,
                 "leaky", 2, // downstream
@@ -455,14 +459,14 @@ public:
 
             conv = gst_element_factory_make("videoconvert", nullptr);
             g_object_set(conv,
-                "qos", 1, // Enable QoS
+                "qos", TRUE, // Enable QoS
                 // "n-threads", 2, // Use multiple threads for conversion
                 NULL);
             
             sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,
-                "max-lateness", G_GINT64_CONSTANT(16666666), // 16.67ms for 30fps
+                "max-lateness", G_GINT64_CONSTANT(100000000), // 100ms
                 "qos", TRUE, // Enable QoS
                 "throttle-time", 0,
                 "processing-deadline", G_GUINT64_CONSTANT(0),

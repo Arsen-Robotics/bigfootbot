@@ -433,9 +433,7 @@ public:
         GstCaps* caps = gst_pad_get_current_caps(pad);
         if (!caps) return;
 
-        GstClock* clock = gst_system_clock_obtain();
-        gst_pipeline_use_clock(GST_PIPELINE(self->pipeline), clock);
-        g_object_set(self->pipeline, "latency", 0, NULL);
+        g_object_set(self->webrtcbin, "latency", 0, NULL);
 
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
@@ -449,7 +447,7 @@ public:
             // Create queue to help absorb jitter
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
-                "max-size-buffers", 20, // Small buffer to reduce latency
+                "max-size-buffers", 1, // was 20
                 "max-size-time", G_GUINT64_CONSTANT(0),
                 "max-size-bytes", 0,
                 "leaky", 2, // downstream
@@ -466,12 +464,13 @@ public:
             sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,
-                "max-lateness", G_GINT64_CONSTANT(100000000), // 100ms
+                "max-lateness", G_GINT64_CONSTANT(-1), // was 100000000
                 "qos", TRUE, // Enable QoS
                 "throttle-time", 0,
                 "processing-deadline", G_GUINT64_CONSTANT(0),
                 "render-delay", G_GUINT64_CONSTANT(0),
                 NULL);
+
             
         } else if (g_str_has_prefix(name, "audio")) {
             conv = gst_element_factory_make("audioconvert", nullptr);

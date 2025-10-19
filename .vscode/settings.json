@@ -1,10 +1,12 @@
 {
-    "cmake.sourceDirectory": "/home/jevgeni/workspaces/bigfootbot/bigfootbot_base_OLD",
+    "cmake.sourceDirectory": "/home/jevgeni/workspaces/ros2_ws/src/bigfootbot/bigfootbot_base_OLD",
     "files.associations": {
         "array": "cpp",
         "string": "cpp",
         "string_view": "cpp",
         "thread": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "typeindex": "cpp",
+        "typeinfo": "cpp"
     }
 }

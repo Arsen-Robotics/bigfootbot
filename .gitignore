@@ -13,3 +13,6 @@ docker/husarnet-config
 **/build/
 **/install/
 **/log/
+
+# Ignore VSCode settings folder
+.vscode/

@@ -265,39 +265,9 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! tee name=t \
-            t. ! \
-                textoverlay text=1 valignment=top halignment=left font-desc='Sans, 24' ! \
-                nvvidconv flip-method=0 ! video/x-raw(memory:NVMM),format=NV12 ! \
+            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
+                nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
                 queue max-size-buffers=2 leaky=downstream ! \
-                nvv4l2h264enc \
-                    bitrate=2000000 \
-                    iframeinterval=30 \
-                    control-rate=1 \
-                    preset-level=1 \
-                    profile=2 \
-                    maxperf-enable=1 \
-                    insert-sps-pps=true \
-                    disable-cabac=false \
-                    EnableTwopassCBR=false ! \
-                queue max-size-buffers=2 leaky=downstream ! \
-                h264parse config-interval=0 ! \
-                rtph264pay \
-                    pt=96 \
-                    mtu=1200 \
-                    config-interval=-1 ! \
-                application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            t. \
-                ! textoverlay text=2 valignment=top halignment=left font-desc='Sans, 24' \
-                ! nvvidconv flip-method=0 ! video/x-raw(memory:NVMM),format=NV12 \
-                ! queue max-size-buffers=2 leaky=downstream \
-                ! nvv4l2h264enc bitrate=2000000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true insert-sps-pps=true \
-                ! queue max-size-buffers=2 leaky=downstream \
-                ! h264parse ! rtph264pay config-interval=1 pt=96 \
-                ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
-            t. ! \
-                textoverlay text=3 valignment=top halignment=left font-desc='Sans, 24' ! \
-                nvvidconv flip-method=0 ! video/x-raw(memory:NVMM),format=NV12 ! \
                 nvv4l2h264enc \
                     bitrate=2000000 \
                     iframeinterval=30 \
@@ -306,9 +276,9 @@ public:
                     profile=0 \
                     maxperf-enable=1 \
                     insert-sps-pps=true \
-                    insert-vui=true \
                     disable-cabac=true \
                     EnableTwopassCBR=false ! \
+                queue max-size-buffers=2 leaky=downstream ! \
                 h264parse config-interval=0 ! \
                 rtph264pay \
                     pt=96 \

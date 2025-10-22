@@ -23,8 +23,8 @@
  */
 class WebRTCSendNode : public rclcpp::Node {
 public:
-    // Flag to control threads
-    std::atomic<bool> running{true};
+    // Flag to control ws_thread
+    std::atomic<bool> ws_running{true};
 
     /**
      * @brief Constructor - initializes GStreamer and member variables
@@ -41,50 +41,35 @@ public:
         gst_init(nullptr, nullptr);
         pipeline = nullptr;
         webrtcbin = nullptr;
-        running = true;
-
-        // Create camera image topic ros2 subscriber below:
-        cam0_sub = this->create_subscription<sensor_msgs::msg::Image>(
-            "camera0/image/raw", 10,
-            std::bind(&WebRTCSendNode::camera0_callback, this, std::placeholders::_1)
-        );
+        ws_running = true;
     }
 
     /**
      * @brief Destructor - cleans up resources
      */
     ~WebRTCSendNode() {
-        running = false;
+        // Stop WebSocket thread
+        ws_running = false;
         ws_cv.notify_all();
+
         if (ws_thread.joinable()) {
             ws_thread.join();
         }
+
+        // Stop bitrate controller
+        bitrate_running = false;
+        if (bitrate_thread.joinable()) {
+            bitrate_thread.join();
+        }
+
         if (pipeline) {
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_object_unref(pipeline);
         }
+
         if (webrtcbin) {
             gst_object_unref(webrtcbin);
         }
-    }
-
-    void camera0_callback(const sensor_msgs::msg::Image::SharedPtr msg) {
-        if (!appsrc0) return;
-
-        GstBuffer *buffer = gst_buffer_new_allocate(NULL, msg->data.size(), NULL);
-
-        GstMapInfo map;
-        gst_buffer_map(buffer, &map, GST_MAP_WRITE);
-        memcpy(map.data, msg->data.data(), msg->data.size());
-        gst_buffer_unmap(buffer, &map);
-
-        GST_BUFFER_PTS(buffer) = gst_util_uint64_scale(msg->header.stamp.sec * 1000000000ULL + msg->header.stamp.nanosec,
-                                                    GST_USECOND, 1);
-        GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale_int(1, GST_SECOND, 30); // assume 30 fps
-
-        GstFlowReturn ret;
-        g_signal_emit_by_name(appsrc0, "push-buffer", buffer, &ret);
-    gst_buffer_unref(buffer);
     }
 
     /**
@@ -95,6 +80,12 @@ public:
             // Set up WebSocket connection using websocketpp
             websocketpp::client<websocketpp::config::asio_client> client;
             client.init_asio();
+
+            // Disable WebSocket++ logs
+            client.clear_access_channels(websocketpp::log::alevel::all);
+
+            // Optionally, keep only connection logs (if you still want to know when connected/disconnected):
+            client.set_access_channels(websocketpp::log::alevel::connect | websocketpp::log::alevel::disconnect);
 
             client.set_open_handler(std::bind(&WebRTCSendNode::on_open, this, std::placeholders::_1, &client));
             client.set_message_handler(std::bind(&WebRTCSendNode::on_msg, this, std::placeholders::_1, std::placeholders::_2));
@@ -108,7 +99,7 @@ public:
 
             client.connect(con);
             
-            while (rclcpp::ok() && running) {
+            while (rclcpp::ok() && ws_running) {
                 client.poll();
             }
 
@@ -198,6 +189,22 @@ public:
                     return G_SOURCE_REMOVE;
                 }, func_ptr);
 
+            } else if (jsonMsg.isMember("pong")) {
+                // Extract timestamp when ping was sent
+                double sent_ts = jsonMsg["pong"]["ts"].asDouble();
+
+                // Get current time
+                using namespace std::chrono;
+                double now_ms = static_cast<double>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+
+                // Calculate RTT (round-trip time)
+                double rtt = now_ms - sent_ts;
+
+                // Update last RTT
+                last_rtt_ms.store(rtt);
+
+                return;
+
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
             }
@@ -214,7 +221,7 @@ public:
     void process_ws_queue() {
         while (rclcpp::ok()) {
             std::unique_lock<std::mutex> lock(ws_mutex);
-            ws_cv.wait(lock, [this] { return !msg_queue.empty() || !running; });
+            ws_cv.wait(lock, [this] { return !msg_queue.empty() || !ws_running; });
 
             std::string msg = msg_queue.front();
             msg_queue.pop();
@@ -224,8 +231,6 @@ public:
             global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
             if (ec) {
                 RCLCPP_ERROR(this->get_logger(), "Error sending WebSocket message: %s", ec.message().c_str());
-            } else {
-                RCLCPP_INFO(this->get_logger(), "Sent message over WebSocket: %s", msg.c_str());
             }
         }
     }
@@ -265,20 +270,21 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
+            nvarguscamerasrc sensor-mode=3 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 ! \
                 nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
-                queue max-size-buffers=2 leaky=downstream ! \
+                queue max-size-buffers=3 leaky=downstream ! \
                 nvv4l2h264enc \
                     bitrate=2000000 \
                     iframeinterval=30 \
+                    num-B-Frames=0 \
                     control-rate=1 \
                     preset-level=1 \
                     profile=0 \
                     maxperf-enable=1 \
-                    insert-sps-pps=true \
-                    disable-cabac=true \
-                    EnableTwopassCBR=false ! \
-                queue max-size-buffers=2 leaky=downstream ! \
+                    insert-sps-pps=1 \
+                    insert-vui=1 \
+                    EnableTwopassCBR=0 ! \
+                queue max-size-buffers=5 leaky=downstream ! \
                 h264parse config-interval=0 ! \
                 rtph264pay \
                     pt=96 \
@@ -341,12 +347,20 @@ public:
             return;
         }
 
-        // Get appsrc element for camera 0
-        // appsrc0 = gst_bin_get_by_name(GST_BIN(pipeline), "appsrc0");
-        // if (!appsrc0) {
-        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get appsrc0 element.");
-        //     return;
-        // }
+        enc = gst_bin_get_by_name(GST_BIN(pipeline), "nvv4l2h264enc0");
+        if (!enc) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get encoder element.");
+            return;
+        } else {
+            // Read initial bitrate
+            gint64 val = 0;
+            g_object_get(G_OBJECT(enc), "bitrate", &val, nullptr);
+            current_bitrate = static_cast<int>(val);
+
+            // Start bitrate controller
+            bitrate_running = true;
+            bitrate_thread = std::thread(&WebRTCSendNode::bitrate_controller_loop, this);
+        }
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
@@ -360,6 +374,91 @@ public:
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    }
+
+    void bitrate_controller_loop() {
+        using namespace std::chrono;
+        const milliseconds interval(2000); // 2 seconds
+        int consecutive_lost = 0;
+
+        while (rclcpp::ok() && bitrate_running) {
+            auto send_ts = steady_clock::now();
+
+            // Send ping containing timestamp of when ping was sent over WebSocket
+            Json::Value pingmsg;
+            pingmsg["ping"]["ts"] = static_cast<double>(duration_cast<milliseconds>(send_ts.time_since_epoch()).count());
+            Json::StreamWriterBuilder writer;
+            std::string ping_str = Json::writeString(writer, pingmsg);
+            queue_ws(ping_str);
+
+            // Wait for interval
+            std::this_thread::sleep_for(interval);
+
+            // Get last RTT
+            double rtt_ms = last_rtt_ms.exchange(-1.0);
+
+            if (rtt_ms < 0) {
+                // No pong received in last interval
+                consecutive_lost++;
+                RCLCPP_WARN(this->get_logger(), "No pong received. Consecutive lost: %d", consecutive_lost);
+            } else {
+                consecutive_lost = 0;
+                RCLCPP_INFO(this->get_logger(), "Current RTT: %.2f ms", rtt_ms);
+            }
+
+            // Adjust bitrate based on RTT
+            int target_bitrate = current_bitrate;
+
+            // Lost pongs => decrease bitrate
+            if (consecutive_lost >= 3) {
+                // Decrease bitrate on multiple lost pongs
+                target_bitrate = std::max(min_bitrate, current_bitrate - bitrate_step);
+                RCLCPP_WARN(this->get_logger(), "Decreasing bitrate to %d bps due to lost pongs.", target_bitrate);
+
+            // High RTT => decrease bitrate
+            } else if (rtt_ms > 150.0) {
+                // High RTT, decrease bitrate
+                target_bitrate = std::max(min_bitrate, current_bitrate - bitrate_step);
+                RCLCPP_INFO(this->get_logger(), "High RTT detected. Decreasing bitrate to %d bps.", target_bitrate);
+
+            // Low RTT => increase bitrate
+            } else if (rtt_ms >= 0 && rtt_ms < 80.0 && consecutive_lost == 0) {
+                // Low RTT, increase bitrate
+                target_bitrate = std::min(max_bitrate, current_bitrate + bitrate_step);
+                RCLCPP_INFO(this->get_logger(), "Low RTT detected. Increasing bitrate to %d bps.", target_bitrate);
+            }
+
+            // Apply new bitrate if changed
+            if (target_bitrate != current_bitrate) {
+                change_bitrate(target_bitrate);
+                current_bitrate = target_bitrate;
+            }
+        }
+    }
+
+    void change_bitrate(int new_bitrate) {
+        // Capture 'this' to access the private member 'enc'
+        auto func = [this, new_bitrate]() {
+            if (this->enc) {
+                g_object_set(G_OBJECT(this->enc),
+                            "bitrate",
+                            static_cast<gint64>(new_bitrate),
+                            nullptr);
+                RCLCPP_INFO(this->get_logger(), "Encoder bitrate set to %d bps", new_bitrate);
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Encoder element missing, cannot set bitrate");
+            }
+        };
+
+        // Allocate lambda on heap for GLib callback
+        auto* func_ptr = new std::function<void()>(func);
+
+        g_main_context_invoke(nullptr, [](gpointer data) -> gboolean {
+            auto* f = static_cast<std::function<void()>*>(data);
+            (*f)();      // execute lambda
+            delete f;    // free memory
+            return G_SOURCE_REMOVE; // remove source after running once
+        }, func_ptr);
     }
 
     /**
@@ -564,12 +663,21 @@ private:
     GstElement* webrtcbin;              // WebRTC element
     websocketpp::connection_hdl global_hdl;  // WebSocket connection handle
     websocketpp::client<websocketpp::config::asio_client>* global_client;  // WebSocket client
-    GstElement* appsrc0;                 // App source for camera 0
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr cam0_sub; // Subscription for camera 0 images
 
     std::queue<std::string> msg_queue;   // Queue for outgoing WebSocket messages
     std::mutex ws_mutex;                 // Mutex for thread safety
     std::condition_variable ws_cv;       // Condition variable for message queue
+
+    // Bitrate controller
+    std::thread bitrate_thread;
+    std::atomic<bool> bitrate_running{false};
+    std::atomic<double> last_rtt_ms{-1.0};
+    int current_bitrate{2000000};
+    const int min_bitrate{800000};
+    const int max_bitrate{2000000};
+    const int bitrate_step{100000};
+
+    GstElement* enc;                     // Encoder element for bitrate adjustment
 };
 
 /**
@@ -603,7 +711,7 @@ int main(int argc, char* argv[]) {
     rclcpp::spin(node);
 
     // Cleanup
-    node->running = false;
+    node->ws_running = false;
     ws_connect_thread.join();
     rclcpp::shutdown();
     return 0;

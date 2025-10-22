@@ -23,7 +23,7 @@
 class WebRTCRecvNode : public rclcpp::Node {
 public:
     // Flag to control threads
-    std::atomic<bool> running{true};
+    std::atomic<bool> ws_running{true};
 
     /**
      * @brief Constructor - initializes GStreamer and member variables
@@ -40,22 +40,26 @@ public:
         gst_init(nullptr, nullptr);
         pipeline = nullptr;
         webrtcbin = nullptr;
-        running = true;
+        ws_running = true;
     }
 
     /**
      * @brief Destructor - cleans up resources
      */
     ~WebRTCRecvNode() {
-        running = false;
+        // Stop WebSocket thread
+        ws_running = false;
         ws_cv.notify_all();
+
         if (ws_thread.joinable()) {
             ws_thread.join();
         }
+
         if (pipeline) {
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_object_unref(pipeline);
         }
+
         if (webrtcbin) {
             gst_object_unref(webrtcbin);
         }
@@ -70,6 +74,12 @@ public:
             websocketpp::client<websocketpp::config::asio_client> client;
             client.init_asio();
 
+            // Disable WebSocket++ logs
+            client.clear_access_channels(websocketpp::log::alevel::all);
+            
+            // Optionally, keep only connection logs (if you still want to know when connected/disconnected):
+            client.set_access_channels(websocketpp::log::alevel::connect | websocketpp::log::alevel::disconnect);
+
             client.set_open_handler(std::bind(&WebRTCRecvNode::on_open, this, std::placeholders::_1, &client));
             client.set_message_handler(std::bind(&WebRTCRecvNode::on_msg, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -82,7 +92,7 @@ public:
 
             client.connect(con);
             
-            while (rclcpp::ok() && running) {
+            while (rclcpp::ok() && ws_running) {
                 client.poll();
             }
 
@@ -178,6 +188,20 @@ public:
                     return G_SOURCE_REMOVE;
                 }, func_ptr);
 
+            } else if (jsonMsg.isMember("ping")) {
+                // Extract the original timestamp
+                double ts = jsonMsg["ping"]["ts"].asDouble();
+
+                // Build pong message with same timestamp
+                Json::Value pongmsg;
+                pongmsg["pong"]["ts"] = ts;
+
+                Json::StreamWriterBuilder writer;
+                std::string pong_str = Json::writeString(writer, pongmsg);
+
+                // Send back to sender
+                queue_ws(pong_str);
+
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
             }
@@ -194,7 +218,7 @@ public:
     void process_ws_queue() {
         while (rclcpp::ok()) {
             std::unique_lock<std::mutex> lock(ws_mutex);
-            ws_cv.wait(lock, [this] { return !msg_queue.empty() || !running; });
+            ws_cv.wait(lock, [this] { return !msg_queue.empty() || !ws_running; });
 
             std::string msg = msg_queue.front();
             msg_queue.pop();
@@ -204,8 +228,6 @@ public:
             global_client->send(global_hdl, msg, websocketpp::frame::opcode::text, ec);
             if (ec) {
                 RCLCPP_ERROR(this->get_logger(), "Error sending WebSocket message: %s", ec.message().c_str());
-            } else {
-                RCLCPP_INFO(this->get_logger(), "Sent message over WebSocket: %s", msg.c_str());
             }
         }
     }
@@ -447,7 +469,7 @@ public:
             // Create queue to help absorb jitter
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
-                "max-size-buffers", 1, // was 20
+                "max-size-buffers", 5,
                 "max-size-time", G_GUINT64_CONSTANT(0),
                 "max-size-bytes", 0,
                 "leaky", 2, // downstream
@@ -464,7 +486,7 @@ public:
             sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,
-                "max-lateness", G_GINT64_CONSTANT(-1), // was 100000000
+                "max-lateness", G_GINT64_CONSTANT(33333333), // ~33ms (1 frame)
                 "qos", TRUE, // Enable QoS
                 "throttle-time", 0,
                 "processing-deadline", G_GUINT64_CONSTANT(0),
@@ -535,7 +557,7 @@ int main(int argc, char* argv[]) {
     rclcpp::spin(node);
 
     // Cleanup
-    node->running = false;
+    node->ws_running = false;
     ws_connect_thread.join();
     rclcpp::shutdown();
     return 0;

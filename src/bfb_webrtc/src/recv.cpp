@@ -22,8 +22,11 @@
  */
 class WebRTCRecvNode : public rclcpp::Node {
 public:
-    // Flag to control threads
+    // Flag to control WebSocket thread
     std::atomic<bool> ws_running{true};
+
+    // Flag to control stats thread
+    std::atomic<bool> stats_running{true};
 
     /**
      * @brief Constructor - initializes GStreamer and member variables
@@ -53,6 +56,12 @@ public:
 
         if (ws_thread.joinable()) {
             ws_thread.join();
+        }
+
+        // Stop stats thread
+        stats_running = false;
+        if (stats_thread.joinable()) {
+            stats_thread.join();
         }
 
         if (pipeline) {
@@ -188,20 +197,6 @@ public:
                     return G_SOURCE_REMOVE;
                 }, func_ptr);
 
-            } else if (jsonMsg.isMember("ping")) {
-                // Extract the original timestamp
-                double ts = jsonMsg["ping"]["ts"].asDouble();
-
-                // Build pong message with same timestamp
-                Json::Value pongmsg;
-                pongmsg["pong"]["ts"] = ts;
-
-                Json::StreamWriterBuilder writer;
-                std::string pong_str = Json::writeString(writer, pongmsg);
-
-                // Send back to sender
-                queue_ws(pong_str);
-
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
             }
@@ -287,6 +282,83 @@ public:
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+        // Start stats thread
+        stats_thread = std::thread(&WebRTCRecvNode::stats_loop, this);
+        stats_thread.detach();
+    }
+
+    void stats_loop() {
+        while (rclcpp::ok() && stats_running) {
+            if (webrtcbin) {
+                // Create a new GstPromise, which will be completed when WebRTC stats are ready
+                GstPromise* promise = gst_promise_new_with_change_func(
+                    [](GstPromise* p, gpointer user_data) {
+                        // 'user_data' is our WebRTCRecvNode instance (the current object)
+                        auto* node = static_cast<WebRTCRecvNode*>(user_data);
+
+                        // Retrieve the stats structure once the promise is fulfilled
+                        const GstStructure* stats = gst_promise_get_reply(p);
+                        if (!stats) {
+                            gst_promise_unref(p);
+                            return;
+                        }
+
+                        const GstStructure* inbound = nullptr;
+
+                        // Loop over all fields in the returned stats structure
+                        for (int i = 0; i < gst_structure_n_fields(stats); ++i) {
+                            const gchar* name = gst_structure_nth_field_name(stats, i);
+
+                            // Find one that starts with "rtp-inbound-stream-stats_"
+                            if (g_str_has_prefix(name, "rtp-inbound-stream-stats_")) {
+                                gst_structure_get(stats, name, GST_TYPE_STRUCTURE, &inbound, nullptr);
+                                break;
+                            }
+                        }
+
+                        if (inbound) {
+                            guint64 packets_received = 0;
+                            guint64 packets_lost = 0;
+                            guint64 bytes_received = 0;
+                            gdouble jitter = 0.0;
+
+                            // Extract key fields from the inbound RTP stats
+                            gst_structure_get_uint64(inbound, "packets-received", &packets_received);
+                            gst_structure_get_uint64(inbound, "packets-lost", &packets_lost);
+                            gst_structure_get_uint64(inbound, "bytes-received", &bytes_received);
+                            gst_structure_get_double(inbound, "jitter", &jitter);
+
+                            // Create a JSON payload to send over WebSocket
+                            Json::Value stats_json;
+                            
+                            stats_json["stats"]["packets_received"] = static_cast<Json::UInt64>(packets_received);
+                            stats_json["stats"]["packets_lost"] = static_cast<Json::UInt64>(packets_lost);
+                            stats_json["stats"]["bytes_received"] = static_cast<Json::UInt64>(bytes_received);
+                            stats_json["stats"]["jitter"] = jitter;
+
+                            // Convert JSON to string
+                            Json::StreamWriterBuilder writer;
+                            std::string stats_str = Json::writeString(writer, stats_json);
+
+                            // Send stats over WebSocket
+                            node->queue_ws(stats_str);
+                        }
+
+                        // Free the promise (always do this)
+                        gst_promise_unref(p);
+                    },
+                    this, // Pass the current instance to the lambda as user_data
+                    nullptr // No destroy notify callback
+                );
+
+                // Ask WebRTCbin to fill stats into the promise
+                g_signal_emit_by_name(webrtcbin, "get-stats", nullptr, promise);
+            }
+
+            // Sleep for 2 seconds before requesting stats again
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
     }
 
     /**
@@ -469,7 +541,7 @@ public:
             // Create queue to help absorb jitter
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
-                "max-size-buffers", 5,
+                "max-size-buffers", 20,
                 "max-size-time", G_GUINT64_CONSTANT(0),
                 "max-size-bytes", 0,
                 "leaky", 2, // downstream
@@ -488,9 +560,6 @@ public:
                 "sync", FALSE,
                 "max-lateness", G_GINT64_CONSTANT(33333333), // ~33ms (1 frame)
                 "qos", TRUE, // Enable QoS
-                "throttle-time", 0,
-                "processing-deadline", G_GUINT64_CONSTANT(0),
-                "render-delay", G_GUINT64_CONSTANT(0),
                 NULL);
 
             
@@ -516,6 +585,7 @@ public:
 
 private:
     std::thread ws_thread;
+    std::thread stats_thread;
     GstElement* pipeline;
     GstElement* webrtcbin;
     websocketpp::connection_hdl global_hdl;

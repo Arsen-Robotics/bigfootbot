@@ -26,6 +26,9 @@ public:
     // Flag to control ws_thread
     std::atomic<bool> ws_running{true};
 
+    // Flag to control bitrate_thread
+    std::atomic<bool> bitrate_running{false};
+
     /**
      * @brief Constructor - initializes GStreamer and member variables
      */
@@ -189,21 +192,8 @@ public:
                     return G_SOURCE_REMOVE;
                 }, func_ptr);
 
-            } else if (jsonMsg.isMember("pong")) {
-                // Extract timestamp when ping was sent
-                double sent_ts = jsonMsg["pong"]["ts"].asDouble();
-
-                // Get current time
-                using namespace std::chrono;
-                double now_ms = static_cast<double>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
-
-                // Calculate RTT (round-trip time)
-                double rtt = now_ms - sent_ts;
-
-                // Update last RTT
-                last_rtt_ms.store(rtt);
-
-                return;
+            } else if (jsonMsg.isMember("stats")) {
+                handle_receiver_stats(jsonMsg["stats"]);
 
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
@@ -274,10 +264,10 @@ public:
                 nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
                 queue max-size-buffers=3 leaky=downstream ! \
                 nvv4l2h264enc \
+                    control-rate=1 \
                     bitrate=2000000 \
                     iframeinterval=30 \
                     num-B-Frames=0 \
-                    control-rate=1 \
                     preset-level=1 \
                     profile=0 \
                     maxperf-enable=1 \
@@ -376,64 +366,24 @@ public:
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
     }
 
+    void handle_receiver_stats(const Json::Value& stats) {
+        // Get individual metrics and update member variables
+        double l_jitter = stats.isMember("jitter") ? stats["jitter"].asDouble() : -1.0;
+        int64_t l_packets_received = stats.isMember("packets_received") ? stats["packets_received"].asUInt64() : -1;
+        int64_t l_packets_lost = stats.isMember("packets_lost") ? stats["packets_lost"].asUInt64() : -1;
+        uint64_t l_bytes_received = stats.isMember("bytes_received") ? stats["bytes_received"].asUInt64() : -1;
+
+        // Print or log stats
+        RCLCPP_INFO(this->get_logger(),
+            "Received Stats -> Jitter: %.4f | Bytes: %lu | Packets: %lu/%lu",
+            l_jitter, l_bytes_received, l_packets_received, l_packets_lost
+        );
+    }
+
     void bitrate_controller_loop() {
         using namespace std::chrono;
         const milliseconds interval(2000); // 2 seconds
         int consecutive_lost = 0;
-
-        while (rclcpp::ok() && bitrate_running) {
-            auto send_ts = steady_clock::now();
-
-            // Send ping containing timestamp of when ping was sent over WebSocket
-            Json::Value pingmsg;
-            pingmsg["ping"]["ts"] = static_cast<double>(duration_cast<milliseconds>(send_ts.time_since_epoch()).count());
-            Json::StreamWriterBuilder writer;
-            std::string ping_str = Json::writeString(writer, pingmsg);
-            queue_ws(ping_str);
-
-            // Wait for interval
-            std::this_thread::sleep_for(interval);
-
-            // Get last RTT
-            double rtt_ms = last_rtt_ms.exchange(-1.0);
-
-            if (rtt_ms < 0) {
-                // No pong received in last interval
-                consecutive_lost++;
-                RCLCPP_WARN(this->get_logger(), "No pong received. Consecutive lost: %d", consecutive_lost);
-            } else {
-                consecutive_lost = 0;
-                RCLCPP_INFO(this->get_logger(), "Current RTT: %.2f ms", rtt_ms);
-            }
-
-            // Adjust bitrate based on RTT
-            int target_bitrate = current_bitrate;
-
-            // Lost pongs => decrease bitrate
-            if (consecutive_lost >= 3) {
-                // Decrease bitrate on multiple lost pongs
-                target_bitrate = std::max(min_bitrate, current_bitrate - bitrate_step);
-                RCLCPP_WARN(this->get_logger(), "Decreasing bitrate to %d bps due to lost pongs.", target_bitrate);
-
-            // High RTT => decrease bitrate
-            } else if (rtt_ms > 150.0) {
-                // High RTT, decrease bitrate
-                target_bitrate = std::max(min_bitrate, current_bitrate - bitrate_step);
-                RCLCPP_INFO(this->get_logger(), "High RTT detected. Decreasing bitrate to %d bps.", target_bitrate);
-
-            // Low RTT => increase bitrate
-            } else if (rtt_ms >= 0 && rtt_ms < 80.0 && consecutive_lost == 0) {
-                // Low RTT, increase bitrate
-                target_bitrate = std::min(max_bitrate, current_bitrate + bitrate_step);
-                RCLCPP_INFO(this->get_logger(), "Low RTT detected. Increasing bitrate to %d bps.", target_bitrate);
-            }
-
-            // Apply new bitrate if changed
-            if (target_bitrate != current_bitrate) {
-                change_bitrate(target_bitrate);
-                current_bitrate = target_bitrate;
-            }
-        }
     }
 
     void change_bitrate(int new_bitrate) {
@@ -670,12 +620,16 @@ private:
 
     // Bitrate controller
     std::thread bitrate_thread;
-    std::atomic<bool> bitrate_running{false};
-    std::atomic<double> last_rtt_ms{-1.0};
     int current_bitrate{2000000};
     const int min_bitrate{800000};
     const int max_bitrate{2000000};
     const int bitrate_step{100000};
+
+    std::atomic<double> jitter{-1.0};
+    std::atomic<int64_t> packets_received{-1};
+    std::atomic<int64_t> packets_lost{-1};
+    std::atomic<int64_t> bytes_received{-1};
+    std::atomic<uint64_t> last_bytes_received{0};
 
     GstElement* enc;                     // Encoder element for bitrate adjustment
 };

@@ -64,6 +64,12 @@ public:
             stats_thread.join();
         }
 
+        // Stop stutter monitor thread
+        monitor_running = false;
+        if (monitor_thread.joinable()) {
+            monitor_thread.join();
+        }
+
         if (pipeline) {
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_object_unref(pipeline);
@@ -282,6 +288,58 @@ public:
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+        // Start stutter monitor thread (runs until destructor)
+        monitor_running = true;
+        monitor_thread = std::thread([this]() {
+            while (monitor_running && rclcpp::ok()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(monitor_period_ms));
+
+                // compute and reset counters atomically
+                uint64_t frames = 0;
+                uint64_t stutters = 0;
+                {
+                    std::lock_guard<std::mutex> lk(stutter_mutex);
+                    frames = frame_count;
+                    stutters = stutter_events;
+                    frame_count = 0;
+                    stutter_events = 0;
+                }
+
+                if (frames == 0) continue;
+                double ratio = double(stutters) / double(frames);
+
+                // Prepare control message
+                Json::Value ctrl;
+                bool send = false;
+                if (ratio > high_stutter_threshold) {
+                    // Too much stutter -> request lower bitrate
+                    current_bitrate_kbps = std::max(100, current_bitrate_kbps.load() - bitrate_step_kbps);
+                    ctrl["control"]["action"] = "set_bitrate";
+                    ctrl["control"]["value_kbps"] = current_bitrate_kbps.load();
+                    send = true;
+                    RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request lower bitrate %d kbps", ratio, current_bitrate_kbps.load());
+                } else if (ratio < low_stutter_threshold) {
+                    // Low stutter -> can try increasing bitrate
+                    current_bitrate_kbps = current_bitrate_kbps.load() + bitrate_step_kbps;
+                    ctrl["control"]["action"] = "set_bitrate";
+                    ctrl["control"]["value_kbps"] = current_bitrate_kbps.load();
+                    send = true;
+                    RCLCPP_INFO(this->get_logger(), "Low stutter ratio %.3f -> request higher bitrate %d kbps", ratio, current_bitrate_kbps.load());
+                } else {
+                    // Keep current; optionally send telemetry
+                    ctrl["telemetry"]["stutter_ratio"] = ratio;
+                    ctrl["telemetry"]["frames"] = Json::UInt64(frames);
+                    send = true;
+                }
+
+                if (send) {
+                    Json::StreamWriterBuilder w;
+                    std::string msg = Json::writeString(w, ctrl);
+                    this->queue_ws(msg);
+                }
+            }
+        });
 
         // Start stats thread
         stats_thread = std::thread(&WebRTCRecvNode::stats_loop, this);
@@ -580,7 +638,72 @@ public:
 
         gst_element_link_many(queue, conv, sink, nullptr);
 
+        // Install pad probe on queue src pad to measure inter-frame intervals
+        if (queue) {
+            GstPad* srcpad = gst_element_get_static_pad(queue, "src");
+            if (srcpad) {
+                gst_pad_add_probe(srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
+                gst_object_unref(srcpad);
+            }
+        }
+
         gst_caps_unref(caps);
+    }
+
+    static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
+        WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
+
+        // If this probe info doesn't contain a buffer, ignore
+        if (!(GST_PAD_PROBE_INFO_TYPE(info) & GST_PAD_PROBE_TYPE_BUFFER)) {
+            return GST_PAD_PROBE_OK;
+        }
+
+        GstBuffer* buf = GST_PAD_PROBE_INFO_BUFFER(info);
+        if (!buf) return GST_PAD_PROBE_OK;
+
+        // Prefer PTS for interval measurement (ensures we measure scheduled intervals, not wall-clock arrival)
+        gboolean has_pts = GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buf));
+        double interval_ms = 0.0;
+
+        std::lock_guard<std::mutex> lk(self->stutter_mutex);
+        if (has_pts) {
+            double pts_ms = GST_TIME_AS_MSECONDS(GST_BUFFER_PTS(buf));
+            if (self->have_last_pts) {
+                interval_ms = pts_ms - self->last_frame_pts_ms;
+            } else {
+                // first PTS seen, can't compute interval yet
+                self->have_last_pts = true;
+                self->last_frame_pts_ms = pts_ms;
+                // do not count as a frame interval yet
+                return GST_PAD_PROBE_OK;
+            }
+            self->last_frame_pts_ms = pts_ms;
+        } else {
+            // fall back to wall-clock if no PTS
+            auto now = std::chrono::steady_clock::now();
+            if (self->last_frame_time.time_since_epoch().count() == 0) {
+                self->last_frame_time = now;
+                return GST_PAD_PROBE_OK;
+            }
+            interval_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(now - self->last_frame_time).count();
+            self->last_frame_time = now;
+        }
+
+        // If interval_ms is non-positive (PTS wrap or weird) ignore
+        if (interval_ms <= 0.0) return GST_PAD_PROBE_OK;
+
+        // update EMA (initialize to first measured interval)
+        if (self->ema_interval_ms <= 0.0) self->ema_interval_ms = interval_ms;
+        else self->ema_interval_ms = (self->ema_interval_ms * (1.0 - self->ema_alpha)) + (interval_ms * self->ema_alpha);
+
+        // count frame & detect stutter
+        self->frame_count++;
+        double threshold = std::max(self->ema_interval_ms * self->stutter_multiplier, self->min_stutter_ms);
+        if (interval_ms > threshold) {
+            self->stutter_events++;
+        }
+
+        return GST_PAD_PROBE_OK;
     }
 
 private:
@@ -594,6 +717,27 @@ private:
     std::queue<std::string> msg_queue;
     std::mutex ws_mutex;
     std::condition_variable ws_cv;
+
+    // Stutter monitoring
+    std::atomic<bool> monitor_running{false};
+    std::thread monitor_thread;
+    std::mutex stutter_mutex;
+    std::chrono::steady_clock::time_point last_frame_time{};
+    // prefer PTS-based timing when available
+    double last_frame_pts_ms{0.0};
+    bool have_last_pts{false};
+    double ema_interval_ms{0.0};           // exponential moving average of inter-frame interval
+    uint64_t frame_count{0};
+    uint64_t stutter_events{0};
+    // make detection more responsive / sensitive
+    const double ema_alpha = 0.40;         // faster EMA adaptation
+    const double stutter_multiplier = 1.25; // smaller multiplier to detect smaller gaps
+    const double min_stutter_ms = 30.0;    // treat >30ms as potential stutter (for 30fps ~33ms)
+    const int monitor_period_ms = 1000;    // faster feedback
+    const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
+    const double low_stutter_threshold = 0.01;  // if <1% stutter -> consider increasing
+    const int bitrate_step_kbps = 200;     // amount to change bitrate by (kbps)
+    std::atomic<int> current_bitrate_kbps{2000}; // local estimate / hint
 };
 
 /**

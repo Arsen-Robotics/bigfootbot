@@ -25,9 +25,6 @@ public:
     // Flag to control WebSocket thread
     std::atomic<bool> ws_running{true};
 
-    // Flag to control stats thread
-    std::atomic<bool> stats_running{true};
-
     /**
      * @brief Constructor - initializes GStreamer and member variables
      */
@@ -58,16 +55,10 @@ public:
             ws_thread.join();
         }
 
-        // Stop stats thread
-        stats_running = false;
-        if (stats_thread.joinable()) {
-            stats_thread.join();
-        }
-
         // Stop stutter monitor thread
-        monitor_running = false;
-        if (monitor_thread.joinable()) {
-            monitor_thread.join();
+        stutter_monitor_running = false;
+        if (stutter_monitor_thread.joinable()) {
+            stutter_monitor_thread.join();
         }
 
         if (pipeline) {
@@ -290,10 +281,10 @@ public:
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
         // Start stutter monitor thread (runs until destructor)
-        monitor_running = true;
-        monitor_thread = std::thread([this]() {
-            while (monitor_running && rclcpp::ok()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(monitor_period_ms));
+        stutter_monitor_running = true;
+        stutter_monitor_thread = std::thread([this]() {
+            while (stutter_monitor_running && rclcpp::ok()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(stutter_monitor_period_ms));
 
                 // compute and reset counters atomically
                 uint64_t frames = 0;
@@ -314,23 +305,18 @@ public:
                 bool send = false;
                 if (ratio > high_stutter_threshold) {
                     // Too much stutter -> request lower bitrate
-                    current_bitrate_kbps = std::max(100, current_bitrate_kbps.load() - bitrate_step_kbps);
+                    current_bitrate_kbps = std::max(min_bitrate_kbps, current_bitrate_kbps.load() - bitrate_step_kbps);
                     ctrl["control"]["action"] = "set_bitrate";
                     ctrl["control"]["value_kbps"] = current_bitrate_kbps.load();
                     send = true;
                     RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request lower bitrate %d kbps", ratio, current_bitrate_kbps.load());
                 } else if (ratio < low_stutter_threshold) {
                     // Low stutter -> can try increasing bitrate
-                    current_bitrate_kbps = current_bitrate_kbps.load() + bitrate_step_kbps;
+                    current_bitrate_kbps = std::min(max_bitrate_kbps, current_bitrate_kbps.load() + bitrate_step_kbps / 3);
                     ctrl["control"]["action"] = "set_bitrate";
                     ctrl["control"]["value_kbps"] = current_bitrate_kbps.load();
                     send = true;
                     RCLCPP_INFO(this->get_logger(), "Low stutter ratio %.3f -> request higher bitrate %d kbps", ratio, current_bitrate_kbps.load());
-                } else {
-                    // Keep current; optionally send telemetry
-                    ctrl["telemetry"]["stutter_ratio"] = ratio;
-                    ctrl["telemetry"]["frames"] = Json::UInt64(frames);
-                    send = true;
                 }
 
                 if (send) {
@@ -340,83 +326,6 @@ public:
                 }
             }
         });
-
-        // Start stats thread
-        stats_thread = std::thread(&WebRTCRecvNode::stats_loop, this);
-        stats_thread.detach();
-    }
-
-    void stats_loop() {
-        while (rclcpp::ok() && stats_running) {
-            if (webrtcbin) {
-                // Create a new GstPromise, which will be completed when WebRTC stats are ready
-                GstPromise* promise = gst_promise_new_with_change_func(
-                    [](GstPromise* p, gpointer user_data) {
-                        // 'user_data' is our WebRTCRecvNode instance (the current object)
-                        auto* node = static_cast<WebRTCRecvNode*>(user_data);
-
-                        // Retrieve the stats structure once the promise is fulfilled
-                        const GstStructure* stats = gst_promise_get_reply(p);
-                        if (!stats) {
-                            gst_promise_unref(p);
-                            return;
-                        }
-
-                        const GstStructure* inbound = nullptr;
-
-                        // Loop over all fields in the returned stats structure
-                        for (int i = 0; i < gst_structure_n_fields(stats); ++i) {
-                            const gchar* name = gst_structure_nth_field_name(stats, i);
-
-                            // Find one that starts with "rtp-inbound-stream-stats_"
-                            if (g_str_has_prefix(name, "rtp-inbound-stream-stats_")) {
-                                gst_structure_get(stats, name, GST_TYPE_STRUCTURE, &inbound, nullptr);
-                                break;
-                            }
-                        }
-
-                        if (inbound) {
-                            guint64 packets_received = 0;
-                            guint64 packets_lost = 0;
-                            guint64 bytes_received = 0;
-                            gdouble jitter = 0.0;
-
-                            // Extract key fields from the inbound RTP stats
-                            gst_structure_get_uint64(inbound, "packets-received", &packets_received);
-                            gst_structure_get_uint64(inbound, "packets-lost", &packets_lost);
-                            gst_structure_get_uint64(inbound, "bytes-received", &bytes_received);
-                            gst_structure_get_double(inbound, "jitter", &jitter);
-
-                            // Create a JSON payload to send over WebSocket
-                            Json::Value stats_json;
-                            
-                            stats_json["stats"]["packets_received"] = static_cast<Json::UInt64>(packets_received);
-                            stats_json["stats"]["packets_lost"] = static_cast<Json::UInt64>(packets_lost);
-                            stats_json["stats"]["bytes_received"] = static_cast<Json::UInt64>(bytes_received);
-                            stats_json["stats"]["jitter"] = jitter;
-
-                            // Convert JSON to string
-                            Json::StreamWriterBuilder writer;
-                            std::string stats_str = Json::writeString(writer, stats_json);
-
-                            // Send stats over WebSocket
-                            node->queue_ws(stats_str);
-                        }
-
-                        // Free the promise (always do this)
-                        gst_promise_unref(p);
-                    },
-                    this, // Pass the current instance to the lambda as user_data
-                    nullptr // No destroy notify callback
-                );
-
-                // Ask WebRTCbin to fill stats into the promise
-                g_signal_emit_by_name(webrtcbin, "get-stats", nullptr, promise);
-            }
-
-            // Sleep for 2 seconds before requesting stats again
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-        }
     }
 
     /**
@@ -638,12 +547,12 @@ public:
 
         gst_element_link_many(queue, conv, sink, nullptr);
 
-        // Install pad probe on queue src pad to measure inter-frame intervals
-        if (queue) {
-            GstPad* srcpad = gst_element_get_static_pad(queue, "src");
-            if (srcpad) {
-                gst_pad_add_probe(srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
-                gst_object_unref(srcpad);
+        // Add stutter monitoring probe on sink pad of sink element
+        if (sink) {
+            GstPad* sinkpad = gst_element_get_static_pad(sink, "sink");
+            if (sinkpad) {
+                gst_pad_add_probe(sinkpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
+                gst_object_unref(sinkpad);
             }
         }
 
@@ -651,56 +560,151 @@ public:
     }
 
     static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
+        // Get pointer to class instance
         WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
 
-        // If this probe info doesn't contain a buffer, ignore
+        // Return if not a buffer
         if (!(GST_PAD_PROBE_INFO_TYPE(info) & GST_PAD_PROBE_TYPE_BUFFER)) {
             return GST_PAD_PROBE_OK;
         }
 
+        // Get the buffer
         GstBuffer* buf = GST_PAD_PROBE_INFO_BUFFER(info);
         if (!buf) return GST_PAD_PROBE_OK;
+    
+        // Get current frame arrival time
+        auto arrival_time = std::chrono::steady_clock::now();
 
-        // Prefer PTS for interval measurement (ensures we measure scheduled intervals, not wall-clock arrival)
+        // Prefer PTS (presentation timestamp) for interval measurement
         gboolean has_pts = GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buf));
-        double interval_ms = 0.0;
 
-        std::lock_guard<std::mutex> lk(self->stutter_mutex);
-        if (has_pts) {
-            double pts_ms = GST_TIME_AS_MSECONDS(GST_BUFFER_PTS(buf));
+        {
+            // Lock mutex for thread safety
+            std::lock_guard<std::mutex> lk(self->stutter_mutex);
+
+            double pts_ms = double(GST_TIME_AS_MSECONDS(GST_BUFFER_PTS(buf)));
+
+            // Metric 1: Inter-frame arrival interval
+            double arrival_delta_ms = 0.0;
+            if (self->last_frame_time.time_since_epoch().count() != 0) {
+                arrival_delta_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(
+                    arrival_time - self->last_frame_time).count();
+            }
+
+            // Metric 2: PTS interval
+            double pts_delta_ms = 0.0;
             if (self->have_last_pts) {
-                interval_ms = pts_ms - self->last_frame_pts_ms;
-            } else {
-                // first PTS seen, can't compute interval yet
+                pts_delta_ms = pts_ms - self->last_frame_pts_ms;
+            }
+
+            // Metric 3: PTS-to-arrival skew (network delay accumulation)
+            // This requires establishing a baseline first
+            if (!self->have_timing_baseline) {
+                // First frame: establish baseline sync point
+                self->baseline_pts_ms = pts_ms;
+                self->baseline_arrival = arrival_time;
+                self->have_timing_baseline = true;
                 self->have_last_pts = true;
                 self->last_frame_pts_ms = pts_ms;
-                // do not count as a frame interval yet
+                self->last_frame_time = arrival_time;
                 return GST_PAD_PROBE_OK;
             }
+
+            // Calculate how much time has passed in PTS vs real arrival time
+            double pts_elapsed = pts_ms - self->baseline_pts_ms;
+            double arrival_elapsed = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(
+                arrival_time - self->baseline_arrival).count();
+            
+            // Skew = how far behind (or ahead) we are vs sender timeline
+            double skew_ms = arrival_elapsed - pts_elapsed;
+
+            // Update EMAs
+
+            // 1. Inter-frame arrival jitter (RFC 3550 style)
+            if (arrival_delta_ms > 0.0 && pts_delta_ms > 0.0) {
+                double transit_delta = arrival_delta_ms - pts_delta_ms;
+                double jitter_sample = std::abs(transit_delta);
+                
+                if (self->ema_jitter_ms < 0.0) {
+                    self->ema_jitter_ms = jitter_sample;
+                } else {
+                    // RFC 3550 uses 1/16 smoothing, but we use ema_alpha for consistency
+                    self->ema_jitter_ms = (self->ema_jitter_ms * (1.0 - self->ema_alpha)) + 
+                                        (jitter_sample * self->ema_alpha);
+                }
+            }
+
+            // 2. Inter-frame PTS interval
+            if (pts_delta_ms > 0.0 && pts_delta_ms < 1000.0) {
+                if (self->ema_interval_ms <= 0.0) {
+                    self->ema_interval_ms = pts_delta_ms;
+                } else {
+                    self->ema_interval_ms = (self->ema_interval_ms * (1.0 - self->ema_alpha)) + 
+                                        (pts_delta_ms * self->ema_alpha);
+                }
+            }
+
+            // 3. PTS-to-arrival skew
+            if (self->ema_skew_ms < 0.0) {
+                self->ema_skew_ms = skew_ms;
+            } else {
+                self->ema_skew_ms = (self->ema_skew_ms * (1.0 - self->ema_alpha)) + 
+                                (skew_ms * self->ema_alpha);
+            }
+
+            self->frame_count++;
+
+            // STUTTER DETECTION using multiple signals
+            bool stutter_detected = false;
+            std::string stutter_reason = "";
+
+            // Signal 1: High jitter
+            // if (self->ema_jitter_ms > self->ema_interval_ms * 0.5) {
+            //     stutter_detected = true;
+            //     stutter_reason += "jitter ";
+            // }
+
+            // Signal 2: Excessive inter-arrival gap
+            if (arrival_delta_ms > 0.0) {
+                double threshold = std::max({
+                    self->ema_interval_ms * self->stutter_multiplier,
+                    self->min_stutter_ms
+                });
+                
+                if (arrival_delta_ms > threshold) {
+                    stutter_detected = true;
+                    stutter_reason += "gap ";
+                }
+            }
+ 
+            // Signal 3: Growing delay accumulation (skew)
+            // if (self->ema_skew_ms > self->ema_interval_ms * 3.0) {
+            //     stutter_detected = true;
+            //     stutter_reason += "delay_accumulation ";
+            // }
+
+            if (stutter_detected) {
+                self->stutter_events++;
+            }
+
+            // Reset baseline periodically to prevent drift
+            if (self->frame_count % 300 == 0) {
+                self->baseline_pts_ms = pts_ms;
+                self->baseline_arrival = arrival_time;
+                self->ema_skew_ms = 0.0;
+            }
+
+            // Update state
             self->last_frame_pts_ms = pts_ms;
-        } else {
-            // fall back to wall-clock if no PTS
-            auto now = std::chrono::steady_clock::now();
-            if (self->last_frame_time.time_since_epoch().count() == 0) {
-                self->last_frame_time = now;
-                return GST_PAD_PROBE_OK;
-            }
-            interval_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(now - self->last_frame_time).count();
-            self->last_frame_time = now;
-        }
+            self->last_frame_time = arrival_time;
+            self->have_last_pts = true;
 
-        // If interval_ms is non-positive (PTS wrap or weird) ignore
-        if (interval_ms <= 0.0) return GST_PAD_PROBE_OK;
+            // BITRATE ADJUSTMENT HINTS (use these in your control logic)
+            // - High ema_jitter_ms → network unstable → reduce bitrate
+            // - Growing ema_skew_ms → network congested → reduce bitrate aggressively  
+            // - High stutter_rate → reduce bitrate
+            // - Low jitter + stable skew → can try increasing bitrate
 
-        // update EMA (initialize to first measured interval)
-        if (self->ema_interval_ms <= 0.0) self->ema_interval_ms = interval_ms;
-        else self->ema_interval_ms = (self->ema_interval_ms * (1.0 - self->ema_alpha)) + (interval_ms * self->ema_alpha);
-
-        // count frame & detect stutter
-        self->frame_count++;
-        double threshold = std::max(self->ema_interval_ms * self->stutter_multiplier, self->min_stutter_ms);
-        if (interval_ms > threshold) {
-            self->stutter_events++;
         }
 
         return GST_PAD_PROBE_OK;
@@ -708,7 +712,6 @@ public:
 
 private:
     std::thread ws_thread;
-    std::thread stats_thread;
     GstElement* pipeline;
     GstElement* webrtcbin;
     websocketpp::connection_hdl global_hdl;
@@ -719,25 +722,34 @@ private:
     std::condition_variable ws_cv;
 
     // Stutter monitoring
-    std::atomic<bool> monitor_running{false};
-    std::thread monitor_thread;
+    std::atomic<bool> stutter_monitor_running{false};
+    std::thread stutter_monitor_thread;
     std::mutex stutter_mutex;
     std::chrono::steady_clock::time_point last_frame_time{};
-    // prefer PTS-based timing when available
+
+    // Stutter metrics
+    bool have_timing_baseline{false};
+    double baseline_pts_ms{0.0};
+    std::chrono::steady_clock::time_point baseline_arrival{};
+    double ema_interval_ms{0.0};           // exponential moving average of inter-frame interval
+    double ema_jitter_ms{0.0};             // exponential moving average of inter-arrival jitter
+    double ema_skew_ms{0.0};               // exponential moving average of PTS-to-arrival skew
     double last_frame_pts_ms{0.0};
     bool have_last_pts{false};
-    double ema_interval_ms{0.0};           // exponential moving average of inter-frame interval
     uint64_t frame_count{0};
     uint64_t stutter_events{0};
-    // make detection more responsive / sensitive
-    const double ema_alpha = 0.40;         // faster EMA adaptation
-    const double stutter_multiplier = 1.25; // smaller multiplier to detect smaller gaps
-    const double min_stutter_ms = 30.0;    // treat >30ms as potential stutter (for 30fps ~33ms)
-    const int monitor_period_ms = 1000;    // faster feedback
+
+    // Stutter detection parameters
+    const double ema_alpha = 0.40;         // smoothing factor for EMA
+    const double stutter_multiplier = 1.1; //
+    const double min_stutter_ms = 10.0;    // treat >10ms as potential stutter
+    const int stutter_monitor_period_ms = 1500;    // monitor period in ms
     const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
-    const double low_stutter_threshold = 0.01;  // if <1% stutter -> consider increasing
-    const int bitrate_step_kbps = 200;     // amount to change bitrate by (kbps)
-    std::atomic<int> current_bitrate_kbps{2000}; // local estimate / hint
+    const double low_stutter_threshold = 0.01;  // if <1% stutter -> increase bitrate
+    const int bitrate_step_kbps = 100;     // amount to change bitrate by (kbps)
+    const int min_bitrate_kbps = 300;      // minimum allowed bitrate (kbps)
+    const int max_bitrate_kbps = 2000;     // maximum allowed bitrate (kbps)
+    std::atomic<int> current_bitrate_kbps{2000}; // current target bitrate (kbps)
 };
 
 /**

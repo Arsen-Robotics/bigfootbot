@@ -192,8 +192,14 @@ public:
                     return G_SOURCE_REMOVE;
                 }, func_ptr);
 
-            } else if (jsonMsg.isMember("stats")) {
-                handle_receiver_stats(jsonMsg["stats"]);
+            } else if (jsonMsg.isMember("control")) {
+                const auto& ctrl = jsonMsg["control"];
+                std::string action = ctrl["action"].asString();
+                if (action == "set_bitrate") {
+                    int bitrate = ctrl["value_kbps"].asInt();
+
+                    change_bitrate(bitrate * 1000); // Convert kbps to bps
+                }
 
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
@@ -260,7 +266,7 @@ public:
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
-            nvarguscamerasrc sensor-mode=3 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 ! \
+            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
                 nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
                 queue max-size-buffers=3 leaky=downstream ! \
                 nvv4l2h264enc \

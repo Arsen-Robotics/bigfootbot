@@ -231,7 +231,7 @@ class RoboclawControlNode(Node):
         battery_wattage_1 = (self.abs_last_m1_command / self.max_motor_command * m1_current) * battery_voltage
         battery_wattage_2 = (self.abs_last_m2_command / self.max_motor_command * m2_current) * battery_voltage
 
-        # Only append samples if robot is moving
+        # Append samples only if robot is moving
         if self.abs_last_m1_command > 0 or self.abs_last_m2_command > 0:
             # Maintain max length of motor_wattage_samples
             if len(self.motor_wattage_samples) >= self.max_motor_wattage_speed_samples:
@@ -244,8 +244,8 @@ class RoboclawControlNode(Node):
             self.wheel_speed_samples.append(self.last_wheel_speed_kmh)
 
             # Log wattages (power consumption)
-            with open(self.motor_wattages_log_file, 'a') as f:
-                f.write(f"{datetime.now()} - M1: {battery_wattage_1} W, M2: {battery_wattage_2} W\n")
+            # with open(self.motor_wattages_log_file, 'a') as f:
+            #     f.write(f"{datetime.now()} - M1: {battery_wattage_1} W, M2: {battery_wattage_2} W\n")
 
         # Calculate average motor wattage and average wheel speed if enough samples
         # Then estimate remaining energy and range in km

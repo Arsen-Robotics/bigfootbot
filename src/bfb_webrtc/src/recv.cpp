@@ -286,37 +286,44 @@ public:
             while (stutter_monitor_running && rclcpp::ok()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(stutter_monitor_period_ms));
 
-                // compute and reset counters atomically
+                // Get current stutter metrics and reset counters
                 uint64_t frames = 0;
                 uint64_t stutters = 0;
                 {
                     std::lock_guard<std::mutex> lk(stutter_mutex);
                     frames = frame_count;
                     stutters = stutter_events;
-                    frame_count = 0;
-                    stutter_events = 0;
+                    frame_count = 0; // Reset for next period
+                    stutter_events = 0; // Reset for next period
                 }
 
-                if (frames == 0) continue;
+                //if (frames == 0) continue; // Avoid division by zero
+
+                // Calculate stutter ratio
                 double ratio = double(stutters) / double(frames);
+
+                RCLCPP_INFO(this->get_logger(), "Stutter ratio %.3f (%llu stutters / %llu frames)", ratio, stutters, frames);
+                RCLCPP_INFO(this->get_logger(), "Thresholds: low %.3f, high %.3f", low_stutter_threshold, high_stutter_threshold);
 
                 // Prepare control message
                 Json::Value ctrl;
                 bool send = false;
                 if (ratio > high_stutter_threshold) {
                     // Too much stutter -> request lower bitrate
-                    current_bitrate_kbps = std::max(min_bitrate_kbps, current_bitrate_kbps.load() - bitrate_step_kbps);
+                    int new_bitrate_kpbs = std::max(min_bitrate_kbps, current_bitrate_kbps.load() - bitrate_step_kbps);
                     ctrl["control"]["action"] = "set_bitrate";
-                    ctrl["control"]["value_kbps"] = current_bitrate_kbps.load();
+                    ctrl["control"]["value_kbps"] = new_bitrate_kpbs;
                     send = true;
-                    RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request lower bitrate %d kbps", ratio, current_bitrate_kbps.load());
+                    RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request lower bitrate %d kbps", ratio, new_bitrate_kpbs);
+                    current_bitrate_kbps.store(new_bitrate_kpbs);
                 } else if (ratio < low_stutter_threshold) {
-                    // Low stutter -> can try increasing bitrate
-                    current_bitrate_kbps = std::min(max_bitrate_kbps, current_bitrate_kbps.load() + bitrate_step_kbps / 3);
+                    // Low stutter -> request higher bitrate
+                    int new_bitrate_kbps = std::min(max_bitrate_kbps, current_bitrate_kbps.load() + bitrate_step_kbps);
                     ctrl["control"]["action"] = "set_bitrate";
-                    ctrl["control"]["value_kbps"] = current_bitrate_kbps.load();
+                    ctrl["control"]["value_kbps"] = new_bitrate_kbps;
                     send = true;
-                    RCLCPP_INFO(this->get_logger(), "Low stutter ratio %.3f -> request higher bitrate %d kbps", ratio, current_bitrate_kbps.load());
+                    RCLCPP_INFO(this->get_logger(), "Low stutter ratio %.3f -> request higher bitrate %d kbps", ratio, new_bitrate_kbps);
+                    current_bitrate_kbps.store(new_bitrate_kbps);
                 }
 
                 if (send) {
@@ -560,154 +567,62 @@ public:
     }
 
     static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
-        // Get pointer to class instance
         WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
 
-        // Return if not a buffer
+        // If this probe info doesn't contain a buffer, return
         if (!(GST_PAD_PROBE_INFO_TYPE(info) & GST_PAD_PROBE_TYPE_BUFFER)) {
             return GST_PAD_PROBE_OK;
         }
 
-        // Get the buffer
-        GstBuffer* buf = GST_PAD_PROBE_INFO_BUFFER(info);
-        if (!buf) return GST_PAD_PROBE_OK;
-    
-        // Get current frame arrival time
-        auto arrival_time = std::chrono::steady_clock::now();
+        // Get the buffer (frame)
+        GstBuffer* buffer = GST_PAD_PROBE_INFO_BUFFER(info);
+        if (!buffer) return GST_PAD_PROBE_OK;
+        
+        // Retrieve PTS from buffer
+        if (!GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buffer))) {
+            return GST_PAD_PROBE_OK;
+        }
+        double pts_ms = GST_TIME_AS_MSECONDS(GST_BUFFER_PTS(buffer));
 
-        // Prefer PTS (presentation timestamp) for interval measurement
-        gboolean has_pts = GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buf));
+        double interval_ms = 0.0;
 
         {
-            // Lock mutex for thread safety
             std::lock_guard<std::mutex> lk(self->stutter_mutex);
-
-            double pts_ms = double(GST_TIME_AS_MSECONDS(GST_BUFFER_PTS(buf)));
-
-            // Metric 1: Inter-frame arrival interval
-            double arrival_delta_ms = 0.0;
-            if (self->last_frame_time.time_since_epoch().count() != 0) {
-                arrival_delta_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(
-                    arrival_time - self->last_frame_time).count();
-            }
-
-            // Metric 2: PTS interval
-            double pts_delta_ms = 0.0;
+            
             if (self->have_last_pts) {
-                pts_delta_ms = pts_ms - self->last_frame_pts_ms;
-            }
-
-            // Metric 3: PTS-to-arrival skew (network delay accumulation)
-            // This requires establishing a baseline first
-            if (!self->have_timing_baseline) {
-                // First frame: establish baseline sync point
-                self->baseline_pts_ms = pts_ms;
-                self->baseline_arrival = arrival_time;
-                self->have_timing_baseline = true;
-                self->have_last_pts = true;
+                interval_ms = pts_ms - self->last_frame_pts_ms;
+            } else {
+                // First frame received, can't compute interval yet
                 self->last_frame_pts_ms = pts_ms;
-                self->last_frame_time = arrival_time;
+                self->have_last_pts = true;
+
+                // Don't process further for first frame
                 return GST_PAD_PROBE_OK;
             }
 
-            // Calculate how much time has passed in PTS vs real arrival time
-            double pts_elapsed = pts_ms - self->baseline_pts_ms;
-            double arrival_elapsed = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(
-                arrival_time - self->baseline_arrival).count();
-            
-            // Skew = how far behind (or ahead) we are vs sender timeline
-            double skew_ms = arrival_elapsed - pts_elapsed;
+            // Update last frame PTS
+            self->last_frame_pts_ms = pts_ms;
 
-            // Update EMAs
+            // If interval is non-positive, return
+            if (interval_ms <= 0.0) return GST_PAD_PROBE_OK;
 
-            // 1. Inter-frame arrival jitter (RFC 3550 style)
-            if (arrival_delta_ms > 0.0 && pts_delta_ms > 0.0) {
-                double transit_delta = arrival_delta_ms - pts_delta_ms;
-                double jitter_sample = std::abs(transit_delta);
-                
-                if (self->ema_jitter_ms < 0.0) {
-                    self->ema_jitter_ms = jitter_sample;
-                } else {
-                    // RFC 3550 uses 1/16 smoothing, but we use ema_alpha for consistency
-                    self->ema_jitter_ms = (self->ema_jitter_ms * (1.0 - self->ema_alpha)) + 
-                                        (jitter_sample * self->ema_alpha);
-                }
-            }
+            // Update EMA (Exponential Moving Average)
+            // For the first frame, initialize EMA with the first interval
+            if (self->ema_interval_ms <= 0.0) self->ema_interval_ms = interval_ms;
+            else self->ema_interval_ms = (self->ema_interval_ms * (1.0 - self->ema_alpha)) + (interval_ms * self->ema_alpha);
 
-            // 2. Inter-frame PTS interval
-            if (pts_delta_ms > 0.0 && pts_delta_ms < 1000.0) {
-                if (self->ema_interval_ms <= 0.0) {
-                    self->ema_interval_ms = pts_delta_ms;
-                } else {
-                    self->ema_interval_ms = (self->ema_interval_ms * (1.0 - self->ema_alpha)) + 
-                                        (pts_delta_ms * self->ema_alpha);
-                }
-            }
-
-            // 3. PTS-to-arrival skew
-            if (self->ema_skew_ms < 0.0) {
-                self->ema_skew_ms = skew_ms;
-            } else {
-                self->ema_skew_ms = (self->ema_skew_ms * (1.0 - self->ema_alpha)) + 
-                                (skew_ms * self->ema_alpha);
-            }
-
+            // Count frame and check for stutter
             self->frame_count++;
 
-            // STUTTER DETECTION using multiple signals
-            bool stutter_detected = false;
-            std::string stutter_reason = "";
+            //double threshold_ms = std::max(self->ema_interval_ms * self->stutter_multiplier, self->min_stutter_ms);
+            double threshold_ms = 33 * self->stutter_multiplier;
 
-            // Signal 1: High jitter
-            // if (self->ema_jitter_ms > self->ema_interval_ms * 0.5) {
-            //     stutter_detected = true;
-            //     stutter_reason += "jitter ";
-            // }
-
-            // Signal 2: Excessive inter-arrival gap
-            if (arrival_delta_ms > 0.0) {
-                double threshold = std::max({
-                    self->ema_interval_ms * self->stutter_multiplier,
-                    self->min_stutter_ms
-                });
-                
-                if (arrival_delta_ms > threshold) {
-                    stutter_detected = true;
-                    stutter_reason += "gap ";
-                }
-            }
- 
-            // Signal 3: Growing delay accumulation (skew)
-            // if (self->ema_skew_ms > self->ema_interval_ms * 3.0) {
-            //     stutter_detected = true;
-            //     stutter_reason += "delay_accumulation ";
-            // }
-
-            if (stutter_detected) {
+            if (interval_ms > threshold_ms) {
                 self->stutter_events++;
             }
 
-            // Reset baseline periodically to prevent drift
-            if (self->frame_count % 300 == 0) {
-                self->baseline_pts_ms = pts_ms;
-                self->baseline_arrival = arrival_time;
-                self->ema_skew_ms = 0.0;
-            }
-
-            // Update state
-            self->last_frame_pts_ms = pts_ms;
-            self->last_frame_time = arrival_time;
-            self->have_last_pts = true;
-
-            // BITRATE ADJUSTMENT HINTS (use these in your control logic)
-            // - High ema_jitter_ms → network unstable → reduce bitrate
-            // - Growing ema_skew_ms → network congested → reduce bitrate aggressively  
-            // - High stutter_rate → reduce bitrate
-            // - Low jitter + stable skew → can try increasing bitrate
-
+            return GST_PAD_PROBE_OK;
         }
-
-        return GST_PAD_PROBE_OK;
     }
 
 private:
@@ -728,21 +643,16 @@ private:
     std::chrono::steady_clock::time_point last_frame_time{};
 
     // Stutter metrics
-    bool have_timing_baseline{false};
-    double baseline_pts_ms{0.0};
-    std::chrono::steady_clock::time_point baseline_arrival{};
-    double ema_interval_ms{0.0};           // exponential moving average of inter-frame interval
-    double ema_jitter_ms{0.0};             // exponential moving average of inter-arrival jitter
-    double ema_skew_ms{0.0};               // exponential moving average of PTS-to-arrival skew
     double last_frame_pts_ms{0.0};
     bool have_last_pts{false};
     uint64_t frame_count{0};
     uint64_t stutter_events{0};
+    double ema_interval_ms{0.0};
 
     // Stutter detection parameters
-    const double ema_alpha = 0.40;         // smoothing factor for EMA
-    const double stutter_multiplier = 1.1; //
-    const double min_stutter_ms = 10.0;    // treat >10ms as potential stutter
+    const double ema_alpha = 0.4;         // smoothing factor for EMA
+    const double stutter_multiplier = 1.1; // multiplier for PTS interval threshold
+    const double min_stutter_ms = 10.0;    // minimum stutter threshold in ms
     const int stutter_monitor_period_ms = 1500;    // monitor period in ms
     const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
     const double low_stutter_threshold = 0.01;  // if <1% stutter -> increase bitrate

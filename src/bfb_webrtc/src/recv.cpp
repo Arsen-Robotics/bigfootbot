@@ -291,19 +291,18 @@ public:
                 uint64_t stutters = 0;
                 {
                     std::lock_guard<std::mutex> lk(stutter_mutex);
-                    frames = frame_count;
-                    stutters = stutter_events;
-                    frame_count = 0; // Reset for next period
-                    stutter_events = 0; // Reset for next period
+                    frames = global_frame_count;
+                    stutters = global_stutter_events;
+                    global_frame_count = 0; // Reset for next period
+                    global_stutter_events = 0; // Reset for next period
                 }
 
-                //if (frames == 0) continue; // Avoid division by zero
+                if (frames == 0) continue; // Avoid division by zero
 
                 // Calculate stutter ratio
                 double ratio = double(stutters) / double(frames);
 
                 RCLCPP_INFO(this->get_logger(), "Stutter ratio %.3f (%llu stutters / %llu frames)", ratio, stutters, frames);
-                RCLCPP_INFO(this->get_logger(), "Thresholds: low %.3f, high %.3f", low_stutter_threshold, high_stutter_threshold);
 
                 // Prepare control message
                 Json::Value ctrl;
@@ -511,7 +510,15 @@ public:
         GstElement* conv = nullptr;
         GstElement* sink = nullptr;
 
+        uint64_t nominal_frame_interval_ns = 33333333ULL; // Default to ~30 FPS
+
         if (g_str_has_prefix(name, "video")) {
+            // Get nominal framerate from caps and calculate frame interval in ns
+            gint fps_n = 0, fps_d = 1;
+            if (gst_structure_get_fraction(str, "framerate", &fps_n, &fps_d) && fps_d != 0) {
+                nominal_frame_interval_ns = static_cast<uint64_t>((1e9 * fps_d / fps_n) + 0.5);
+            }
+            
             // Create queue to help absorb jitter
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
@@ -532,7 +539,7 @@ public:
             sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,
-                "max-lateness", G_GINT64_CONSTANT(33333333), // ~33ms (1 frame)
+                "max-lateness", nominal_frame_interval_ns, // 1 frame interval
                 "qos", TRUE, // Enable QoS
                 NULL);
 
@@ -558,6 +565,17 @@ public:
         if (sink) {
             GstPad* sinkpad = gst_element_get_static_pad(sink, "sink");
             if (sinkpad) {
+                // Store nominal frame interval on pad for probe use
+                StreamInfo* stream_info = new StreamInfo();
+                stream_info->nominal_frame_interval_ns = nominal_frame_interval_ns;
+
+                // Attach stream info to pad
+                g_object_set_qdata_full(G_OBJECT(sinkpad),
+                    g_quark_from_static_string("stream-info"),
+                    stream_info,
+                    [](gpointer data){ delete static_cast<StreamInfo*>(data); });
+
+                // Add probe
                 gst_pad_add_probe(sinkpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
                 gst_object_unref(sinkpad);
             }
@@ -568,6 +586,11 @@ public:
 
     static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
         WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
+
+        // Retrieve stream info
+        StreamInfo* stream_info = static_cast<StreamInfo*>(
+            g_object_get_qdata(G_OBJECT(pad), g_quark_from_static_string("stream-info"))
+        );
 
         // If this probe info doesn't contain a buffer, return
         if (!(GST_PAD_PROBE_INFO_TYPE(info) & GST_PAD_PROBE_TYPE_BUFFER)) {
@@ -582,43 +605,41 @@ public:
         if (!GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buffer))) {
             return GST_PAD_PROBE_OK;
         }
-        double pts_ms = GST_TIME_AS_MSECONDS(GST_BUFFER_PTS(buffer));
 
-        double interval_ms = 0.0;
+        // Get PTS in nanoseconds
+        uint64_t pts_ns = GST_BUFFER_PTS(buffer);
+
+        // Interval between frames' PTSs in nanoseconds
+        uint64_t interval_ns = 0;
 
         {
             std::lock_guard<std::mutex> lk(self->stutter_mutex);
             
-            if (self->have_last_pts) {
-                interval_ms = pts_ms - self->last_frame_pts_ms;
+            if (stream_info->have_last_pts) {
+                interval_ns = pts_ns - stream_info->last_frame_pts_ns;
             } else {
                 // First frame received, can't compute interval yet
-                self->last_frame_pts_ms = pts_ms;
-                self->have_last_pts = true;
+                stream_info->last_frame_pts_ns = pts_ns;
+                stream_info->have_last_pts = true;
 
                 // Don't process further for first frame
                 return GST_PAD_PROBE_OK;
             }
 
             // Update last frame PTS
-            self->last_frame_pts_ms = pts_ms;
+            stream_info->last_frame_pts_ns = pts_ns;
 
             // If interval is non-positive, return
-            if (interval_ms <= 0.0) return GST_PAD_PROBE_OK;
-
-            // Update EMA (Exponential Moving Average)
-            // For the first frame, initialize EMA with the first interval
-            if (self->ema_interval_ms <= 0.0) self->ema_interval_ms = interval_ms;
-            else self->ema_interval_ms = (self->ema_interval_ms * (1.0 - self->ema_alpha)) + (interval_ms * self->ema_alpha);
+            if (interval_ns <= 0) return GST_PAD_PROBE_OK;
 
             // Count frame and check for stutter
-            self->frame_count++;
+            self->global_frame_count++;
 
-            //double threshold_ms = std::max(self->ema_interval_ms * self->stutter_multiplier, self->min_stutter_ms);
-            double threshold_ms = 33 * self->stutter_multiplier;
+            // Calculate PTS interval threshold beyond which a stutter is counted
+            uint64_t threshold_ns = stream_info->nominal_frame_interval_ns * self->stutter_multiplier;
 
-            if (interval_ms > threshold_ms) {
-                self->stutter_events++;
+            if (interval_ns > threshold_ns) {
+                self->global_stutter_events++;
             }
 
             return GST_PAD_PROBE_OK;
@@ -626,12 +647,14 @@ public:
     }
 
 private:
-    std::thread ws_thread;
+    // GStreamer elements
     GstElement* pipeline;
     GstElement* webrtcbin;
+
+    // WebSocket variables
     websocketpp::connection_hdl global_hdl;
     websocketpp::client<websocketpp::config::asio_client>* global_client;
-    
+    std::thread ws_thread;
     std::queue<std::string> msg_queue;
     std::mutex ws_mutex;
     std::condition_variable ws_cv;
@@ -640,20 +663,22 @@ private:
     std::atomic<bool> stutter_monitor_running{false};
     std::thread stutter_monitor_thread;
     std::mutex stutter_mutex;
-    std::chrono::steady_clock::time_point last_frame_time{};
 
-    // Stutter metrics
-    double last_frame_pts_ms{0.0};
-    bool have_last_pts{false};
-    uint64_t frame_count{0};
-    uint64_t stutter_events{0};
-    double ema_interval_ms{0.0};
+    // Stream info (per stream)
+    struct StreamInfo {
+        uint64_t nominal_frame_interval_ns{33333333ULL}; // Default to ~30 FPS
+        bool have_last_pts{false};
+        uint64_t last_frame_pts_ns{0};
+    };
+
+    // Stutter metrics (global across all streams)
+    std::atomic<uint64_t> global_frame_count{0};
+    std::atomic<uint64_t> global_stutter_events{0};
 
     // Stutter detection parameters
     const double ema_alpha = 0.4;         // smoothing factor for EMA
     const double stutter_multiplier = 1.1; // multiplier for PTS interval threshold
-    const double min_stutter_ms = 10.0;    // minimum stutter threshold in ms
-    const int stutter_monitor_period_ms = 1500;    // monitor period in ms
+    const int stutter_monitor_period_ms = 2000;    // monitor period in ms
     const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
     const double low_stutter_threshold = 0.01;  // if <1% stutter -> increase bitrate
     const int bitrate_step_kbps = 100;     // amount to change bitrate by (kbps)

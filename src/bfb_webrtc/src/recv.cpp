@@ -246,7 +246,7 @@ public:
     void setup_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
-        pipeline = gst_parse_launch("webrtcbin name=recv stun-server=stun://stun.l.google.com:19302 \
+        pipeline = gst_parse_launch("webrtcbin name=webrtcbin stun-server=stun://stun.l.google.com:19302 \
                 videotestsrc is-live=true pattern=black ! video/x-raw,width=16,height=16,framerate=1/1 ! videoconvert ! fakesink",
             &error);
 
@@ -262,7 +262,7 @@ public:
         }
 
         // Get webrtcbin element
-        webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "recv");
+        webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "webrtcbin");
         if (!webrtcbin) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
             return;
@@ -500,6 +500,18 @@ public:
         GstCaps* caps = gst_pad_get_current_caps(pad);
         if (!caps) return;
 
+        GstWebRTCRTPTransceiver* transceiver = nullptr;
+        g_signal_emit_by_name(self->webrtcbin, "get-transceiver-for-pad", pad, &transceiver);
+
+        if (transceiver) {
+            gchar* mid = nullptr;
+            g_object_get(transceiver, "mid", &mid, nullptr);
+            if (mid) {
+                RCLCPP_INFO(self->get_logger(), "Pad %p corresponds to MID = %s", pad, mid);
+                g_free(mid);
+            }
+        }
+
         g_object_set(self->webrtcbin, "latency", 0, NULL);
 
         const GstStructure* str = gst_caps_get_structure(caps, 0);
@@ -669,6 +681,8 @@ private:
         uint64_t nominal_frame_interval_ns{33333333ULL}; // Default to ~30 FPS
         bool have_last_pts{false};
         uint64_t last_frame_pts_ns{0};
+        std::atomic<uint64_t> frame_count{0};
+        std::atomic<uint64_t> stutter_count{0};
     };
 
     // Stutter metrics (global across all streams)

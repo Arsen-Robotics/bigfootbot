@@ -264,12 +264,12 @@ public:
     void setup_pipeline() {
         // Create GStreamer pipeline
         GError* error = nullptr;
-        pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+        pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
             stun-server=stun://stun.l.google.com:19302 \
             v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
                 nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
                 queue max-size-buffers=3 leaky=downstream ! \
-                nvv4l2h264enc \
+                nvv4l2h264enc name=enc0 \
                     control-rate=1 \
                     bitrate=2000000 \
                     iframeinterval=30 \
@@ -282,14 +282,35 @@ public:
                     EnableTwopassCBR=0 ! \
                 queue max-size-buffers=5 leaky=downstream ! \
                 h264parse config-interval=0 ! \
-                rtph264pay \
+                rtph264pay name=pay0 \
                     pt=96 \
                     mtu=1200 \
                     config-interval=-1 ! \
-                application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.",
+                application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
+            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
+                nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
+                queue max-size-buffers=3 leaky=downstream ! \
+                nvv4l2h264enc name=enc1 \
+                    control-rate=1 \
+                    bitrate=2000000 \
+                    iframeinterval=30 \
+                    num-B-Frames=0 \
+                    preset-level=1 \
+                    profile=0 \
+                    maxperf-enable=1 \
+                    insert-sps-pps=1 \
+                    insert-vui=1 \
+                    EnableTwopassCBR=0 ! \
+                queue max-size-buffers=5 leaky=downstream ! \
+                h264parse config-interval=0 ! \
+                rtph264pay name=pay1 \
+                    pt=96 \
+                    mtu=1200 \
+                    config-interval=-1 ! \
+                application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin.",
             &error);
 
-        // webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+        // webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
         //     stun-server=stun://stun.l.google.com:19302 \
         //         v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
         //             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
@@ -297,30 +318,30 @@ public:
         //             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true insert-sps-pps=true \
         //             ! queue max-size-buffers=2 leaky=downstream \
         //             ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
         //         v4l2src device=/dev/cam-aveo ! video/x-raw,width=640,height=480,framerate=30/1 \
         //             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
         //             ! queue max-size-buffers=2 leaky=downstream \
         //             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true insert-sps-pps=true \
         //             ! queue max-size-buffers=2 leaky=downstream \
         //             ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
         //         nvarguscamerasrc sensor-mode=3 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
         //             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
         //             ! queue max-size-buffers=2 leaky=downstream \
         //             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true insert-sps-pps=true\
         //             ! queue max-size-buffers=2 leaky=downstream \
         //             ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv.
+        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin.
         
-        // pipeline = gst_parse_launch("webrtcbin name=sendrecv bundle-policy=max-bundle latency=0 \
+        // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
         //     stun-server=stun://stun.l.google.com:19302 \
         //     input-selector name=input_selector0 \
         //         ! queue max-size-buffers=2 leaky=downstream \
         //         ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
         //         ! queue max-size-buffers=2 leaky=downstream \
         //         ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //         ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! sendrecv. \
+        //         ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
         //     v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv name=nvvidconv0 ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_0 \
         //     videotestsrc is-live=true ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_1",
         //     &error);
@@ -337,26 +358,67 @@ public:
         }
 
         // Get webrtcbin element
-        webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "sendrecv");
+        webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "webrtcbin");
         if (!webrtcbin) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
             return;
         }
 
-        enc = gst_bin_get_by_name(GST_BIN(pipeline), "nvv4l2h264enc0");
-        if (!enc) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get encoder element.");
+        enc0 = gst_bin_get_by_name(GST_BIN(pipeline), "enc0");
+        enc1 = gst_bin_get_by_name(GST_BIN(pipeline), "enc1");
+        if (!enc0 || !enc1) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get one or more encoder elements.");
             return;
         } else {
             // Read initial bitrate
             gint64 val = 0;
-            g_object_get(G_OBJECT(enc), "bitrate", &val, nullptr);
+            g_object_get(G_OBJECT(enc0), "bitrate", &val, nullptr);
             current_bitrate = static_cast<int>(val);
 
             // Start bitrate controller
             bitrate_running = true;
             bitrate_thread = std::thread(&WebRTCSendNode::bitrate_controller_loop, this);
         }
+
+        // Get payloader elements
+        GstElement* pay0 = gst_bin_get_by_name(GST_BIN(pipeline), "pay0");
+        GstElement* pay1 = gst_bin_get_by_name(GST_BIN(pipeline), "pay1");
+        if (!pay0 || !pay1) {
+            RCLCPP_ERROR(get_logger(), "Failed to get payloader elements");
+            return;
+        }
+
+        // Get payloader src pads
+        GstPad* pay0_src = gst_element_get_static_pad(pay0, "src");
+        GstPad* pay1_src = gst_element_get_static_pad(pay1, "src");
+        if (!pay0_src || !pay1_src) {
+            RCLCPP_ERROR(get_logger(), "Failed to get payloader src pads");
+            return;
+        }
+
+        // Request sink pads from webrtcbin for each stream
+        GstPad* sink0 = gst_element_get_request_pad(webrtcbin, "sink_%u");
+        GstPad* sink1 = gst_element_get_request_pad(webrtcbin, "sink_%u");
+        if (!sink0 || !sink1) {
+            RCLCPP_ERROR(get_logger(), "Failed to request sink pads from webrtcbin");
+            return;
+        }
+
+        // Link payloader src pads to webrtcbin sink pads
+        if (GST_PAD_LINK_FAILED(gst_pad_link(pay0_src, sink0))) {
+            RCLCPP_ERROR(get_logger(), "Failed to link pay0 to webrtcbin");
+        }
+        if (GST_PAD_LINK_FAILED(gst_pad_link(pay1_src, sink1))) {
+            RCLCPP_ERROR(get_logger(), "Failed to link pay1 to webrtcbin");
+        }
+
+        // Cleanup references
+        gst_object_unref(pay0_src);
+        gst_object_unref(pay1_src);
+        gst_object_unref(sink0);
+        gst_object_unref(sink1);
+        gst_object_unref(pay0);
+        gst_object_unref(pay1);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
@@ -395,8 +457,8 @@ public:
     void change_bitrate(int new_bitrate) {
         // Capture 'this' to access the private member 'enc'
         auto func = [this, new_bitrate]() {
-            if (this->enc) {
-                g_object_set(G_OBJECT(this->enc),
+            if (this->enc0) {
+                g_object_set(G_OBJECT(this->enc0),
                             "bitrate",
                             static_cast<gint64>(new_bitrate),
                             nullptr);
@@ -637,7 +699,8 @@ private:
     std::atomic<int64_t> bytes_received{-1};
     std::atomic<uint64_t> last_bytes_received{0};
 
-    GstElement* enc;                     // Encoder element for bitrate adjustment
+    GstElement* enc0;                     // Encoder for first camera
+    GstElement* enc1;                     // Encoder for second camera
 };
 
 /**

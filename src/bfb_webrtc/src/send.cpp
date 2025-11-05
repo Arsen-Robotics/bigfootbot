@@ -253,6 +253,118 @@ public:
         ws_cv.notify_one();
     }
 
+    void add_stream(int stream_id,
+                    const std::string& device,
+                    const std::string& src_type,
+                    int width,
+                    int height,
+                    int framerate,
+                    int bitrate) {
+        // Create GStreamer elements for the stream
+        GstElement *src, *capsfilter0, *convert, *capsfilter1 *queue0, *encoder, *queue1, *parse, *payloader, *capsfilter2;
+
+        // Source
+        if (src_type == "v4l2src") {
+            src = gst_element_factory_make("v4l2src", NULL);
+            g_object_set(G_OBJECT(src), "device", device.c_str(), NULL);
+        } else if (src_type == "argus") {
+            src = gst_element_factory_make("nvarguscamerasrc", NULL);
+            g_object_set(G_OBJECT(src), "sensor-mode", 3, NULL);
+        }
+
+        // 1st caps filter - after camera source
+        capsfilter0 = gst_element_factory_make("capsfilter", NULL);
+        if (src_type == "v4l2src") {
+            GstCaps* caps0 = gst_caps_new_simple("video/x-raw",
+                                                "width", G_TYPE_INT, width,
+                                                "height", G_TYPE_INT, height,
+                                                "framerate", GST_TYPE_FRACTION, framerate, 1,
+                                                NULL);
+            g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
+            gst_caps_unref(caps0);
+        } else if (src_type == "argus") {
+            GstCaps* caps0 = gst_caps_new_simple("video/x-raw(memory:NVMM)",
+                                                "width", G_TYPE_INT, width,
+                                                "height", G_TYPE_INT, height,
+                                                "framerate", GST_TYPE_FRACTION, framerate, 1,
+                                                NULL);
+            g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
+            gst_caps_unref(caps0);
+        }
+        
+        // Converter
+        convert = gst_element_factory_make("nvvidconv", NULL);
+
+        // 2nd caps filter - after converter
+        capsfilter1 = gst_element_factory_make("capsfilter", NULL);
+        GstCaps* caps1 = gst_caps_new_simple("video/x-raw(memory:NVMM)",
+                                             "format", G_TYPE_STRING, "NV12",
+                                             NULL);
+        g_object_set(G_OBJECT(capsfilter1), "caps", caps1, NULL);
+        gst_caps_unref(caps1);
+
+        // Queue before encoder
+        queue0 = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(queue0), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
+
+        // Encoder
+        std::string enc_name = "enc" + std::to_string(stream_id);
+        encoder = gst_element_factory_make("nvv4l2h264enc", enc_name.c_str());
+        g_object_set(encoder,
+                 "control-rate", 1,
+                 "bitrate", bitrate,
+                 "iframeinterval", 30,
+                 "num-B-Frames", 0,
+                 "preset-level", 1,
+                 "profile", 0,
+                 "maxperf-enable", 1,
+                 "insert-sps-pps", 1,
+                 "insert-vui", 1,
+                 "EnableTwopassCBR", 0,
+                 NULL);
+
+        // Queue after encoder
+        queue1 = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
+
+        // Parser
+        parse = gst_element_factory_make("h264parse", NULL);
+        g_object_set(parse, "config-interval", 0, NULL);
+
+        // Payloader
+        payloader = gst_element_factory_make("rtph264pay", NULL);
+        g_object_set(payloader,
+                    "pt", 96,
+                    "mtu", 1200,
+                    "config-interval", -1,
+                    NULL);
+
+        // 3rd caps filter - after payloader
+        capsfilter2 = gst_element_factory_make("capsfilter", NULL);
+        GstCaps* caps2 = gst_caps_new_simple("application/x-rtp",
+                                             "media", G_TYPE_STRING, "video",
+                                             "encoding-name", G_TYPE_STRING, "H264",
+                                             "payload", G_TYPE_INT, 96,
+                                             NULL);
+        g_object_set(G_OBJECT(capsfilter2), "caps", caps2, NULL);
+        gst_caps_unref(caps2);
+
+        // Add elements to pipeline
+        gst_bin_add_many(GST_BIN(pipeline), src, capsfilter0, convert, capsfilter1, 
+                         queue0, encoder, queue1, parse, payloader, capsfilter2, NULL);
+        
+        // Link elements
+        gst_element_link_many(src, capsfilter0, convert, capsfilter1, 
+                              queue0, encoder, queue1, parse, payloader, capsfilter2, NULL);
+
+        // Link to webrtcbin
+        GstPad* pay_src = gst_element_get_static_pad(capsfilter2, "src");
+        GstPad* webrtc_sink = gst_element_get_request_pad(webrtcbin, "sink_%u"); // request new sink pad
+        gst_pad_link(pay_src, webrtc_sink);
+        gst_object_unref(pay_src);
+        gst_object_unref(webrtc_sink);
+    }
+
     /**
      * @brief Sets up the GStreamer pipeline for video streaming
      * 
@@ -262,53 +374,79 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
-        // Create GStreamer pipeline
+        // Create empty GStreamer pipeline
         GError* error = nullptr;
-        pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
-            stun-server=stun://stun.l.google.com:19302 \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
-                nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
-                queue max-size-buffers=3 leaky=downstream ! \
-                nvv4l2h264enc name=enc0 \
-                    control-rate=1 \
-                    bitrate=2000000 \
-                    iframeinterval=30 \
-                    num-B-Frames=0 \
-                    preset-level=1 \
-                    profile=0 \
-                    maxperf-enable=1 \
-                    insert-sps-pps=1 \
-                    insert-vui=1 \
-                    EnableTwopassCBR=0 ! \
-                queue max-size-buffers=5 leaky=downstream ! \
-                h264parse config-interval=0 ! \
-                rtph264pay name=pay0 \
-                    pt=96 \
-                    mtu=1200 \
-                    config-interval=-1 ! \
-                application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
-            v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
-                nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
-                queue max-size-buffers=3 leaky=downstream ! \
-                nvv4l2h264enc name=enc1 \
-                    control-rate=1 \
-                    bitrate=2000000 \
-                    iframeinterval=30 \
-                    num-B-Frames=0 \
-                    preset-level=1 \
-                    profile=0 \
-                    maxperf-enable=1 \
-                    insert-sps-pps=1 \
-                    insert-vui=1 \
-                    EnableTwopassCBR=0 ! \
-                queue max-size-buffers=5 leaky=downstream ! \
-                h264parse config-interval=0 ! \
-                rtph264pay name=pay1 \
-                    pt=96 \
-                    mtu=1200 \
-                    config-interval=-1 ! \
-                application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin.",
-            &error);
+        pipeline = gst_pipeline_new("pipeline");
+        if (!pipeline) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline.");
+            return;
+        }
+
+        // Create webrtcbin element
+        GstElement* webrtcbin = gst_element_factory_make("webrtcbin", "webrtcbin");
+        if (!webrtcbin) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create webrtcbin element.");
+            return;
+        }
+
+        // Set webrtcbin properties
+        g_object_set(webrtcbin,
+             "bundle-policy", 1,          // GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE
+             "latency", 0,
+             "stun-server", "stun://stun.l.google.com:19302",
+             NULL);
+        
+        // Add webrtcbin to pipeline
+        gst_bin_add(GST_BIN(pipeline), webrtcbin);
+
+        // Add media streams to the pipeline
+        add_stream(0, "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
+
+        // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
+        //     stun-server=stun://stun.l.google.com:19302 \
+        //     v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
+        //         nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
+        //         queue max-size-buffers=3 leaky=downstream ! \
+        //         nvv4l2h264enc name=enc0 \
+        //             control-rate=1 \
+        //             bitrate=2000000 \
+        //             iframeinterval=30 \
+        //             num-B-Frames=0 \
+        //             preset-level=1 \
+        //             profile=0 \
+        //             maxperf-enable=1 \
+        //             insert-sps-pps=1 \
+        //             insert-vui=1 \
+        //             EnableTwopassCBR=0 ! \
+        //         queue max-size-buffers=5 leaky=downstream ! \
+        //         h264parse config-interval=0 ! \
+        //         rtph264pay name=pay0 \
+        //             pt=96 \
+        //             mtu=1200 \
+        //             config-interval=-1 ! \
+        //         application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
+        //     v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
+        //         nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
+        //         queue max-size-buffers=3 leaky=downstream ! \
+        //         nvv4l2h264enc name=enc1 \
+        //             control-rate=1 \
+        //             bitrate=2000000 \
+        //             iframeinterval=30 \
+        //             num-B-Frames=0 \
+        //             preset-level=1 \
+        //             profile=0 \
+        //             maxperf-enable=1 \
+        //             insert-sps-pps=1 \
+        //             insert-vui=1 \
+        //             EnableTwopassCBR=0 ! \
+        //         queue max-size-buffers=5 leaky=downstream ! \
+        //         h264parse config-interval=0 ! \
+        //         rtph264pay name=pay1 \
+        //             pt=96 \
+        //             mtu=1200 \
+        //             config-interval=-1 ! \
+        //         application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin.",
+        //     &error);
 
         // webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
         //     stun-server=stun://stun.l.google.com:19302 \
@@ -352,17 +490,17 @@ public:
             return;
         }
 
-        if (!pipeline) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline.");
-            return;
-        }
+        // if (!pipeline) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline.");
+        //     return;
+        // }
 
-        // Get webrtcbin element
-        webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "webrtcbin");
-        if (!webrtcbin) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
-            return;
-        }
+        // // Get webrtcbin element
+        // webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "webrtcbin");
+        // if (!webrtcbin) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
+        //     return;
+        // }
 
         enc0 = gst_bin_get_by_name(GST_BIN(pipeline), "enc0");
         enc1 = gst_bin_get_by_name(GST_BIN(pipeline), "enc1");

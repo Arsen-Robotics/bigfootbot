@@ -27,7 +27,7 @@ public:
     std::atomic<bool> ws_running{true};
 
     // Flag to control bitrate_thread
-    std::atomic<bool> bitrate_running{false};
+    // std::atomic<bool> bitrate_running{false};
 
     /**
      * @brief Constructor - initializes GStreamer and member variables
@@ -60,10 +60,10 @@ public:
         }
 
         // Stop bitrate controller
-        bitrate_running = false;
-        if (bitrate_thread.joinable()) {
-            bitrate_thread.join();
-        }
+        // bitrate_running = false;
+        // if (bitrate_thread.joinable()) {
+        //     bitrate_thread.join();
+        // }
 
         if (pipeline) {
             gst_element_set_state(pipeline, GST_STATE_NULL);
@@ -195,10 +195,11 @@ public:
             } else if (jsonMsg.isMember("control")) {
                 const auto& ctrl = jsonMsg["control"];
                 std::string action = ctrl["action"].asString();
-                if (action == "set_bitrate") {
-                    int bitrate = ctrl["value_kbps"].asInt();
 
-                    change_bitrate(bitrate * 1000); // Convert kbps to bps
+                if (action == "change_bitrate") {
+                    int stream_id = ctrl["stream_id"].asInt();
+                    int delta_bitrate = ctrl["delta"].asInt();
+                    change_bitrate(stream_id, delta_bitrate);
                 }
 
             } else {
@@ -261,7 +262,7 @@ public:
                     int framerate,
                     int bitrate) {
         // Create GStreamer elements for the stream
-        GstElement *src, *capsfilter0, *convert, *capsfilter1 *queue0, *encoder, *queue1, *parse, *payloader, *capsfilter2;
+        GstElement *src, *capsfilter0, *convert, *capsfilter1, *queue0, *encoder, *queue1, *parse, *payloader, *capsfilter2;
 
         // Source
         if (src_type == "v4l2src") {
@@ -270,6 +271,11 @@ public:
         } else if (src_type == "argus") {
             src = gst_element_factory_make("nvarguscamerasrc", NULL);
             g_object_set(G_OBJECT(src), "sensor-mode", 3, NULL);
+        }
+
+        if (!src) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create source element for stream %d.", stream_id);
+            return;
         }
 
         // 1st caps filter - after camera source
@@ -283,29 +289,59 @@ public:
             g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
             gst_caps_unref(caps0);
         } else if (src_type == "argus") {
-            GstCaps* caps0 = gst_caps_new_simple("video/x-raw(memory:NVMM)",
+            GstCaps* caps0 = gst_caps_new_simple("video/x-raw",
                                                 "width", G_TYPE_INT, width,
                                                 "height", G_TYPE_INT, height,
                                                 "framerate", GST_TYPE_FRACTION, framerate, 1,
                                                 NULL);
+
+            // Set memory feature to NVMM
+            GstCapsFeatures* features0 = gst_caps_features_new("memory:NVMM", NULL);
+            gst_caps_set_features(caps0, 0, features0);
+
             g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
             gst_caps_unref(caps0);
+        }
+
+        if (!capsfilter0) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create capsfilter0 for stream %d.", stream_id);
+            return;
         }
         
         // Converter
         convert = gst_element_factory_make("nvvidconv", NULL);
 
+        if (!convert) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create converter for stream %d.", stream_id);
+            return;
+        }
+
         // 2nd caps filter - after converter
         capsfilter1 = gst_element_factory_make("capsfilter", NULL);
-        GstCaps* caps1 = gst_caps_new_simple("video/x-raw(memory:NVMM)",
+        GstCaps* caps1 = gst_caps_new_simple("video/x-raw",
                                              "format", G_TYPE_STRING, "NV12",
                                              NULL);
+
+        // Set memory feature to NVMM
+        GstCapsFeatures* features1 = gst_caps_features_new("memory:NVMM", NULL);
+        gst_caps_set_features(caps1, 0, features1);
+
+        if (!capsfilter1) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create capsfilter1 for stream %d.", stream_id);
+            return;
+        }
+
         g_object_set(G_OBJECT(capsfilter1), "caps", caps1, NULL);
         gst_caps_unref(caps1);
 
         // Queue before encoder
         queue0 = gst_element_factory_make("queue", NULL);
         g_object_set(G_OBJECT(queue0), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
+
+        if (!queue0) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create queue0 for stream %d.", stream_id);
+            return;
+        }
 
         // Encoder
         std::string enc_name = "enc" + std::to_string(stream_id);
@@ -323,13 +359,31 @@ public:
                  "EnableTwopassCBR", 0,
                  NULL);
 
+        if (!encoder) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create encoder for stream %d.", stream_id);
+            return;
+        }
+
+        // Store encoder element in map
+        encoders[stream_id] = encoder;
+
         // Queue after encoder
         queue1 = gst_element_factory_make("queue", NULL);
         g_object_set(G_OBJECT(queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
 
+        if (!queue1) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create queue1 for stream %d.", stream_id);
+            return;
+        }
+
         // Parser
         parse = gst_element_factory_make("h264parse", NULL);
         g_object_set(parse, "config-interval", 0, NULL);
+
+        if (!parse) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create parser for stream %d.", stream_id);
+            return;
+        }
 
         // Payloader
         payloader = gst_element_factory_make("rtph264pay", NULL);
@@ -339,6 +393,11 @@ public:
                     "config-interval", -1,
                     NULL);
 
+        if (!payloader) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create payloader for stream %d.", stream_id);
+            return;
+        }
+
         // 3rd caps filter - after payloader
         capsfilter2 = gst_element_factory_make("capsfilter", NULL);
         GstCaps* caps2 = gst_caps_new_simple("application/x-rtp",
@@ -346,6 +405,12 @@ public:
                                              "encoding-name", G_TYPE_STRING, "H264",
                                              "payload", G_TYPE_INT, 96,
                                              NULL);
+
+        if (!capsfilter2) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create capsfilter2 for stream %d.", stream_id);
+            return;
+        }
+
         g_object_set(G_OBJECT(capsfilter2), "caps", caps2, NULL);
         gst_caps_unref(caps2);
 
@@ -360,6 +425,16 @@ public:
         // Link to webrtcbin
         GstPad* pay_src = gst_element_get_static_pad(capsfilter2, "src");
         GstPad* webrtc_sink = gst_element_get_request_pad(webrtcbin, "sink_%u"); // request new sink pad
+
+        if (!pay_src) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get payloader src pad for stream %d.", stream_id);
+            return;
+        }
+        if (!webrtc_sink) {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get webrtcbin sink pad for stream %d.", stream_id);
+            return;
+        }
+
         gst_pad_link(pay_src, webrtc_sink);
         gst_object_unref(pay_src);
         gst_object_unref(webrtc_sink);
@@ -383,7 +458,7 @@ public:
         }
 
         // Create webrtcbin element
-        GstElement* webrtcbin = gst_element_factory_make("webrtcbin", "webrtcbin");
+        webrtcbin = gst_element_factory_make("webrtcbin", "webrtcbin");
         if (!webrtcbin) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create webrtcbin element.");
             return;
@@ -391,7 +466,7 @@ public:
 
         // Set webrtcbin properties
         g_object_set(webrtcbin,
-             "bundle-policy", 1,          // GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE
+             "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE,
              "latency", 0,
              "stun-server", "stun://stun.l.google.com:19302",
              NULL);
@@ -400,7 +475,8 @@ public:
         gst_bin_add(GST_BIN(pipeline), webrtcbin);
 
         // Add media streams to the pipeline
-        add_stream(0, "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
+        // add_stream(0, "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
+        add_stream(1, "", "argus", 640, 480, 30, 2000000);
 
         // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
         //     stun-server=stun://stun.l.google.com:19302 \
@@ -448,115 +524,61 @@ public:
         //         application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin.",
         //     &error);
 
-        // webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
-        //     stun-server=stun://stun.l.google.com:19302 \
-        //         v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 \
-        //             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-        //             ! queue max-size-buffers=2 leaky=downstream \
-        //             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true insert-sps-pps=true \
-        //             ! queue max-size-buffers=2 leaky=downstream \
-        //             ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
-        //         v4l2src device=/dev/cam-aveo ! video/x-raw,width=640,height=480,framerate=30/1 \
-        //             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-        //             ! queue max-size-buffers=2 leaky=downstream \
-        //             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true insert-sps-pps=true \
-        //             ! queue max-size-buffers=2 leaky=downstream \
-        //             ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
-        //         nvarguscamerasrc sensor-mode=3 ! video/x-raw(memory:NVMM),width=640,height=480,framerate=30/1 \
-        //             ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 \
-        //             ! queue max-size-buffers=2 leaky=downstream \
-        //             ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true insert-sps-pps=true\
-        //             ! queue max-size-buffers=2 leaky=downstream \
-        //             ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //             ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin.
-        
-        // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
-        //     stun-server=stun://stun.l.google.com:19302 \
-        //     input-selector name=input_selector0 \
-        //         ! queue max-size-buffers=2 leaky=downstream \
-        //         ! nvv4l2h264enc bitrate=2500000 iframeinterval=30 control-rate=1 preset-level=1 profile=2 maxperf-enable=true \
-        //         ! queue max-size-buffers=2 leaky=downstream \
-        //         ! h264parse ! rtph264pay config-interval=1 pt=96 \
-        //         ! application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
-        //     v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv name=nvvidconv0 ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_0 \
-        //     videotestsrc is-live=true ! video/x-raw,width=640,height=480,framerate=30/1 ! nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! input_selector0.sink_1",
-        //     &error);
+        // enc0 = gst_bin_get_by_name(GST_BIN(pipeline), "enc0");
+        // enc1 = gst_bin_get_by_name(GST_BIN(pipeline), "enc1");
+        // if (!enc0 || !enc1) {
+        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get one or more encoder elements.");
+        //     return;
+        // } else {
+        //     // Read initial bitrate
+        //     gint64 val = 0;
+        //     g_object_get(G_OBJECT(enc0), "bitrate", &val, nullptr);
+        //     current_bitrate = static_cast<int>(val);
 
-        if (error) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline: %s", error->message);
-            g_error_free(error);
-            return;
-        }
+        //     // Start bitrate controller
+        //     bitrate_running = true;
+        //     bitrate_thread = std::thread(&WebRTCSendNode::bitrate_controller_loop, this);
+        // }
 
-        // if (!pipeline) {
-        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline.");
+        // // Get payloader elements
+        // GstElement* pay0 = gst_bin_get_by_name(GST_BIN(pipeline), "pay0");
+        // GstElement* pay1 = gst_bin_get_by_name(GST_BIN(pipeline), "pay1");
+        // if (!pay0 || !pay1) {
+        //     RCLCPP_ERROR(get_logger(), "Failed to get payloader elements");
         //     return;
         // }
 
-        // // Get webrtcbin element
-        // webrtcbin = gst_bin_get_by_name(GST_BIN(pipeline), "webrtcbin");
-        // if (!webrtcbin) {
-        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get WebRTC element.");
+        // // Get payloader src pads
+        // GstPad* pay0_src = gst_element_get_static_pad(pay0, "src");
+        // GstPad* pay1_src = gst_element_get_static_pad(pay1, "src");
+        // if (!pay0_src || !pay1_src) {
+        //     RCLCPP_ERROR(get_logger(), "Failed to get payloader src pads");
         //     return;
         // }
 
-        enc0 = gst_bin_get_by_name(GST_BIN(pipeline), "enc0");
-        enc1 = gst_bin_get_by_name(GST_BIN(pipeline), "enc1");
-        if (!enc0 || !enc1) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get one or more encoder elements.");
-            return;
-        } else {
-            // Read initial bitrate
-            gint64 val = 0;
-            g_object_get(G_OBJECT(enc0), "bitrate", &val, nullptr);
-            current_bitrate = static_cast<int>(val);
+        // // Request sink pads from webrtcbin for each stream
+        // GstPad* sink0 = gst_element_get_request_pad(webrtcbin, "sink_%u");
+        // GstPad* sink1 = gst_element_get_request_pad(webrtcbin, "sink_%u");
+        // if (!sink0 || !sink1) {
+        //     RCLCPP_ERROR(get_logger(), "Failed to request sink pads from webrtcbin");
+        //     return;
+        // }
 
-            // Start bitrate controller
-            bitrate_running = true;
-            bitrate_thread = std::thread(&WebRTCSendNode::bitrate_controller_loop, this);
-        }
+        // // Link payloader src pads to webrtcbin sink pads
+        // if (GST_PAD_LINK_FAILED(gst_pad_link(pay0_src, sink0))) {
+        //     RCLCPP_ERROR(get_logger(), "Failed to link pay0 to webrtcbin");
+        // }
+        // if (GST_PAD_LINK_FAILED(gst_pad_link(pay1_src, sink1))) {
+        //     RCLCPP_ERROR(get_logger(), "Failed to link pay1 to webrtcbin");
+        // }
 
-        // Get payloader elements
-        GstElement* pay0 = gst_bin_get_by_name(GST_BIN(pipeline), "pay0");
-        GstElement* pay1 = gst_bin_get_by_name(GST_BIN(pipeline), "pay1");
-        if (!pay0 || !pay1) {
-            RCLCPP_ERROR(get_logger(), "Failed to get payloader elements");
-            return;
-        }
-
-        // Get payloader src pads
-        GstPad* pay0_src = gst_element_get_static_pad(pay0, "src");
-        GstPad* pay1_src = gst_element_get_static_pad(pay1, "src");
-        if (!pay0_src || !pay1_src) {
-            RCLCPP_ERROR(get_logger(), "Failed to get payloader src pads");
-            return;
-        }
-
-        // Request sink pads from webrtcbin for each stream
-        GstPad* sink0 = gst_element_get_request_pad(webrtcbin, "sink_%u");
-        GstPad* sink1 = gst_element_get_request_pad(webrtcbin, "sink_%u");
-        if (!sink0 || !sink1) {
-            RCLCPP_ERROR(get_logger(), "Failed to request sink pads from webrtcbin");
-            return;
-        }
-
-        // Link payloader src pads to webrtcbin sink pads
-        if (GST_PAD_LINK_FAILED(gst_pad_link(pay0_src, sink0))) {
-            RCLCPP_ERROR(get_logger(), "Failed to link pay0 to webrtcbin");
-        }
-        if (GST_PAD_LINK_FAILED(gst_pad_link(pay1_src, sink1))) {
-            RCLCPP_ERROR(get_logger(), "Failed to link pay1 to webrtcbin");
-        }
-
-        // Cleanup references
-        gst_object_unref(pay0_src);
-        gst_object_unref(pay1_src);
-        gst_object_unref(sink0);
-        gst_object_unref(sink1);
-        gst_object_unref(pay0);
-        gst_object_unref(pay1);
+        // // Cleanup references
+        // gst_object_unref(pay0_src);
+        // gst_object_unref(pay1_src);
+        // gst_object_unref(sink0);
+        // gst_object_unref(sink1);
+        // gst_object_unref(pay0);
+        // gst_object_unref(pay1);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
@@ -572,38 +594,55 @@ public:
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
     }
 
-    void handle_receiver_stats(const Json::Value& stats) {
-        // Get individual metrics and update member variables
-        double l_jitter = stats.isMember("jitter") ? stats["jitter"].asDouble() : -1.0;
-        int64_t l_packets_received = stats.isMember("packets_received") ? stats["packets_received"].asUInt64() : -1;
-        int64_t l_packets_lost = stats.isMember("packets_lost") ? stats["packets_lost"].asUInt64() : -1;
-        uint64_t l_bytes_received = stats.isMember("bytes_received") ? stats["bytes_received"].asUInt64() : -1;
+    // void handle_receiver_stats(const Json::Value& stats) {
+    //     // Get individual metrics and update member variables
+    //     double l_jitter = stats.isMember("jitter") ? stats["jitter"].asDouble() : -1.0;
+    //     int64_t l_packets_received = stats.isMember("packets_received") ? stats["packets_received"].asUInt64() : -1;
+    //     int64_t l_packets_lost = stats.isMember("packets_lost") ? stats["packets_lost"].asUInt64() : -1;
+    //     uint64_t l_bytes_received = stats.isMember("bytes_received") ? stats["bytes_received"].asUInt64() : -1;
 
-        // Print or log stats
-        RCLCPP_INFO(this->get_logger(),
-            "Received Stats -> Jitter: %.4f | Bytes: %lu | Packets: %lu/%lu",
-            l_jitter, l_bytes_received, l_packets_received, l_packets_lost
-        );
-    }
+    //     // Print or log stats
+    //     RCLCPP_INFO(this->get_logger(),
+    //         "Received Stats -> Jitter: %.4f | Bytes: %lu | Packets: %lu/%lu",
+    //         l_jitter, l_bytes_received, l_packets_received, l_packets_lost
+    //     );
+    // }
 
-    void bitrate_controller_loop() {
-        using namespace std::chrono;
-        const milliseconds interval(2000); // 2 seconds
-        int consecutive_lost = 0;
-    }
-
-    void change_bitrate(int new_bitrate) {
-        // Capture 'this' to access the private member 'enc'
-        auto func = [this, new_bitrate]() {
-            if (this->enc0) {
-                g_object_set(G_OBJECT(this->enc0),
-                            "bitrate",
-                            static_cast<gint64>(new_bitrate),
-                            nullptr);
-                RCLCPP_INFO(this->get_logger(), "Encoder bitrate set to %d bps", new_bitrate);
-            } else {
-                RCLCPP_WARN(this->get_logger(), "Encoder element missing, cannot set bitrate");
+    void change_bitrate(int stream_id, int delta) {
+        // Create a lambda that will execute the bitrate change
+        auto func = [this, stream_id, delta]() {
+            // Find the encoder corresponding to stream_id
+            auto it = encoders.find(stream_id);
+            if (it == encoders.end() || it->second == nullptr) {
+                RCLCPP_WARN(this->get_logger(),
+                            "Stream %d encoder not found, cannot change bitrate",
+                            stream_id);
+                return;
             }
+        
+            // Get the encoder element
+            GstElement* encoder = it->second;
+            
+            // Get the current bitrate
+            int current_bitrate = 0;
+            g_object_get(G_OBJECT(encoder), "bitrate", &current_bitrate, nullptr);
+
+            // Calculate new bitrate
+            int new_bitrate = current_bitrate + delta;
+
+            // Clamp new bitrate within allowed range
+            new_bitrate = std::max(min_bitrate, std::min(new_bitrate, max_bitrate));
+
+            // Set the new bitrate on the encoder
+            g_object_set(G_OBJECT(encoder),
+                     "bitrate",
+                     static_cast<gint>(new_bitrate),
+                     nullptr);
+
+            RCLCPP_INFO(this->get_logger(),
+                        "Changed stream %d bitrate to %d bps",
+                        stream_id, new_bitrate);
+
         };
 
         // Allocate lambda on heap for GLib callback
@@ -824,21 +863,25 @@ private:
     std::mutex ws_mutex;                 // Mutex for thread safety
     std::condition_variable ws_cv;       // Condition variable for message queue
 
-    // Bitrate controller
-    std::thread bitrate_thread;
-    int current_bitrate{2000000};
-    const int min_bitrate{800000};
+    // // Bitrate controller
+    // std::thread bitrate_thread;
+    // int current_bitrate{2000000};
+    // const int min_bitrate{800000};
+    // const int max_bitrate{2000000};
+    // const int bitrate_step{100000};
+
+    // std::atomic<double> jitter{-1.0};
+    // std::atomic<int64_t> packets_received{-1};
+    // std::atomic<int64_t> packets_lost{-1};
+    // std::atomic<int64_t> bytes_received{-1};
+    // std::atomic<uint64_t> last_bytes_received{0};
+
+    // Map of encoder elements of each stream
+    std::unordered_map<int, GstElement*> encoders;
+
+    // Bitrate
+    const int min_bitrate{300000};
     const int max_bitrate{2000000};
-    const int bitrate_step{100000};
-
-    std::atomic<double> jitter{-1.0};
-    std::atomic<int64_t> packets_received{-1};
-    std::atomic<int64_t> packets_lost{-1};
-    std::atomic<int64_t> bytes_received{-1};
-    std::atomic<uint64_t> last_bytes_received{0};
-
-    GstElement* enc0;                     // Encoder for first camera
-    GstElement* enc1;                     // Encoder for second camera
 };
 
 /**

@@ -197,7 +197,7 @@ public:
                 std::string action = ctrl["action"].asString();
 
                 if (action == "change_bitrate") {
-                    int stream_id = ctrl["stream_id"].asInt();
+                    std::string stream_id = ctrl["stream_id"].asString();
                     int delta_bitrate = ctrl["delta"].asInt();
                     change_bitrate(stream_id, delta_bitrate);
                 }
@@ -254,7 +254,7 @@ public:
         ws_cv.notify_one();
     }
 
-    void add_stream(int stream_id,
+    void add_stream(const std::string& stream_id,
                     const std::string& device,
                     const std::string& src_type,
                     int width,
@@ -344,7 +344,7 @@ public:
         }
 
         // Encoder
-        std::string enc_name = "enc" + std::to_string(stream_id);
+        std::string enc_name = "enc_" + stream_id;
         encoder = gst_element_factory_make("nvv4l2h264enc", enc_name.c_str());
         g_object_set(encoder,
                  "control-rate", 1,
@@ -435,6 +435,12 @@ public:
             return;
         }
 
+        GstWebRTCRTPTransceiver* transceiver = nullptr;
+        g_signal_emit_by_name(webrtcbin, "get-transceiver", track_index, &transceiver);
+
+        std::string mid = "video" + std::to_string(track_index);
+        g_object_set(G_OBJECT(transceiver), "mid", mid.c_str(), nullptr);
+
         gst_pad_link(pay_src, webrtc_sink);
         gst_object_unref(pay_src);
         gst_object_unref(webrtc_sink);
@@ -467,7 +473,6 @@ public:
         // Set webrtcbin properties
         g_object_set(webrtcbin,
              "bundle-policy", GST_WEBRTC_BUNDLE_POLICY_MAX_BUNDLE,
-             "latency", 0,
              "stun-server", "stun://stun.l.google.com:19302",
              NULL);
         
@@ -475,8 +480,8 @@ public:
         gst_bin_add(GST_BIN(pipeline), webrtcbin);
 
         // Add media streams to the pipeline
-        // add_stream(0, "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
-        add_stream(1, "", "argus", 640, 480, 30, 2000000);
+        // add_stream("video1", "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
+        add_stream("video0", "", "argus", 640, 480, 30, 2000000);
 
         // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
         //     stun-server=stun://stun.l.google.com:19302 \
@@ -608,15 +613,15 @@ public:
     //     );
     // }
 
-    void change_bitrate(int stream_id, int delta) {
+    void change_bitrate(const std::string& stream_id, int delta) {
         // Create a lambda that will execute the bitrate change
         auto func = [this, stream_id, delta]() {
             // Find the encoder corresponding to stream_id
             auto it = encoders.find(stream_id);
             if (it == encoders.end() || it->second == nullptr) {
                 RCLCPP_WARN(this->get_logger(),
-                            "Stream %d encoder not found, cannot change bitrate",
-                            stream_id);
+                            "Stream %s not found or encoder is null, cannot change bitrate.",
+                            stream_id.c_str());
                 return;
             }
         
@@ -640,8 +645,8 @@ public:
                      nullptr);
 
             RCLCPP_INFO(this->get_logger(),
-                        "Changed stream %d bitrate to %d bps",
-                        stream_id, new_bitrate);
+                        "Changed stream %s bitrate to %d bps",
+                        stream_id.c_str(), new_bitrate);
 
         };
 
@@ -877,7 +882,7 @@ private:
     // std::atomic<uint64_t> last_bytes_received{0};
 
     // Map of encoder elements of each stream
-    std::unordered_map<int, GstElement*> encoders;
+    std::unordered_map<std::string, GstElement*> encoders;
 
     // Bitrate
     const int min_bitrate{300000};

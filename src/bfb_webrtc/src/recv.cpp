@@ -481,10 +481,26 @@ public:
 
         g_signal_connect(decodebin, "pad-added", G_CALLBACK(on_decodebin_pad_added), self);
 
-         
         sinkpad = gst_element_get_static_pad(decodebin, "sink");
         gst_pad_link(pad, sinkpad);
         gst_object_unref(sinkpad);
+
+        // Get the MID
+        GstWebRTCRTPTransceiver* transceiver = NULL;
+        g_object_get(pad, "transceiver", &transceiver, NULL);
+        
+        if (transceiver) {
+            // Extract MID from transceiver
+            gchar* mid = NULL;
+            g_object_get(transceiver, "mid", &mid, NULL);
+            
+            if (mid) {
+                RCLCPP_INFO(self->get_logger(), "MID: %s", mid);
+                
+                g_free(mid);
+            }
+            gst_object_unref(transceiver);
+        }
     }
 
     /**
@@ -499,18 +515,6 @@ public:
     static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCRecvNode* self) {
         GstCaps* caps = gst_pad_get_current_caps(pad);
         if (!caps) return;
-
-        GstWebRTCRTPTransceiver* transceiver = nullptr;
-        g_signal_emit_by_name(self->webrtcbin, "get-transceiver-for-pad", pad, &transceiver);
-
-        if (transceiver) {
-            gchar* mid = nullptr;
-            g_object_get(transceiver, "mid", &mid, nullptr);
-            if (mid) {
-                RCLCPP_INFO(self->get_logger(), "Pad %p corresponds to MID = %s", pad, mid);
-                g_free(mid);
-            }
-        }
 
         g_object_set(self->webrtcbin, "latency", 0, NULL);
 
@@ -678,6 +682,7 @@ private:
 
     // Stream info (per stream)
     struct StreamInfo {
+        std::string mid;
         uint64_t nominal_frame_interval_ns{33333333ULL}; // Default to ~30 FPS
         bool have_last_pts{false};
         uint64_t last_frame_pts_ns{0};

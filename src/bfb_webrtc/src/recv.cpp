@@ -504,10 +504,11 @@ public:
 
         // Pad name is "src_N" where N is the transceiver index
         const gchar* pad_name = gst_pad_get_name(pad);
+        RCLCPP_INFO(self->get_logger(), "Pad name: %s", pad_name);
         
         int transceiver_index;
         if (sscanf(pad_name, "src_%d", &transceiver_index) == 1) {
-            g_print("Received stream with transceiver index: %d\n", transceiver_index);
+            RCLCPP_INFO(self->get_logger(), "Transceiver index: %d", transceiver_index);
             
             // Now both sides agree: transceiver_index identifies this stream
             // Receiver can send: {"transceiver": 0, "bitrate": 1000000}

@@ -264,6 +264,14 @@ public:
         // Create GStreamer elements for the stream
         GstElement *src, *capsfilter0, *convert, *capsfilter1, *queue0, *encoder, *queue1, *parse, *payloader, *capsfilter2;
 
+        // Create transceiver
+        // GstWebRTCRTPTransceiver* transceiver = nullptr;
+        // GstCaps* transceiver_caps = gst_caps_from_string("application/x-rtp,media=video");
+        // g_signal_emit_by_name(webrtcbin, "add-transceiver",
+        //                      GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_SENDONLY,
+        //                      transceiver_caps, &transceiver);
+        // gst_caps_unref(transceiver_caps);
+
         // Source
         if (src_type == "v4l2src") {
             src = gst_element_factory_make("v4l2src", NULL);
@@ -441,7 +449,20 @@ public:
 
         // Link to webrtcbin
         GstPad* pay_src = gst_element_get_static_pad(capsfilter2, "src");
-        GstPad* webrtc_sink = gst_element_get_request_pad(webrtcbin, "sink_%u"); // request new sink pad
+        // Requesting sink pad from webrtcbin also creates a new transceiver internally
+        GstPad* webrtc_sink = gst_element_get_request_pad(webrtcbin, "sink_%u");
+
+        // Retrieve the transceiver associated with this pad
+        GstWebRTCRTPTransceiver* transceiver = nullptr;
+        g_signal_emit_by_name(webrtcbin, "get-transceiver", webrtc_sink, &transceiver);
+
+        if (transceiver) {
+            gint mline_index = 0;
+            g_object_get(transceiver, "mline-index", &mline_index, nullptr);
+            RCLCPP_INFO(this->get_logger(), "Stream %s assigned to mline index %d", stream_id.c_str(), mline_index);
+            // Store mapping: stream_id -> mline_index
+            gst_object_unref(transceiver);
+        }
 
         if (!pay_src) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get payloader src pad for stream %d.", stream_id);

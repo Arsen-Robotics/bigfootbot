@@ -385,6 +385,23 @@ public:
             return;
         }
 
+        // Create transceiver for THIS stream (Jetson safe)
+        // GstWebRTCRTPTransceiver* transceiver = nullptr;
+        // g_signal_emit_by_name(
+        //     webrtcbin,
+        //     "add-transceiver",
+        //     GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_SENDONLY,
+        //     NULL,   // DO NOT pass mid here, Jetson won't use it yet
+        //     &transceiver
+        // );
+
+        // if (!transceiver) {
+        //     RCLCPP_ERROR(this->get_logger(), "Failed to create transceiver for %s", stream_id.c_str());
+        //     return;
+        // }
+
+        // g_object_set(G_OBJECT(transceiver), "track-id", stream_id.c_str(), nullptr);
+
         // Payloader
         payloader = gst_element_factory_make("rtph264pay", NULL);
         g_object_set(payloader,
@@ -435,11 +452,11 @@ public:
             return;
         }
 
-        GstWebRTCRTPTransceiver* transceiver = nullptr;
-        g_signal_emit_by_name(webrtcbin, "get-transceiver", track_index, &transceiver);
+        // GstWebRTCRTPTransceiver* transceiver = nullptr;
+        // g_signal_emit_by_name(webrtcbin, "get-transceiver", track_index, &transceiver);
 
-        std::string mid = "video" + std::to_string(track_index);
-        g_object_set(G_OBJECT(transceiver), "mid", mid.c_str(), nullptr);
+        // std::string mid = "video" + std::to_string(track_index);
+        // g_object_set(G_OBJECT(transceiver), "mid", mid.c_str(), nullptr);
 
         gst_pad_link(pay_src, webrtc_sink);
         gst_object_unref(pay_src);
@@ -480,8 +497,9 @@ public:
         gst_bin_add(GST_BIN(pipeline), webrtcbin);
 
         // Add media streams to the pipeline
-        // add_stream("video1", "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
         add_stream("video0", "", "argus", 640, 480, 30, 2000000);
+        add_stream("video1", "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
+        add_stream("video2", "/dev/cam-aveo", "v4l2src", 640, 480, 30, 2000000);
 
         // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
         //     stun-server=stun://stun.l.google.com:19302 \

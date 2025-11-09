@@ -197,7 +197,7 @@ public:
                 std::string action = ctrl["action"].asString();
 
                 if (action == "change_bitrate") {
-                    std::string stream_id = ctrl["stream_id"].asString();
+                    int stream_id = ctrl["stream_id"].asInt();
                     int delta_bitrate = ctrl["delta"].asInt();
                     change_bitrate(stream_id, delta_bitrate);
                 }
@@ -254,23 +254,14 @@ public:
         ws_cv.notify_one();
     }
 
-    void add_stream(const std::string& stream_id,
+    void add_stream(const std::string& src_type,
                     const std::string& device,
-                    const std::string& src_type,
                     int width,
                     int height,
                     int framerate,
                     int bitrate) {
         // Create GStreamer elements for the stream
         GstElement *src, *capsfilter0, *convert, *capsfilter1, *queue0, *encoder, *queue1, *parse, *payloader, *capsfilter2;
-
-        // Create transceiver
-        // GstWebRTCRTPTransceiver* transceiver = nullptr;
-        // GstCaps* transceiver_caps = gst_caps_from_string("application/x-rtp,media=video");
-        // g_signal_emit_by_name(webrtcbin, "add-transceiver",
-        //                      GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_SENDONLY,
-        //                      transceiver_caps, &transceiver);
-        // gst_caps_unref(transceiver_caps);
 
         // Source
         if (src_type == "v4l2src") {
@@ -279,11 +270,6 @@ public:
         } else if (src_type == "argus") {
             src = gst_element_factory_make("nvarguscamerasrc", NULL);
             g_object_set(G_OBJECT(src), "sensor-mode", 3, NULL);
-        }
-
-        if (!src) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create source element for stream %d.", stream_id);
-            return;
         }
 
         // 1st caps filter - after camera source
@@ -310,19 +296,9 @@ public:
             g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
             gst_caps_unref(caps0);
         }
-
-        if (!capsfilter0) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create capsfilter0 for stream %d.", stream_id);
-            return;
-        }
         
         // Converter
         convert = gst_element_factory_make("nvvidconv", NULL);
-
-        if (!convert) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create converter for stream %d.", stream_id);
-            return;
-        }
 
         // 2nd caps filter - after converter
         capsfilter1 = gst_element_factory_make("capsfilter", NULL);
@@ -334,11 +310,6 @@ public:
         GstCapsFeatures* features1 = gst_caps_features_new("memory:NVMM", NULL);
         gst_caps_set_features(caps1, 0, features1);
 
-        if (!capsfilter1) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create capsfilter1 for stream %d.", stream_id);
-            return;
-        }
-
         g_object_set(G_OBJECT(capsfilter1), "caps", caps1, NULL);
         gst_caps_unref(caps1);
 
@@ -346,13 +317,8 @@ public:
         queue0 = gst_element_factory_make("queue", NULL);
         g_object_set(G_OBJECT(queue0), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
 
-        if (!queue0) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create queue0 for stream %d.", stream_id);
-            return;
-        }
-
         // Encoder
-        std::string enc_name = "enc_" + stream_id;
+        std::string enc_name = "enc" + std::to_string(pipeline_stream_index);
         encoder = gst_element_factory_make("nvv4l2h264enc", enc_name.c_str());
         g_object_set(encoder,
                  "control-rate", 1,
@@ -367,48 +333,13 @@ public:
                  "EnableTwopassCBR", 0,
                  NULL);
 
-        if (!encoder) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create encoder for stream %d.", stream_id);
-            return;
-        }
-
-        // Store encoder element in map
-        encoders[stream_id] = encoder;
-
         // Queue after encoder
         queue1 = gst_element_factory_make("queue", NULL);
         g_object_set(G_OBJECT(queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
 
-        if (!queue1) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create queue1 for stream %d.", stream_id);
-            return;
-        }
-
         // Parser
         parse = gst_element_factory_make("h264parse", NULL);
         g_object_set(parse, "config-interval", 0, NULL);
-
-        if (!parse) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create parser for stream %d.", stream_id);
-            return;
-        }
-
-        // Create transceiver for THIS stream (Jetson safe)
-        // GstWebRTCRTPTransceiver* transceiver = nullptr;
-        // g_signal_emit_by_name(
-        //     webrtcbin,
-        //     "add-transceiver",
-        //     GST_WEBRTC_RTP_TRANSCEIVER_DIRECTION_SENDONLY,
-        //     NULL,   // DO NOT pass mid here, Jetson won't use it yet
-        //     &transceiver
-        // );
-
-        // if (!transceiver) {
-        //     RCLCPP_ERROR(this->get_logger(), "Failed to create transceiver for %s", stream_id.c_str());
-        //     return;
-        // }
-
-        // g_object_set(G_OBJECT(transceiver), "track-id", stream_id.c_str(), nullptr);
 
         // Payloader
         payloader = gst_element_factory_make("rtph264pay", NULL);
@@ -418,11 +349,6 @@ public:
                     "config-interval", -1,
                     NULL);
 
-        if (!payloader) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create payloader for stream %d.", stream_id);
-            return;
-        }
-
         // 3rd caps filter - after payloader
         capsfilter2 = gst_element_factory_make("capsfilter", NULL);
         GstCaps* caps2 = gst_caps_new_simple("application/x-rtp",
@@ -430,11 +356,6 @@ public:
                                              "encoding-name", G_TYPE_STRING, "H264",
                                              "payload", G_TYPE_INT, 96,
                                              NULL);
-
-        if (!capsfilter2) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create capsfilter2 for stream %d.", stream_id);
-            return;
-        }
 
         g_object_set(G_OBJECT(capsfilter2), "caps", caps2, NULL);
         gst_caps_unref(caps2);
@@ -454,30 +375,20 @@ public:
 
         // Retrieve the transceiver associated with this pad
         GstWebRTCRTPTransceiver* transceiver = nullptr;
-        g_signal_emit_by_name(webrtcbin, "get-transceiver", webrtc_sink, &transceiver);
+        g_signal_emit_by_name(webrtcbin, "get-transceiver", pipeline_stream_index, &transceiver);
 
         if (transceiver) {
-            gint mline_index = 0;
-            g_object_get(transceiver, "mline-index", &mline_index, nullptr);
-            RCLCPP_INFO(this->get_logger(), "Stream %s assigned to mline index %d", stream_id.c_str(), mline_index);
-            // Store mapping: stream_id -> mline_index
+            // Store encoder element in the map
+            encoders[pipeline_stream_index] = encoder;
+
+            RCLCPP_INFO(this->get_logger(), "Transceiver created for stream %d", pipeline_stream_index);
+
+            // Only increment if transceiver has actually been created
+            pipeline_stream_index++;
             gst_object_unref(transceiver);
+        } else {
+            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get transceiver for stream %d.", pipeline_stream_index);
         }
-
-        if (!pay_src) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get payloader src pad for stream %d.", stream_id);
-            return;
-        }
-        if (!webrtc_sink) {
-            RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get webrtcbin sink pad for stream %d.", stream_id);
-            return;
-        }
-
-        // GstWebRTCRTPTransceiver* transceiver = nullptr;
-        // g_signal_emit_by_name(webrtcbin, "get-transceiver", track_index, &transceiver);
-
-        // std::string mid = "video" + std::to_string(track_index);
-        // g_object_set(G_OBJECT(transceiver), "mid", mid.c_str(), nullptr);
 
         gst_pad_link(pay_src, webrtc_sink);
         gst_object_unref(pay_src);
@@ -518,9 +429,9 @@ public:
         gst_bin_add(GST_BIN(pipeline), webrtcbin);
 
         // Add media streams to the pipeline
-        add_stream("video0", "", "argus", 640, 480, 30, 2000000);
-        add_stream("video1", "/dev/cam-arducam", "v4l2src", 640, 480, 30, 2000000);
-        add_stream("video2", "/dev/cam-aveo", "v4l2src", 640, 480, 30, 2000000);
+        add_stream("argus", "", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/cam-arducam", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/cam-aveo", 640, 480, 30, 2000000);
 
         // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
         //     stun-server=stun://stun.l.google.com:19302 \
@@ -652,15 +563,14 @@ public:
     //     );
     // }
 
-    void change_bitrate(const std::string& stream_id, int delta) {
+    void change_bitrate(int stream_id, int delta) {
         // Create a lambda that will execute the bitrate change
         auto func = [this, stream_id, delta]() {
             // Find the encoder corresponding to stream_id
             auto it = encoders.find(stream_id);
             if (it == encoders.end() || it->second == nullptr) {
                 RCLCPP_WARN(this->get_logger(),
-                            "Stream %s not found or encoder is null, cannot change bitrate.",
-                            stream_id.c_str());
+                            "Stream %d encoder not found. Cannot change bitrate.", stream_id);
                 return;
             }
         
@@ -684,8 +594,8 @@ public:
                      nullptr);
 
             RCLCPP_INFO(this->get_logger(),
-                        "Changed stream %s bitrate to %d bps",
-                        stream_id.c_str(), new_bitrate);
+                        "Changed stream %d bitrate to %d kbps",
+                        stream_id, new_bitrate);
 
         };
 
@@ -921,7 +831,11 @@ private:
     // std::atomic<uint64_t> last_bytes_received{0};
 
     // Map of encoder elements of each stream
-    std::unordered_map<std::string, GstElement*> encoders;
+    std::unordered_map<int, GstElement*> encoders;
+
+    // Index, used only during pipeline creation,
+    // to correctly map encoder element to its corresponding stream
+    int pipeline_stream_index = 0;
 
     // Bitrate
     const int min_bitrate{300000};

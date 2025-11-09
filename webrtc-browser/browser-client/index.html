@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Robot Camera Stream</title>
+  <style>
+    /* Simple, clean styling for MVP */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #4a9eff;
+    }
+
+    .controls {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label {
+      font-weight: 500;
+      color: #b0b0b0;
+    }
+
+    input[type="text"] {
+      padding: 8px 12px;
+      background: #1a1a1a;
+      border: 1px solid #404040;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 14px;
+      min-width: 200px;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #4a9eff;
+    }
+
+    button {
+      padding: 8px 16px;
+      background: #4a9eff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #3a8eef;
+    }
+
+    button:disabled {
+      background: #404040;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .status {
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-weight: 500;
+      display: inline-block;
+    }
+
+    .status-disconnected {
+      background: #404040;
+      color: #b0b0b0;
+    }
+
+    .status-connecting {
+      background: #ffa500;
+      color: #1a1a1a;
+    }
+
+    .status-connected {
+      background: #00c853;
+      color: white;
+    }
+
+    .status-error {
+      background: #d32f2f;
+      color: white;
+    }
+
+    .video-container {
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16 / 9;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+
+    .video-placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #666;
+      font-size: 18px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 Robot Camera Stream</h1>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label for="signaling-url">Signaling Server:</label>
+        <input 
+          type="text" 
+          id="signaling-url" 
+          value="ws://localhost:8765" 
+          placeholder="ws://localhost:8765"
+        />
+      </div>
+      
+      <button id="connect">Connect</button>
+      <button id="disconnect" disabled>Disconnect</button>
+      
+      <div class="status status-disconnected" id="status">Disconnected</div>
+    </div>
+
+    <div class="video-container">
+      <video id="video" autoplay playsinline></video>
+      <div class="video-placeholder" id="placeholder">
+        Video stream will appear here
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
+

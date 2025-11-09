@@ -14,6 +14,8 @@
 #include <mutex>
 #include <sys/resource.h>
 
+static GQuark STREAM_INFO_QUARK = 0;
+
 /**
  * @brief Main class handling WebRTC video streaming
  * 
@@ -41,6 +43,7 @@ public:
         pipeline = nullptr;
         webrtcbin = nullptr;
         ws_running = true;
+        STREAM_INFO_QUARK = g_quark_from_static_string("stream-info");
     }
 
     /**
@@ -230,7 +233,7 @@ public:
      * @param msg Message to be queued
      */
     void queue_ws(const std::string& msg) {
-        std::lock_guard<std::mutex> lock(ws_mutex);
+        std::lock_guard<std::mutex> lk(ws_mutex);
         msg_queue.push(msg);
         ws_cv.notify_one();
     }
@@ -286,49 +289,56 @@ public:
             while (stutter_monitor_running && rclcpp::ok()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(stutter_monitor_period_ms));
 
-                // Get current stutter metrics and reset counters
-                uint64_t frames = 0;
-                uint64_t stutters = 0;
-                {
-                    std::lock_guard<std::mutex> lk(stutter_mutex);
-                    frames = global_frame_count;
-                    stutters = global_stutter_events;
-                    global_frame_count = 0; // Reset for next period
-                    global_stutter_events = 0; // Reset for next period
-                }
+                std::lock_guard<std::mutex> lk(streams_mutex);
 
-                if (frames == 0) continue; // Avoid division by zero
+                for (auto& [stream_id, stream_info] : streams) {
+                    if (!stream_info) continue;
 
-                // Calculate stutter ratio
-                double ratio = double(stutters) / double(frames);
+                    // Get current stutter metrics and reset counters
+                    uint64_t frames = 0;
+                    uint64_t stutters = 0;
+                    {
+                        std::lock_guard<std::mutex> lk(stutter_mutex);
+                        frames = stream_info->frame_count;
+                        stutters = stream_info->stutter_count;
+                        stream_info->frame_count = 0; // Reset for next period
+                        stream_info->stutter_count = 0; // Reset for next period
+                    }
 
-                RCLCPP_INFO(this->get_logger(), "Stutter ratio %.3f (%llu stutters / %llu frames)", ratio, stutters, frames);
+                    if (frames == 0) continue; // Avoid division by zero
 
-                // Prepare control message
-                Json::Value ctrl;
-                bool send = false;
-                if (ratio > high_stutter_threshold) {
-                    // Too much stutter -> request lower bitrate
-                    int new_bitrate_kpbs = std::max(min_bitrate_kbps, current_bitrate_kbps.load() - bitrate_step_kbps);
-                    ctrl["control"]["action"] = "set_bitrate";
-                    ctrl["control"]["value_kbps"] = new_bitrate_kpbs;
-                    send = true;
-                    RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request lower bitrate %d kbps", ratio, new_bitrate_kpbs);
-                    current_bitrate_kbps.store(new_bitrate_kpbs);
-                } else if (ratio < low_stutter_threshold) {
-                    // Low stutter -> request higher bitrate
-                    int new_bitrate_kbps = std::min(max_bitrate_kbps, current_bitrate_kbps.load() + bitrate_step_kbps);
-                    ctrl["control"]["action"] = "set_bitrate";
-                    ctrl["control"]["value_kbps"] = new_bitrate_kbps;
-                    send = true;
-                    RCLCPP_INFO(this->get_logger(), "Low stutter ratio %.3f -> request higher bitrate %d kbps", ratio, new_bitrate_kbps);
-                    current_bitrate_kbps.store(new_bitrate_kbps);
-                }
+                    // Calculate stutter ratio
+                    double ratio = double(stutters) / double(frames);
 
-                if (send) {
-                    Json::StreamWriterBuilder w;
-                    std::string msg = Json::writeString(w, ctrl);
-                    this->queue_ws(msg);
+                    RCLCPP_INFO(this->get_logger(), "Stutter ratio for stream %d: %.3f (%llu stutters / %llu frames)",
+                                                    stream_info->stream_id, ratio, stutters, frames);
+
+                    // Prepare control message
+                    Json::Value ctrl;
+                    bool send = false;
+                    if (ratio > high_stutter_threshold) {
+                        // Too much stutter -> request lower bitrate
+                        int delta = -bitrate_step_kbps;
+                        ctrl["control"]["action"] = "set_bitrate";
+                        ctrl["control"]["stream_id"] = stream_info->stream_id;
+                        ctrl["control"]["delta"] = delta;
+                        send = true;
+                        RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request bitrate delta %d kbps", ratio, delta);
+                    } else if (ratio < low_stutter_threshold) {
+                        // Low stutter -> request higher bitrate
+                        int delta = bitrate_step_kbps;
+                        ctrl["control"]["action"] = "set_bitrate";
+                        ctrl["control"]["stream_id"] = stream_info->stream_id;
+                        ctrl["control"]["delta"] = delta;
+                        send = true;
+                        RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request bitrate delta %d kbps", ratio, delta);
+                    }
+
+                    if (send) {
+                        Json::StreamWriterBuilder w;
+                        std::string msg = Json::writeString(w, ctrl);
+                        this->queue_ws(msg);
+                    }
                 }
             }
         });
@@ -479,29 +489,6 @@ public:
         gst_bin_add(GST_BIN(self->pipeline), decodebin);
         gst_element_sync_state_with_parent(decodebin);
 
-        g_signal_connect(decodebin, "pad-added", G_CALLBACK(on_decodebin_pad_added), self);
-
-        sinkpad = gst_element_get_static_pad(decodebin, "sink");
-        gst_pad_link(pad, sinkpad);
-        gst_object_unref(sinkpad);
-
-        // Get the MID
-        GstWebRTCRTPTransceiver* transceiver = NULL;
-        g_object_get(pad, "transceiver", &transceiver, NULL);
-        
-        if (transceiver) {
-            // Extract MID from transceiver
-            gchar* mid = NULL;
-            g_object_get(transceiver, "mid", &mid, NULL);
-            
-            if (mid) {
-                RCLCPP_INFO(self->get_logger(), "MID: %s", mid);
-                
-                g_free(mid);
-            }
-            gst_object_unref(transceiver);
-        }
-
         // Pad name is "src_N" where N is the transceiver index
         const gchar* pad_name = gst_pad_get_name(pad);
         RCLCPP_INFO(self->get_logger(), "Pad name: %s", pad_name);
@@ -510,10 +497,30 @@ public:
         if (sscanf(pad_name, "src_%d", &transceiver_index) == 1) {
             RCLCPP_INFO(self->get_logger(), "Transceiver index: %d", transceiver_index);
             
-            // Now both sides agree: transceiver_index identifies this stream
-            // Receiver can send: {"transceiver": 0, "bitrate": 1000000}
-            // Sender uses transceiver 0 to find correct encoder
+            // Store transceiver index (stream_id) on pad
+            StreamInfo* stream_info = new StreamInfo();
+            stream_info->stream_id = transceiver_index;
+
+            // Attach stream info to pad
+            g_object_set_qdata(G_OBJECT(decodebin),
+                STREAM_INFO_QUARK,
+                stream_info);
+
+            // Add stream_info instance to stream map
+            {
+                std::lock_guard<std::mutex> lk(streams_mutex);
+                streams[stream_info->stream_id] = stream_info;
+            }
+        } else {
+            RCLCPP_ERROR(self->get_logger(), "Couldn't get transceiver index, skipping stream");
+            return;
         }
+
+        g_signal_connect(decodebin, "pad-added", G_CALLBACK(on_decodebin_pad_added), self);
+
+        sinkpad = gst_element_get_static_pad(decodebin, "sink");
+        gst_pad_link(pad, sinkpad);
+        gst_object_unref(sinkpad);
     }
 
     /**
@@ -528,6 +535,16 @@ public:
     static void on_decodebin_pad_added(GstElement* decodebin, GstPad* pad, WebRTCRecvNode* self) {
         GstCaps* caps = gst_pad_get_current_caps(pad);
         if (!caps) return;
+
+        // Retrieve StreamInfo attached to decodebin
+        StreamInfo* stream_info = static_cast<StreamInfo*>(
+            g_object_get_qdata(G_OBJECT(decodebin), STREAM_INFO_QUARK)
+        );
+
+        if (!stream_info) {
+            RCLCPP_ERROR(self->get_logger(), "No stream-info found for decodebin, skipping stream");
+            return;
+        }
 
         g_object_set(self->webrtcbin, "latency", 0, NULL);
 
@@ -595,14 +612,17 @@ public:
             GstPad* sinkpad = gst_element_get_static_pad(sink, "sink");
             if (sinkpad) {
                 // Store nominal frame interval on pad for probe use
-                StreamInfo* stream_info = new StreamInfo();
                 stream_info->nominal_frame_interval_ns = nominal_frame_interval_ns;
 
                 // Attach stream info to pad
+                // Transfer ownership to sinkpad: sinkpad will free the struct when pad is destroyed
                 g_object_set_qdata_full(G_OBJECT(sinkpad),
-                    g_quark_from_static_string("stream-info"),
+                    STREAM_INFO_QUARK,
                     stream_info,
                     [](gpointer data){ delete static_cast<StreamInfo*>(data); });
+
+                // Remove the non-owning pointer from decodebin to avoid dangling pointer later
+                g_object_set_qdata(G_OBJECT(decodebin), STREAM_INFO_QUARK, nullptr);
 
                 // Add probe
                 gst_pad_add_probe(sinkpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
@@ -618,7 +638,7 @@ public:
 
         // Retrieve stream info
         StreamInfo* stream_info = static_cast<StreamInfo*>(
-            g_object_get_qdata(G_OBJECT(pad), g_quark_from_static_string("stream-info"))
+            g_object_get_qdata(G_OBJECT(pad), STREAM_INFO_QUARK)
         );
 
         // If this probe info doesn't contain a buffer, return
@@ -662,13 +682,13 @@ public:
             if (interval_ns <= 0) return GST_PAD_PROBE_OK;
 
             // Count frame and check for stutter
-            self->global_frame_count++;
+            stream_info->frame_count++;
 
             // Calculate PTS interval threshold beyond which a stutter is counted
             uint64_t threshold_ns = stream_info->nominal_frame_interval_ns * self->stutter_multiplier;
 
             if (interval_ns > threshold_ns) {
-                self->global_stutter_events++;
+                stream_info->stutter_count++;
             }
 
             return GST_PAD_PROBE_OK;
@@ -695,7 +715,7 @@ private:
 
     // Stream info (per stream)
     struct StreamInfo {
-        std::string mid;
+        int stream_id;
         uint64_t nominal_frame_interval_ns{33333333ULL}; // Default to ~30 FPS
         bool have_last_pts{false};
         uint64_t last_frame_pts_ns{0};
@@ -703,9 +723,9 @@ private:
         std::atomic<uint64_t> stutter_count{0};
     };
 
-    // Stutter metrics (global across all streams)
-    std::atomic<uint64_t> global_frame_count{0};
-    std::atomic<uint64_t> global_stutter_events{0};
+    // Map of stream info instances
+    std::unordered_map<int, StreamInfo*> streams;
+    std::mutex streams_mutex;
 
     // Stutter detection parameters
     const double ema_alpha = 0.4;         // smoothing factor for EMA
@@ -714,9 +734,6 @@ private:
     const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
     const double low_stutter_threshold = 0.01;  // if <1% stutter -> increase bitrate
     const int bitrate_step_kbps = 100;     // amount to change bitrate by (kbps)
-    const int min_bitrate_kbps = 300;      // minimum allowed bitrate (kbps)
-    const int max_bitrate_kbps = 2000;     // maximum allowed bitrate (kbps)
-    std::atomic<int> current_bitrate_kbps{2000}; // current target bitrate (kbps)
 };
 
 /**

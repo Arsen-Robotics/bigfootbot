@@ -44,6 +44,12 @@ public:
         webrtcbin = nullptr;
         ws_running = true;
         STREAM_INFO_QUARK = g_quark_from_static_string("stream-info");
+
+        // Stutter monitor callback
+        stutter_monitor_timer = this->create_wall_timer(
+            std::chrono::milliseconds(stutter_monitor_period_ms),
+            [this]() { this->stutter_monitor_callback(); }
+        );
     }
 
     /**
@@ -56,12 +62,6 @@ public:
 
         if (ws_thread.joinable()) {
             ws_thread.join();
-        }
-
-        // Stop stutter monitor thread
-        stutter_monitor_running = false;
-        if (stutter_monitor_thread.joinable()) {
-            stutter_monitor_thread.join();
         }
 
         if (pipeline) {
@@ -197,6 +197,31 @@ public:
                     return G_SOURCE_REMOVE;
                 }, func_ptr);
 
+            } else if (jsonMsg.isMember("info")) {
+                const auto& info = jsonMsg["info"];
+                std::string type = info["type"].asString();
+
+                if (type == "frame_interval_ns") {
+                    int stream_id = info["stream_id"].asInt();
+                    uint64_t frame_interval_ns = info["frame_interval_ns"].asInt();
+
+                    // Lock the streams map
+                    std::lock_guard<std::mutex> lk(streams_mutex);
+
+                    auto it = streams.find(stream_id);
+                    if (it != streams.end() && it->second != nullptr) {
+                        StreamInfo* stream_info = it->second;
+
+                        // Lock the stream_info instance
+                        std::lock_guard<std::mutex> lk1(stutter_mutex);
+
+                        // Update the frame interval (nominal)
+                        stream_info->nominal_frame_interval_ns = frame_interval_ns;
+                    } else {
+                        RCLCPP_ERROR(this->get_logger(), "Couldn't find stream ID %d in streams map", stream_id);
+                    }
+                }
+
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Unknown JSON message type");
             }
@@ -282,66 +307,60 @@ public:
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    }
 
-        // Start stutter monitor thread (runs until destructor)
-        stutter_monitor_running = true;
-        stutter_monitor_thread = std::thread([this]() {
-            while (stutter_monitor_running && rclcpp::ok()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(stutter_monitor_period_ms));
+    void stutter_monitor_callback() {
+        std::lock_guard<std::mutex> lk(streams_mutex);
 
-                std::lock_guard<std::mutex> lk(streams_mutex);
+        for (auto& [stream_id, stream_info] : streams) {
+            if (!stream_info) continue;
 
-                for (auto& [stream_id, stream_info] : streams) {
-                    if (!stream_info) continue;
-
-                    // Get current stutter metrics and reset counters
-                    uint64_t frames = 0;
-                    uint64_t stutters = 0;
-                    {
-                        std::lock_guard<std::mutex> lk(stutter_mutex);
-                        frames = stream_info->frame_count;
-                        stutters = stream_info->stutter_count;
-                        stream_info->frame_count = 0; // Reset for next period
-                        stream_info->stutter_count = 0; // Reset for next period
-                    }
-
-                    if (frames == 0) continue; // Avoid division by zero
-
-                    // Calculate stutter ratio
-                    double ratio = double(stutters) / double(frames);
-
-                    RCLCPP_INFO(this->get_logger(), "Stutter ratio for stream %d: %.3f (%llu stutters / %llu frames)",
-                                                    stream_info->stream_id, ratio, stutters, frames);
-
-                    // Prepare control message
-                    Json::Value ctrl;
-                    bool send = false;
-                    if (ratio > high_stutter_threshold) {
-                        // Too much stutter -> request lower bitrate
-                        int delta = -bitrate_step_kbps;
-                        ctrl["control"]["action"] = "change_bitrate";
-                        ctrl["control"]["stream_id"] = stream_info->stream_id;
-                        ctrl["control"]["delta"] = delta;
-                        send = true;
-                        RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_info->stream_id, ratio, delta);
-                    } else if (ratio < low_stutter_threshold) {
-                        // Low stutter -> request higher bitrate
-                        int delta = bitrate_step_kbps;
-                        ctrl["control"]["action"] = "change_bitrate";
-                        ctrl["control"]["stream_id"] = stream_info->stream_id;
-                        ctrl["control"]["delta"] = delta;
-                        send = true;
-                        RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_info->stream_id, ratio, delta);
-                    }
-
-                    if (send) {
-                        Json::StreamWriterBuilder w;
-                        std::string msg = Json::writeString(w, ctrl);
-                        this->queue_ws(msg);
-                    }
-                }
+            // Get current stutter metrics and reset counters
+            uint64_t frames = 0;
+            uint64_t stutters = 0;
+            {
+                std::lock_guard<std::mutex> lk(stutter_mutex);
+                frames = stream_info->frame_count;
+                stutters = stream_info->stutter_count;
+                stream_info->frame_count = 0; // Reset for next period
+                stream_info->stutter_count = 0; // Reset for next period
             }
-        });
+
+            if (frames == 0) continue; // Avoid division by zero
+
+            // Calculate stutter ratio
+            double ratio = double(stutters) / double(frames);
+
+            RCLCPP_INFO(this->get_logger(), "Stutter ratio for stream %d: %.3f (%llu stutters / %llu frames)",
+                                            stream_id, ratio, stutters, frames);
+
+            // Prepare control message
+            Json::Value ctrl;
+            bool send = false;
+            if (ratio > high_stutter_threshold) {
+                // Too much stutter -> request lower bitrate
+                int delta = -bitrate_step_kbps;
+                ctrl["control"]["action"] = "change_bitrate";
+                ctrl["control"]["stream_id"] = stream_id;
+                ctrl["control"]["delta"] = delta;
+                send = true;
+                RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
+            } else if (ratio < low_stutter_threshold) {
+                // Low stutter -> request higher bitrate
+                int delta = bitrate_step_kbps;
+                ctrl["control"]["action"] = "change_bitrate";
+                ctrl["control"]["stream_id"] = stream_id;
+                ctrl["control"]["delta"] = delta;
+                send = true;
+                RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
+            }
+
+            if (send) {
+                Json::StreamWriterBuilder w;
+                std::string msg = Json::writeString(w, ctrl);
+                this->queue_ws(msg);
+            }
+        }
     }
 
     /**
@@ -709,9 +728,8 @@ private:
     std::condition_variable ws_cv;
 
     // Stutter monitoring
-    std::atomic<bool> stutter_monitor_running{false};
-    std::thread stutter_monitor_thread;
     std::mutex stutter_mutex;
+    rclcpp::TimerBase::SharedPtr stutter_monitor_timer;
 
     // Stream info (per stream)
     struct StreamInfo {
@@ -728,7 +746,6 @@ private:
     std::mutex streams_mutex;
 
     // Stutter detection parameters
-    const double ema_alpha = 0.4;         // smoothing factor for EMA
     const double stutter_multiplier = 1.1; // multiplier for PTS interval threshold
     const int stutter_monitor_period_ms = 2000;    // monitor period in ms
     const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate

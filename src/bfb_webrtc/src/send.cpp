@@ -15,6 +15,8 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sys/resource.h>
 
+static GQuark FRAME_INTERVAL_INFO_QUARK = 0;
+
 /**
  * @brief Main class handling WebRTC video streaming
  * 
@@ -45,6 +47,13 @@ public:
         pipeline = nullptr;
         webrtcbin = nullptr;
         ws_running = true;
+        FRAME_INTERVAL_INFO_QUARK = g_quark_from_static_string("frame-interval-info");
+
+        // Frame interval monitor callback
+        frame_interval_monitor_timer = this->create_wall_timer(
+            std::chrono::milliseconds(frame_interval_monitor_period_ms),
+            [this]() { this->frame_interval_monitor_callback(); }
+        );
     }
 
     /**
@@ -333,6 +342,9 @@ public:
                  "EnableTwopassCBR", 0,
                  NULL);
 
+        // Get the src pad of encoder element
+        GstPad* enc_srcpad = gst_element_get_static_pad(encoder, "src");
+
         // Queue after encoder
         queue1 = gst_element_factory_make("queue", NULL);
         g_object_set(G_OBJECT(queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
@@ -386,6 +398,20 @@ public:
             // Only increment if transceiver has actually been created
             pipeline_stream_index++;
             gst_object_unref(transceiver);
+
+            // Store stream ID in an instance of frame_interval_info
+            FrameIntervalInfo* frame_interval_info = new FrameIntervalInfo();
+            frame_interval_info->stream_id = pipeline_stream_index;
+
+            // Attach frame interval info to pad
+            g_object_set_qdata_full(G_OBJECT(enc_srcpad),
+                FRAME_INTERVAL_INFO_QUARK,
+                frame_interval_info,
+                [](gpointer data){ delete static_cast<FrameIntervalInfo*>(data); });
+            
+            // Create frame callback probe
+            gst_pad_add_probe(enc_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, self, nullptr);
+            gst_object_unref(enc_srcpad);
         } else {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get transceiver for stream %d.", pipeline_stream_index);
         }
@@ -393,6 +419,101 @@ public:
         gst_pad_link(pay_src, webrtc_sink);
         gst_object_unref(pay_src);
         gst_object_unref(webrtc_sink);
+    }
+
+    static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
+        WebRTCSendNode* self = static_cast<WebRTCSendNode*>(user_data);
+
+        // Retrieve frame interval info
+        FrameIntervalInfo* frame_interval_info = static_cast<StreamInfo*>(
+            g_object_get_qdata(G_OBJECT(pad), FRAME_INTERVAL_INFO_QUARK)
+        );
+
+        // If this probe info doesn't contain a buffer, return
+        if (!(GST_PAD_PROBE_INFO_TYPE(info) & GST_PAD_PROBE_TYPE_BUFFER)) {
+            return GST_PAD_PROBE_OK;
+        }
+
+        // Get the buffer (frame)
+        GstBuffer* buffer = GST_PAD_PROBE_INFO_BUFFER(info);
+        if (!buffer) return GST_PAD_PROBE_OK;
+        
+        // Retrieve PTS from buffer
+        if (!GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buffer))) {
+            return GST_PAD_PROBE_OK;
+        }
+
+        // Get PTS in nanoseconds
+        uint64_t pts_ns = GST_BUFFER_PTS(buffer);
+
+        // Interval between frames' PTSs in nanoseconds
+        uint64_t interval_ns = 0;
+
+        {
+            std::lock_guard<std::mutex> lk(self->frame_interval_struct_mutex);
+            
+            if (frame_interval_info->have_last_pts) {
+                interval_ns = pts_ns - frame_interval_info->last_frame_pts_ns;
+            } else {
+                // First frame received, can't compute interval yet
+                frame_interval_info->last_frame_pts_ns = pts_ns;
+                frame_interval_info->have_last_pts = true;
+
+                // Don't process further for first frame
+                return GST_PAD_PROBE_OK;
+            }
+
+            // Update last frame PTS
+            frame_interval_info->last_frame_pts_ns = pts_ns;
+
+            // If interval is non-positive, return
+            if (interval_ns <= 0) return GST_PAD_PROBE_OK;
+
+            if (frame_interval_info->ewma_frame_interval_ns == 0) {
+                frame_interval_info->ewma_frame_interval_ns = interval_ns;
+            } else {
+                frame_interval_info->ewma_frame_interval_ns =
+                    self->interval_ewma_alpha * interval_ns +
+                    (1.0 - self->interval_ewma_alpha) * frame_interval_info->ewma_frame_interval_ns;
+            }
+
+            return GST_PAD_PROBE_OK;
+        }
+    }
+
+    void frame_interval_monitor_callback() {
+        std::lock_guard<std::mutex> lk(frame_interval_vector_mutex);
+
+        for (auto& frame_interval_info : frame_intervals) {
+            if (!stream_info) continue;
+
+            // Get EWMA frame interval
+            int stream_id = -1;
+            uint64_t ewma_frame_interval_ns = 0;
+            {
+                std::lock_guard<std::mutex> lk(frame_interval_struct_mutex);
+                stream_id = frame_interval_info->stream_id;
+                ewma_frame_interval_ns = frame_interval_info->ewma_frame_interval_ns;
+            }
+
+            if (stream_id == -1) continue;
+
+            // Prepare frame interval message
+            Json::Value info;
+            bool send = false;
+
+            info["info"]["type"] = "frame_interval";
+            info["info"]["stream_id"] = stream_id;
+            info["info"]["frame_interval_ns"] = ewma_frame_interval_ns;
+            send = true;
+            RCLCPP_WARN(this->get_logger(), "Stream %d: EWMA frame interval %d ns", stream_id, ewma_frame_interval_ns);
+
+            if (send) {
+                Json::StreamWriterBuilder w;
+                std::string msg = Json::writeString(w, info);
+                this->queue_ws(msg);
+            }
+        }
     }
 
     /**
@@ -432,108 +553,6 @@ public:
         add_stream("argus", "", 640, 480, 30, 2000000);
         add_stream("v4l2src", "/dev/cam-arducam", 640, 480, 30, 2000000);
         add_stream("v4l2src", "/dev/cam-aveo", 640, 480, 30, 2000000);
-
-        // pipeline = gst_parse_launch("webrtcbin name=webrtcbin bundle-policy=max-bundle latency=0 \
-        //     stun-server=stun://stun.l.google.com:19302 \
-        //     v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
-        //         nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
-        //         queue max-size-buffers=3 leaky=downstream ! \
-        //         nvv4l2h264enc name=enc0 \
-        //             control-rate=1 \
-        //             bitrate=2000000 \
-        //             iframeinterval=30 \
-        //             num-B-Frames=0 \
-        //             preset-level=1 \
-        //             profile=0 \
-        //             maxperf-enable=1 \
-        //             insert-sps-pps=1 \
-        //             insert-vui=1 \
-        //             EnableTwopassCBR=0 ! \
-        //         queue max-size-buffers=5 leaky=downstream ! \
-        //         h264parse config-interval=0 ! \
-        //         rtph264pay name=pay0 \
-        //             pt=96 \
-        //             mtu=1200 \
-        //             config-interval=-1 ! \
-        //         application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin. \
-        //     v4l2src device=/dev/cam-arducam ! video/x-raw,width=640,height=480,framerate=30/1 ! \
-        //         nvvidconv ! video/x-raw(memory:NVMM),format=NV12 ! \
-        //         queue max-size-buffers=3 leaky=downstream ! \
-        //         nvv4l2h264enc name=enc1 \
-        //             control-rate=1 \
-        //             bitrate=2000000 \
-        //             iframeinterval=30 \
-        //             num-B-Frames=0 \
-        //             preset-level=1 \
-        //             profile=0 \
-        //             maxperf-enable=1 \
-        //             insert-sps-pps=1 \
-        //             insert-vui=1 \
-        //             EnableTwopassCBR=0 ! \
-        //         queue max-size-buffers=5 leaky=downstream ! \
-        //         h264parse config-interval=0 ! \
-        //         rtph264pay name=pay1 \
-        //             pt=96 \
-        //             mtu=1200 \
-        //             config-interval=-1 ! \
-        //         application/x-rtp,media=video,encoding-name=H264,payload=96 ! webrtcbin.",
-        //     &error);
-
-        // enc0 = gst_bin_get_by_name(GST_BIN(pipeline), "enc0");
-        // enc1 = gst_bin_get_by_name(GST_BIN(pipeline), "enc1");
-        // if (!enc0 || !enc1) {
-        //     RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get one or more encoder elements.");
-        //     return;
-        // } else {
-        //     // Read initial bitrate
-        //     gint64 val = 0;
-        //     g_object_get(G_OBJECT(enc0), "bitrate", &val, nullptr);
-        //     current_bitrate = static_cast<int>(val);
-
-        //     // Start bitrate controller
-        //     bitrate_running = true;
-        //     bitrate_thread = std::thread(&WebRTCSendNode::bitrate_controller_loop, this);
-        // }
-
-        // // Get payloader elements
-        // GstElement* pay0 = gst_bin_get_by_name(GST_BIN(pipeline), "pay0");
-        // GstElement* pay1 = gst_bin_get_by_name(GST_BIN(pipeline), "pay1");
-        // if (!pay0 || !pay1) {
-        //     RCLCPP_ERROR(get_logger(), "Failed to get payloader elements");
-        //     return;
-        // }
-
-        // // Get payloader src pads
-        // GstPad* pay0_src = gst_element_get_static_pad(pay0, "src");
-        // GstPad* pay1_src = gst_element_get_static_pad(pay1, "src");
-        // if (!pay0_src || !pay1_src) {
-        //     RCLCPP_ERROR(get_logger(), "Failed to get payloader src pads");
-        //     return;
-        // }
-
-        // // Request sink pads from webrtcbin for each stream
-        // GstPad* sink0 = gst_element_get_request_pad(webrtcbin, "sink_%u");
-        // GstPad* sink1 = gst_element_get_request_pad(webrtcbin, "sink_%u");
-        // if (!sink0 || !sink1) {
-        //     RCLCPP_ERROR(get_logger(), "Failed to request sink pads from webrtcbin");
-        //     return;
-        // }
-
-        // // Link payloader src pads to webrtcbin sink pads
-        // if (GST_PAD_LINK_FAILED(gst_pad_link(pay0_src, sink0))) {
-        //     RCLCPP_ERROR(get_logger(), "Failed to link pay0 to webrtcbin");
-        // }
-        // if (GST_PAD_LINK_FAILED(gst_pad_link(pay1_src, sink1))) {
-        //     RCLCPP_ERROR(get_logger(), "Failed to link pay1 to webrtcbin");
-        // }
-
-        // // Cleanup references
-        // gst_object_unref(pay0_src);
-        // gst_object_unref(pay1_src);
-        // gst_object_unref(sink0);
-        // gst_object_unref(sink1);
-        // gst_object_unref(pay0);
-        // gst_object_unref(pay1);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
@@ -817,19 +836,6 @@ private:
     std::mutex ws_mutex;                 // Mutex for thread safety
     std::condition_variable ws_cv;       // Condition variable for message queue
 
-    // // Bitrate controller
-    // std::thread bitrate_thread;
-    // int current_bitrate{2000000};
-    // const int min_bitrate{800000};
-    // const int max_bitrate{2000000};
-    // const int bitrate_step{100000};
-
-    // std::atomic<double> jitter{-1.0};
-    // std::atomic<int64_t> packets_received{-1};
-    // std::atomic<int64_t> packets_lost{-1};
-    // std::atomic<int64_t> bytes_received{-1};
-    // std::atomic<uint64_t> last_bytes_received{0};
-
     // Map of encoder elements of each stream
     std::unordered_map<int, GstElement*> encoders;
 
@@ -840,6 +846,22 @@ private:
     // Bitrate
     const int min_bitrate{300000};
     const int max_bitrate{2000000};
+
+    struct FrameIntervalInfo {
+        int stream_id;
+        bool have_last_pts{false};
+        uint64_t last_frame_pts_ns{0};
+        uint64_t ewma_frame_interval_ns{0}; // Exponentially Weighted Moving Average
+    };
+
+    std::mutex frame_interval_struct_mutex;
+    rclcpp::TimerBase::SharedPtr frame_interval_monitor_timer;
+    const int interval_ewma_alpha = 0.1;
+
+    // Vector of frame interval info instances
+    std::vector<FrameIntervalInfo*> frame_intervals;
+    std::mutex frame_interval_vector_mutex;
+    const int frame_interval_monitor_period_ms = 5000;
 };
 
 /**

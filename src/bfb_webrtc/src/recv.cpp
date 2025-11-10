@@ -319,19 +319,19 @@ public:
                     if (ratio > high_stutter_threshold) {
                         // Too much stutter -> request lower bitrate
                         int delta = -bitrate_step_kbps;
-                        ctrl["control"]["action"] = "set_bitrate";
+                        ctrl["control"]["action"] = "change_bitrate";
                         ctrl["control"]["stream_id"] = stream_info->stream_id;
                         ctrl["control"]["delta"] = delta;
                         send = true;
-                        RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request bitrate delta %d kbps", ratio, delta);
+                        RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_info->stream_id, ratio, delta);
                     } else if (ratio < low_stutter_threshold) {
                         // Low stutter -> request higher bitrate
                         int delta = bitrate_step_kbps;
-                        ctrl["control"]["action"] = "set_bitrate";
+                        ctrl["control"]["action"] = "change_bitrate";
                         ctrl["control"]["stream_id"] = stream_info->stream_id;
                         ctrl["control"]["delta"] = delta;
                         send = true;
-                        RCLCPP_WARN(this->get_logger(), "High stutter ratio %.3f -> request bitrate delta %d kbps", ratio, delta);
+                        RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_info->stream_id, ratio, delta);
                     }
 
                     if (send) {
@@ -508,8 +508,8 @@ public:
 
             // Add stream_info instance to stream map
             {
-                std::lock_guard<std::mutex> lk(streams_mutex);
-                streams[stream_info->stream_id] = stream_info;
+                std::lock_guard<std::mutex> lk(self->streams_mutex);
+                self->streams[stream_info->stream_id] = stream_info;
             }
         } else {
             RCLCPP_ERROR(self->get_logger(), "Couldn't get transceiver index, skipping stream");

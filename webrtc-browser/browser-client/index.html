@@ -121,15 +121,60 @@
       border-radius: 8px;
       overflow: hidden;
       position: relative;
-      aspect-ratio: 16 / 9;
+      min-height: 400px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 10px;
+      padding: 10px;
     }
 
-    video {
+    /**
+     * Why grid layout:
+     * - Automatically arranges videos in responsive grid
+     * - Adapts to number of streams (1, 2, 3, etc.)
+     * - Works well on different screen sizes
+     */
+    .video-wrapper {
+      background: #1a1a1a;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .video-label {
+      background: #2a2a2a;
+      color: #e0e0e0;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      border-bottom: 1px solid #404040;
+    }
+
+    /**
+     * Why label:
+     * - Identifies which camera each video is from
+     * - Helps when multiple streams are displayed
+     * - Can be enhanced with camera metadata later
+     */
+    .video-wrapper video {
       width: 100%;
       height: 100%;
+      flex: 1;
       display: block;
       object-fit: contain;
+      background: #000;
     }
+
+    /**
+     * Why object-fit: contain:
+     * - Preserves aspect ratio
+     * - Shows full video without cropping
+     * - Works with different camera resolutions
+     */
 
     .video-placeholder {
       position: absolute;
@@ -139,7 +184,15 @@
       color: #666;
       font-size: 18px;
       text-align: center;
+      z-index: 1;
     }
+
+    /**
+     * Why placeholder:
+     * - Shows when no streams are active
+     * - Better UX than empty black screen
+     * - Provides visual feedback
+     */
   </style>
 </head>
 <body>
@@ -163,10 +216,11 @@
       <div class="status status-disconnected" id="status">Disconnected</div>
     </div>
 
-    <div class="video-container">
-      <video id="video" autoplay playsinline></video>
+    <div class="video-container" id="video-container">
       <div class="video-placeholder" id="placeholder">
-        Video stream will appear here
+        Video streams will appear here
+        <br>
+        <small style="color: #888;">Multiple camera streams supported</small>
       </div>
     </div>
   </div>

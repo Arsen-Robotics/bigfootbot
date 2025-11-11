@@ -14,8 +14,38 @@ import { SignalingClient, SignalingMessage } from './signaling-client';
 
 export type WebRTCClientStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+/**
+ * Track information for identifying and managing video tracks
+ * 
+ * Why track ID:
+ * - Each camera stream needs unique identification
+ * - Allows UI to map tracks to specific video elements
+ * - Enables track management (start/stop individual streams)
+ */
+export interface TrackInfo {
+  trackId: string;           // Unique identifier for this track
+  track: MediaStreamTrack;   // The actual media track
+  stream: MediaStream;        // Stream containing this track
+  transceiver?: RTCRtpTransceiver; // WebRTC transceiver (if available)
+}
+
 export interface WebRTCClientCallbacks {
   onStatusChange?: (status: WebRTCClientStatus) => void;
+  /**
+   * Called when a new video track is received
+   * 
+   * Why per-track callback:
+   * - Tracks arrive individually, not all at once
+   * - Allows UI to create video elements as tracks arrive
+   * - Better for dynamic stream handling
+   * 
+   * @param trackInfo Information about the received track
+   */
+  onTrack?: (trackInfo: TrackInfo) => void;
+  /**
+   * Legacy callback for single stream (deprecated, use onTrack instead)
+   * Kept for backward compatibility but will only fire for first track
+   */
   onStream?: (stream: MediaStream) => void;
   onError?: (error: Error) => void;
 }
@@ -33,6 +63,26 @@ export class WebRTCClient {
   private signalingClient: SignalingClient;
   private callbacks: WebRTCClientCallbacks;
   private status: WebRTCClientStatus = 'disconnected';
+  
+  /**
+   * Map of track IDs to track information
+   * 
+   * Why track all tracks:
+   * - Need to manage multiple streams simultaneously
+   * - Allows cleanup of specific tracks
+   * - Enables track lookup by ID
+   */
+  private tracks: Map<string, TrackInfo> = new Map();
+  
+  /**
+   * Counter for generating unique track IDs
+   * 
+   * Why sequential IDs:
+   * - Simple and reliable way to identify tracks
+   * - Tracks arrive in order from sender (usually)
+   * - Can be enhanced later with metadata from signaling
+   */
+  private trackIdCounter = 0;
 
   /**
    * @param signalingClient Signaling client for SDP/ICE exchange
@@ -69,14 +119,89 @@ export class WebRTCClient {
 
     const pc = new RTCPeerConnection(configuration);
 
-    // Handle incoming media streams
-    // Why: When remote stream is added, we get the video track
+    /**
+     * Handle incoming media tracks
+     * 
+     * Why handle each track individually:
+     * - Multiple cameras send multiple tracks in same connection
+     * - Each track arrives via separate ontrack event
+     * - Need to process each track separately to display all cameras
+     * 
+     * Why track transceiver:
+     * - Provides metadata about the track (mid, direction, etc.)
+     * - Can be used for track identification if mid is available
+     * - Useful for debugging and track management
+     */
     pc.ontrack = (event) => {
-      console.log('[WebRTC] Received remote track:', event.track.kind);
-      if (event.streams && event.streams[0]) {
-        this.setStatus('connected');
-        this.callbacks.onStream?.(event.streams[0]);
+      const track = event.track;
+      const stream = event.streams[0]; // Get first stream (usually only one per track)
+      
+      console.log('[WebRTC] Received remote track:', track.kind, {
+        id: track.id,
+        label: track.label,
+        enabled: track.enabled,
+        readyState: track.readyState
+      });
+
+      // Generate unique track ID
+      // Why: Need consistent ID for track management
+      // Priority: Use transceiver mid if available, otherwise generate sequential ID
+      const transceiver = event.transceiver;
+      let trackId: string;
+      
+      if (transceiver && transceiver.mid) {
+        // Use media section ID from SDP if available
+        // Why: Matches sender's track identification
+        trackId = transceiver.mid;
+        console.log('[WebRTC] Using transceiver mid as track ID:', trackId);
+      } else {
+        // Generate sequential ID
+        // Why: Fallback when mid is not available
+        trackId = `track-${this.trackIdCounter++}`;
+        console.log('[WebRTC] Generated track ID:', trackId);
       }
+
+      // Create track info object
+      // Why: Bundle all track-related information together
+      const trackInfo: TrackInfo = {
+        trackId,
+        track,
+        stream: stream || new MediaStream([track]), // Ensure stream exists
+        transceiver
+      };
+
+      // Store track for later reference
+      // Why: Need to track all active streams for cleanup and management
+      this.tracks.set(trackId, trackInfo);
+
+      // Update connection status when first track arrives
+      // Why: Consider connected when we receive at least one video stream
+      if (this.status !== 'connected') {
+        this.setStatus('connected');
+      }
+
+      // Notify callback about new track
+      // Why: UI needs to create video element for this track
+      this.callbacks.onTrack?.(trackInfo);
+
+      // Legacy callback support (only fires for first track)
+      // Why: Backward compatibility, but deprecated
+      if (this.tracks.size === 1 && this.callbacks.onStream) {
+        console.log('[WebRTC] Firing legacy onStream callback for first track');
+        this.callbacks.onStream(trackInfo.stream);
+      }
+
+      // Handle track ended event
+      // Why: Track might stop (camera disconnects, etc.)
+      track.onended = () => {
+        console.log('[WebRTC] Track ended:', trackId);
+        this.tracks.delete(trackId);
+        
+        // Update status if no tracks remain
+        if (this.tracks.size === 0) {
+          this.setStatus('disconnected');
+        }
+      };
     };
 
     // Handle ICE candidates
@@ -231,13 +356,28 @@ export class WebRTCClient {
    * - Closes peer connection properly
    * - Stops all tracks to free resources
    * - Prevents memory leaks
+   * - Clears track tracking map
    */
   disconnect(): void {
     if (this.peerConnection) {
-      // Close all tracks
+      // Stop all tracks
+      // Why: Release media resources and stop video decoding
       this.peerConnection.getReceivers().forEach(receiver => {
-        receiver.track.stop();
+        if (receiver.track) {
+          receiver.track.stop();
+        }
       });
+
+      // Also stop tracks from our tracking map
+      // Why: Ensure all tracks are stopped, even if not in receivers
+      this.tracks.forEach(trackInfo => {
+        trackInfo.track.stop();
+      });
+
+      // Clear track tracking
+      // Why: Reset state for next connection
+      this.tracks.clear();
+      this.trackIdCounter = 0;
 
       // Close peer connection
       this.peerConnection.close();
@@ -246,6 +386,26 @@ export class WebRTCClient {
 
     this.setStatus('disconnected');
     console.log('[WebRTC] Disconnected');
+  }
+
+  /**
+   * Get all active tracks
+   * 
+   * Why: Allows UI to query active streams
+   * - Useful for displaying stream count
+   * - Enables track management UI
+   */
+  getTracks(): TrackInfo[] {
+    return Array.from(this.tracks.values());
+  }
+
+  /**
+   * Get track count
+   * 
+   * Why: Quick way to check how many streams are active
+   */
+  getTrackCount(): number {
+    return this.tracks.size;
   }
 
   /**

@@ -201,9 +201,11 @@ public:
                 const auto& info = jsonMsg["info"];
                 std::string type = info["type"].asString();
 
-                if (type == "frame_interval_ns") {
+                if (type == "frame_interval") {
                     int stream_id = info["stream_id"].asInt();
-                    uint64_t frame_interval_ns = info["frame_interval_ns"].asInt();
+                    uint64_t frame_interval_ns = info["frame_interval_ns"].asUInt64();
+
+                    RCLCPP_INFO(this->get_logger(), "Stream %d frame_interval %lu", stream_id, frame_interval_ns);
 
                     // Lock the streams map
                     std::lock_guard<std::mutex> lk(streams_mutex);
@@ -352,7 +354,7 @@ public:
                 ctrl["control"]["stream_id"] = stream_id;
                 ctrl["control"]["delta"] = delta;
                 send = true;
-                RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
+                RCLCPP_WARN(this->get_logger(), "Stream %d: Low stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
             }
 
             if (send) {
@@ -749,7 +751,7 @@ private:
     const double stutter_multiplier = 1.1; // multiplier for PTS interval threshold
     const int stutter_monitor_period_ms = 2000;    // monitor period in ms
     const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
-    const double low_stutter_threshold = 0.01;  // if <1% stutter -> increase bitrate
+    const double low_stutter_threshold = 0.04;  // if <1% stutter -> increase bitrate
     const int bitrate_step_kbps = 100;     // amount to change bitrate by (kbps)
 };
 

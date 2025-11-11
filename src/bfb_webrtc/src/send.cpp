@@ -395,10 +395,6 @@ public:
 
             RCLCPP_INFO(this->get_logger(), "Transceiver created for stream %d", pipeline_stream_index);
 
-            // Only increment if transceiver has actually been created
-            pipeline_stream_index++;
-            gst_object_unref(transceiver);
-
             // Store stream ID in an instance of frame_interval_info
             FrameIntervalInfo* frame_interval_info = new FrameIntervalInfo();
             frame_interval_info->stream_id = pipeline_stream_index;
@@ -412,6 +408,16 @@ public:
             // Create frame callback probe
             gst_pad_add_probe(enc_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, this, nullptr);
             gst_object_unref(enc_srcpad);
+
+            // Add frame_interval_info instance to frame_intervals vector
+            {
+                std::lock_guard<std::mutex> lk(frame_intervals_vector_mutex);
+                frame_intervals.push_back(frame_interval_info);
+            }
+
+            // Only increment if transceiver has actually been created
+            pipeline_stream_index++;
+            gst_object_unref(transceiver);
         } else {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get transceiver for stream %d.", pipeline_stream_index);
         }
@@ -482,7 +488,7 @@ public:
     }
 
     void frame_interval_monitor_callback() {
-        std::lock_guard<std::mutex> lk(frame_interval_vector_mutex);
+        std::lock_guard<std::mutex> lk(frame_intervals_vector_mutex);
 
         for (auto& frame_interval_info : frame_intervals) {
             if (!frame_interval_info) continue;
@@ -856,11 +862,11 @@ private:
 
     std::mutex frame_interval_struct_mutex;
     rclcpp::TimerBase::SharedPtr frame_interval_monitor_timer;
-    const int interval_ewma_alpha = 0.1;
+    const double interval_ewma_alpha = 0.1;
 
     // Vector of frame interval info instances
     std::vector<FrameIntervalInfo*> frame_intervals;
-    std::mutex frame_interval_vector_mutex;
+    std::mutex frame_intervals_vector_mutex;
     const int frame_interval_monitor_period_ms = 5000;
 };
 

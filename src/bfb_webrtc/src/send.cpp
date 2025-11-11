@@ -410,7 +410,7 @@ public:
                 [](gpointer data){ delete static_cast<FrameIntervalInfo*>(data); });
             
             // Create frame callback probe
-            gst_pad_add_probe(enc_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, self, nullptr);
+            gst_pad_add_probe(enc_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, this, nullptr);
             gst_object_unref(enc_srcpad);
         } else {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not get transceiver for stream %d.", pipeline_stream_index);
@@ -425,7 +425,7 @@ public:
         WebRTCSendNode* self = static_cast<WebRTCSendNode*>(user_data);
 
         // Retrieve frame interval info
-        FrameIntervalInfo* frame_interval_info = static_cast<StreamInfo*>(
+        FrameIntervalInfo* frame_interval_info = static_cast<FrameIntervalInfo*>(
             g_object_get_qdata(G_OBJECT(pad), FRAME_INTERVAL_INFO_QUARK)
         );
 
@@ -485,7 +485,7 @@ public:
         std::lock_guard<std::mutex> lk(frame_interval_vector_mutex);
 
         for (auto& frame_interval_info : frame_intervals) {
-            if (!stream_info) continue;
+            if (!frame_interval_info) continue;
 
             // Get EWMA frame interval
             int stream_id = -1;
@@ -504,7 +504,7 @@ public:
 
             info["info"]["type"] = "frame_interval";
             info["info"]["stream_id"] = stream_id;
-            info["info"]["frame_interval_ns"] = ewma_frame_interval_ns;
+            info["info"]["frame_interval_ns"] = Json::Value(Json::UInt64(ewma_frame_interval_ns));
             send = true;
             RCLCPP_WARN(this->get_logger(), "Stream %d: EWMA frame interval %d ns", stream_id, ewma_frame_interval_ns);
 
@@ -582,9 +582,9 @@ public:
     //     );
     // }
 
-    void change_bitrate(int stream_id, int delta) {
+    void change_bitrate(int stream_id, int delta_kpbs) {
         // Create a lambda that will execute the bitrate change
-        auto func = [this, stream_id, delta]() {
+        auto func = [this, stream_id, delta_kpbs]() {
             // Find the encoder corresponding to stream_id
             auto it = encoders.find(stream_id);
             if (it == encoders.end() || it->second == nullptr) {
@@ -601,7 +601,7 @@ public:
             g_object_get(G_OBJECT(encoder), "bitrate", &current_bitrate, nullptr);
 
             // Calculate new bitrate
-            int new_bitrate = current_bitrate + delta;
+            int new_bitrate = current_bitrate + delta_kpbs * 1000; // conver kbps to bps
 
             // Clamp new bitrate within allowed range
             new_bitrate = std::max(min_bitrate, std::min(new_bitrate, max_bitrate));

@@ -117,7 +117,7 @@ services:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/root/.Xauthority
       - QT_X11_NO_MITSHM=0 # Enable MIT-SHM for better performance
-      - LIBVA_DRIVER_NAME=
+      - LIBVA_DRIVER_NAME=i965
       - XDG_RUNTIME_DIR=/tmp/runtime-root
 
     # Map all devices from host to container
@@ -129,6 +129,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # Allow access to X11
       - $HOME/.Xauthority:/root/.Xauthority:ro  # Allow access to X11
       - /dev/shm:/dev/shm
+      - /dev/dri:/dev/dri
 
     devices:
       - /dev/dri:/dev/dri

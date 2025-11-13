@@ -502,17 +502,146 @@ public:
     /**
      * @brief Callback for handling incoming media streams
      */
+    // static void on_incoming_stream(GstElement* webrtcbin, GstPad* pad, WebRTCRecvNode* self) {
+    //     RCLCPP_INFO(self->get_logger(), "Received incoming stream.");
+
+    //     GstCaps* caps = gst_pad_get_current_caps(pad);
+    //     if (!caps) return;
+
+    //     const GstStructure* str = gst_caps_get_structure(caps, 0);
+    //     const gchar* media_type = gst_structure_get_name(str);
+
+    //     // Create new StreamInfo to store stream_id and later pass it to the frame probe
+    //     StreamInfo* stream_info = new StreamInfo();
+
+    //     // Pad name is "src_N" where N is the transceiver index
+    //     const gchar* pad_name = gst_pad_get_name(pad);
+    //     RCLCPP_INFO(self->get_logger(), "Pad name: %s", pad_name);
+        
+    //     int transceiver_index;
+    //     if (sscanf(pad_name, "src_%d", &transceiver_index) == 1) {
+    //         RCLCPP_INFO(self->get_logger(), "Transceiver index: %d", transceiver_index);
+            
+    //         // Store transceiver index (stream_id) on pad
+    //         stream_info->stream_id = transceiver_index;
+
+    //         // Attach stream info to pad
+    //         // g_object_set_qdata(G_OBJECT(decodebin),
+    //         //     STREAM_INFO_QUARK,
+    //         //     stream_info);
+
+    //         // Add stream_info instance to stream map
+    //         {
+    //             std::lock_guard<std::mutex> lk(self->streams_mutex);
+    //             self->streams[stream_info->stream_id] = stream_info;
+    //         }
+    //     } else {
+    //         RCLCPP_ERROR(self->get_logger(), "Couldn't get transceiver index, skipping stream");
+    //         return;
+    //     }
+
+    //     if (g_str_has_prefix(media_type, "application/x-rtp")) {
+    //         const gchar* encoding = gst_structure_get_string(str, "encoding-name");
+
+    //         GstElement* depay = nullptr;
+    //         GstElement* decoder = nullptr;
+    //         GstElement* queue = nullptr;
+    //         GstElement* conv = nullptr;
+    //         GstElement* sink = nullptr;
+
+    //         if (g_str_equal(encoding, "H264")) {
+    //             g_object_set(self->webrtcbin, "latency", 0, NULL);
+
+    //             // Create elements
+    //             depay = gst_element_factory_make("rtph264depay", nullptr);
+    //             decoder = gst_element_factory_make("avdec_h264", nullptr); // hardware decoder
+    //             queue = gst_element_factory_make("queue", nullptr);
+    //             conv = gst_element_factory_make("videoconvert", nullptr);
+    //             sink = gst_element_factory_make("xvimagesink", nullptr);
+
+    //             if (!depay || !decoder || !queue || !conv || !sink) {
+    //                 RCLCPP_ERROR(self->get_logger(), "Failed to create one or more elements");
+    //                 return;
+    //             }
+
+    //             // Configure queue
+    //             g_object_set(queue,
+    //                 "max-size-buffers", 20,
+    //                 "max-size-time", G_GUINT64_CONSTANT(0),
+    //                 "max-size-bytes", 0,
+    //                 "leaky", 2, // downstream
+    //                 "silent", TRUE,
+    //                 "flush-on-eos", TRUE,
+    //                 NULL);
+
+    //             // Configure converter
+    //             g_object_set(conv,
+    //                 "qos", TRUE, // Enable QoS
+    //                 // "n-threads", 2, // Use multiple threads for conversion
+    //                 NULL);
+                    
+    //             // Configure sink
+    //             g_object_set(sink,
+    //                 "sync", FALSE,
+    //                 "max-lateness", 33333333, // 1 frame interval
+    //                 "qos", TRUE, // Enable QoS
+    //                 NULL);
+
+    //             // Add elements to pipeline
+    //             gst_bin_add_many(GST_BIN(self->pipeline), depay, decoder, queue, conv, sink, nullptr);
+    //             gst_element_sync_state_with_parent(depay);
+    //             gst_element_sync_state_with_parent(decoder);
+    //             gst_element_sync_state_with_parent(queue);
+    //             gst_element_sync_state_with_parent(conv);
+    //             gst_element_sync_state_with_parent(sink);
+
+    //             // Link webrtcbin src pad to depayloader sink pad
+    //             GstPad* depay_sink_pad = gst_element_get_static_pad(depay, "sink");
+    //             if (gst_pad_link(pad, depay_sink_pad) != GST_PAD_LINK_OK) {
+    //                 RCLCPP_ERROR(self->get_logger(), "Failed to link webrtcbin src pad to depayloader!");
+    //                 gst_object_unref(depay_sink_pad);
+    //                 return;
+    //             }
+    //             gst_object_unref(depay_sink_pad);
+
+    //             // Link rest of the elements: depay → decoder → queue → conv → sink
+    //             if (!gst_element_link_many(depay, decoder, queue, conv, sink, nullptr)) {
+    //                 RCLCPP_ERROR(self->get_logger(), "Failed to link elements!");
+    //                 return;
+    //             }
+
+    //             // GstPad* sinkpad;
+    //             // GstElement* decodebin = gst_element_factory_make("decodebin", nullptr);
+    //             // gst_bin_add(GST_BIN(self->pipeline), decodebin);
+    //             // gst_element_sync_state_with_parent(decodebin);
+
+    //             // Add stutter monitoring probe on sink pad of sink element
+    //             GstPad* sinkpad = gst_element_get_static_pad(sink, "sink");
+    //             if (sinkpad) {
+    //                 // Store nominal frame interval on pad for probe use
+    //                 //stream_info->nominal_frame_interval_ns = nominal_frame_interval_ns;
+
+    //                 // Attach stream info to pad
+    //                 g_object_set_qdata_full(G_OBJECT(sinkpad),
+    //                     STREAM_INFO_QUARK,
+    //                     stream_info,
+    //                     [](gpointer data){ delete static_cast<StreamInfo*>(data); });
+
+    //                 // Add probe
+    //                 gst_pad_add_probe(sinkpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
+    //                 gst_object_unref(sinkpad);
+    //             }
+    //         }
+    //     }
+    //     gst_caps_unref(caps);
+    // }
     static void on_incoming_stream(GstElement* webrtcbin, GstPad* pad, WebRTCRecvNode* self) {
         RCLCPP_INFO(self->get_logger(), "Received incoming stream.");
 
-        GstCaps* caps = gst_pad_get_current_caps(pad);
-        if (!caps) return;
-
-        const GstStructure* str = gst_caps_get_structure(caps, 0);
-        const gchar* media_type = gst_structure_get_name(str);
-
-        // Create new StreamInfo to store stream_id and later pass it to the frame probe
-        StreamInfo* stream_info = new StreamInfo();
+        GstPad* sinkpad;
+        GstElement* decodebin = gst_element_factory_make("vaapidecodebin", nullptr);
+        gst_bin_add(GST_BIN(self->pipeline), decodebin);
+        gst_element_sync_state_with_parent(decodebin);
 
         // Pad name is "src_N" where N is the transceiver index
         const gchar* pad_name = gst_pad_get_name(pad);
@@ -523,12 +652,13 @@ public:
             RCLCPP_INFO(self->get_logger(), "Transceiver index: %d", transceiver_index);
             
             // Store transceiver index (stream_id) on pad
+            StreamInfo* stream_info = new StreamInfo();
             stream_info->stream_id = transceiver_index;
 
             // Attach stream info to pad
-            // g_object_set_qdata(G_OBJECT(decodebin),
-            //     STREAM_INFO_QUARK,
-            //     stream_info);
+            g_object_set_qdata(G_OBJECT(decodebin),
+                STREAM_INFO_QUARK,
+                stream_info);
 
             // Add stream_info instance to stream map
             {
@@ -540,100 +670,11 @@ public:
             return;
         }
 
-        if (g_str_has_prefix(media_type, "application/x-rtp")) {
-            const gchar* encoding = gst_structure_get_string(str, "encoding-name");
+        g_signal_connect(decodebin, "pad-added", G_CALLBACK(on_decodebin_pad_added), self);
 
-            GstElement* depay = nullptr;
-            GstElement* decoder = nullptr;
-            GstElement* queue = nullptr;
-            GstElement* conv = nullptr;
-            GstElement* sink = nullptr;
-
-            if (g_str_equal(encoding, "H264")) {
-                g_object_set(self->webrtcbin, "latency", 0, NULL);
-
-                // Create elements
-                depay = gst_element_factory_make("rtph264depay", nullptr);
-                decoder = gst_element_factory_make("avdec_h264", nullptr); // hardware decoder
-                queue = gst_element_factory_make("queue", nullptr);
-                conv = gst_element_factory_make("videoconvert", nullptr);
-                sink = gst_element_factory_make("xvimagesink", nullptr);
-
-                if (!depay || !decoder || !queue || !conv || !sink) {
-                    RCLCPP_ERROR(self->get_logger(), "Failed to create one or more elements");
-                    return;
-                }
-
-                // Configure queue
-                g_object_set(queue,
-                    "max-size-buffers", 20,
-                    "max-size-time", G_GUINT64_CONSTANT(0),
-                    "max-size-bytes", 0,
-                    "leaky", 2, // downstream
-                    "silent", TRUE,
-                    "flush-on-eos", TRUE,
-                    NULL);
-
-                // Configure converter
-                g_object_set(conv,
-                    "qos", TRUE, // Enable QoS
-                    // "n-threads", 2, // Use multiple threads for conversion
-                    NULL);
-                    
-                // Configure sink
-                g_object_set(sink,
-                    "sync", FALSE,
-                    "max-lateness", 33333333, // 1 frame interval
-                    "qos", TRUE, // Enable QoS
-                    NULL);
-
-                // Add elements to pipeline
-                gst_bin_add_many(GST_BIN(self->pipeline), depay, decoder, queue, conv, sink, nullptr);
-                gst_element_sync_state_with_parent(depay);
-                gst_element_sync_state_with_parent(decoder);
-                gst_element_sync_state_with_parent(queue);
-                gst_element_sync_state_with_parent(conv);
-                gst_element_sync_state_with_parent(sink);
-
-                // Link webrtcbin src pad to depayloader sink pad
-                GstPad* depay_sink_pad = gst_element_get_static_pad(depay, "sink");
-                if (gst_pad_link(pad, depay_sink_pad) != GST_PAD_LINK_OK) {
-                    RCLCPP_ERROR(self->get_logger(), "Failed to link webrtcbin src pad to depayloader!");
-                    gst_object_unref(depay_sink_pad);
-                    return;
-                }
-                gst_object_unref(depay_sink_pad);
-
-                // Link rest of the elements: depay → decoder → queue → conv → sink
-                if (!gst_element_link_many(depay, decoder, queue, conv, sink, nullptr)) {
-                    RCLCPP_ERROR(self->get_logger(), "Failed to link elements!");
-                    return;
-                }
-
-                // GstPad* sinkpad;
-                // GstElement* decodebin = gst_element_factory_make("decodebin", nullptr);
-                // gst_bin_add(GST_BIN(self->pipeline), decodebin);
-                // gst_element_sync_state_with_parent(decodebin);
-
-                // Add stutter monitoring probe on sink pad of sink element
-                GstPad* sinkpad = gst_element_get_static_pad(sink, "sink");
-                if (sinkpad) {
-                    // Store nominal frame interval on pad for probe use
-                    //stream_info->nominal_frame_interval_ns = nominal_frame_interval_ns;
-
-                    // Attach stream info to pad
-                    g_object_set_qdata_full(G_OBJECT(sinkpad),
-                        STREAM_INFO_QUARK,
-                        stream_info,
-                        [](gpointer data){ delete static_cast<StreamInfo*>(data); });
-
-                    // Add probe
-                    gst_pad_add_probe(sinkpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
-                    gst_object_unref(sinkpad);
-                }
-            }
-        }
-        gst_caps_unref(caps);
+        sinkpad = gst_element_get_static_pad(decodebin, "sink");
+        gst_pad_link(pad, sinkpad);
+        gst_object_unref(sinkpad);
     }
 
     /**

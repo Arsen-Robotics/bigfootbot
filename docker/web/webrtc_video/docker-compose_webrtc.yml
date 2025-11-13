@@ -117,7 +117,9 @@ services:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/root/.Xauthority
       - QT_X11_NO_MITSHM=0 # Enable MIT-SHM for better performance
-      - LIBVA_DRIVER_NAME=i965
+      - LIBVA_DRIVER_NAME=iHD # LIBVA_DRIVER_NAME=
+      # - LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+      # - GST_VAAPI_DISPLAY=drm
       - XDG_RUNTIME_DIR=/tmp/runtime-root
 
     # Map all devices from host to container
@@ -130,6 +132,7 @@ services:
       - $HOME/.Xauthority:/root/.Xauthority:ro  # Allow access to X11
       - /dev/shm:/dev/shm
       - /dev/dri:/dev/dri
+      # - /dev/dri/renderD128:/dev/dri/renderD128
 
     devices:
       - /dev/dri:/dev/dri

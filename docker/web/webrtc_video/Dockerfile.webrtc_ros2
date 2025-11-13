@@ -31,12 +31,11 @@ COPY src/bfb_webrtc ${ROS_WS}/src/bfb_webrtc
 RUN apt-get update \
     && apt install -y gstreamer1.0-x libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev libsoup2.4-dev libjson-glib-dev \
-    libnice-dev autoconf libtool gtk-doc-tools libglib2.0-dev gstreamer1.0-nice libssl-dev \
+    libnice-dev gstreamer1.0-nice libssl-dev vainfo i965-va-driver intel-media-va-driver gstreamer1.0-vaapi \
     libreadline-dev gstreamer1.0-plugins-ugly libsrtp2-dev gstreamer1.0-plugins-good libjsoncpp-dev \
     gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
     gstreamer1.0-qt5 gstreamer1.0-pulseaudio nlohmann-json3-dev libwebsocketpp-dev libboost-dev \
-    python3-gi python3-gi-cairo gir1.2-gstreamer-1.0 wget ros-${ROS_DISTRO}-cv-bridge \
-    gstreamer1.0-libav vainfo i965-va-driver intel-media-va-driver
+    python3-gi python3-gi-cairo gir1.2-gstreamer-1.0 wget ros-${ROS_DISTRO}-cv-bridge
 
 # Install pip
 RUN cd / \

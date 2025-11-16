@@ -270,12 +270,12 @@ public:
                     int framerate,
                     int bitrate) {
         // Create GStreamer elements for the stream
-        GstElement *src, *capsfilter0, *convert, *capsfilter1, *queue0, *encoder, *queue1, *parse, *payloader, *capsfilter2;
+        GstElement *src, *queue0, *capsfilter0, *convert, *capsfilter1, *queue1, *encoder, *queue2, *parse, *payloader, *capsfilter2;
 
         // Source
         if (src_type == "v4l2src") {
             src = gst_element_factory_make("v4l2src", NULL);
-            g_object_set(G_OBJECT(src), "device", device.c_str(), NULL);
+            g_object_set(G_OBJECT(src), "device", device.c_str(), "io-mode", 2, NULL);
         } else if (src_type == "argus") {
             src = gst_element_factory_make("nvarguscamerasrc", NULL);
             g_object_set(G_OBJECT(src), "sensor-mode", 3, NULL);
@@ -305,6 +305,10 @@ public:
             g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
             gst_caps_unref(caps0);
         }
+
+        // Queue after camera source
+        queue0 = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(queue0), "max-size-buffers", 15, "leaky", 2, NULL); // downstream leaky
         
         // Converter
         convert = gst_element_factory_make("nvvidconv", NULL);
@@ -323,8 +327,8 @@ public:
         gst_caps_unref(caps1);
 
         // Queue before encoder
-        queue0 = gst_element_factory_make("queue", NULL);
-        g_object_set(G_OBJECT(queue0), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
+        queue1 = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(queue1), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
 
         // Encoder
         std::string enc_name = "enc" + std::to_string(pipeline_stream_index);
@@ -346,8 +350,8 @@ public:
         GstPad* enc_srcpad = gst_element_get_static_pad(encoder, "src");
 
         // Queue after encoder
-        queue1 = gst_element_factory_make("queue", NULL);
-        g_object_set(G_OBJECT(queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
+        queue2 = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(queue2), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
 
         // Parser
         parse = gst_element_factory_make("h264parse", NULL);
@@ -373,12 +377,12 @@ public:
         gst_caps_unref(caps2);
 
         // Add elements to pipeline
-        gst_bin_add_many(GST_BIN(pipeline), src, capsfilter0, convert, capsfilter1, 
-                         queue0, encoder, queue1, parse, payloader, capsfilter2, NULL);
+        gst_bin_add_many(GST_BIN(pipeline), src, capsfilter0, queue0, convert, capsfilter1, 
+                         queue1, encoder, queue2, parse, payloader, capsfilter2, NULL);
         
         // Link elements
-        gst_element_link_many(src, capsfilter0, convert, capsfilter1, 
-                              queue0, encoder, queue1, parse, payloader, capsfilter2, NULL);
+        gst_element_link_many(src, capsfilter0, queue0, convert, capsfilter1, 
+                              queue1, encoder, queue2, parse, payloader, capsfilter2, NULL);
 
         // Link to webrtcbin
         GstPad* pay_src = gst_element_get_static_pad(capsfilter2, "src");

@@ -275,7 +275,7 @@ public:
         // Source
         if (src_type == "v4l2src") {
             src = gst_element_factory_make("v4l2src", NULL);
-            g_object_set(G_OBJECT(src), "device", device.c_str(), "io-mode", 2, NULL);
+            g_object_set(G_OBJECT(src), "device", device.c_str(), "io-mode", 4, NULL);
         } else if (src_type == "argus") {
             src = gst_element_factory_make("nvarguscamerasrc", NULL);
             g_object_set(G_OBJECT(src), "sensor-mode", 3, NULL);

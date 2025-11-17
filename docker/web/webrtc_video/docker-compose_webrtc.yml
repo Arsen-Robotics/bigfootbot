@@ -117,7 +117,7 @@ services:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/root/.Xauthority
       - QT_X11_NO_MITSHM=0 # Enable MIT-SHM for better performance
-      - LIBVA_DRIVER_NAME=iHD # LIBVA_DRIVER_NAME=
+      - LIBVA_DRIVER_NAME= # LIBVA_DRIVER_NAME=iHD
       # - LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
       # - GST_VAAPI_DISPLAY=drm
       - XDG_RUNTIME_DIR=/tmp/runtime-root

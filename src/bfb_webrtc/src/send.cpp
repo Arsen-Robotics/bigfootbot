@@ -560,9 +560,10 @@ public:
         gst_bin_add(GST_BIN(pipeline), webrtcbin);
 
         // Add media streams to the pipeline
-        add_stream("argus", "", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/cam-arducam", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/cam-aveo", 640, 480, 30, 2000000);
+        // add_stream("argus", "", 640, 480, 30, 2000000);
+        // add_stream("v4l2src", "/dev/cam-arducam", 640, 480, 30, 2000000);
+        // add_stream("v4l2src", "/dev/cam-aveo", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/video11", 640, 480, 30, 2000000);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 

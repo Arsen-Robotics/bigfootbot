@@ -265,12 +265,13 @@ public:
 
     void add_stream(const std::string& src_type,
                     const std::string& device,
+                    const std::string& format,
                     int width,
                     int height,
                     int framerate,
                     int bitrate) {
         // Create GStreamer elements for the stream
-        GstElement *src, *queue0, *capsfilter0, *convert, *capsfilter1, *queue1, *encoder, *queue2, *parse, *payloader, *capsfilter2;
+        GstElement *src, *queue0, *capsfilter0, *jpegdec_stage, *convert, *capsfilter1, *queue1, *encoder, *queue2, *parse, *payloader, *capsfilter2;
 
         // Source
         if (src_type == "v4l2src") {
@@ -284,7 +285,7 @@ public:
         // 1st caps filter - after camera source
         capsfilter0 = gst_element_factory_make("capsfilter", NULL);
         if (src_type == "v4l2src") {
-            GstCaps* caps0 = gst_caps_new_simple("video/x-raw",
+            GstCaps* caps0 = gst_caps_new_simple(format.c_str(),
                                                 "width", G_TYPE_INT, width,
                                                 "height", G_TYPE_INT, height,
                                                 "framerate", GST_TYPE_FRACTION, framerate, 1,
@@ -292,7 +293,7 @@ public:
             g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
             gst_caps_unref(caps0);
         } else if (src_type == "argus") {
-            GstCaps* caps0 = gst_caps_new_simple("video/x-raw",
+            GstCaps* caps0 = gst_caps_new_simple(format.c_str(),
                                                 "width", G_TYPE_INT, width,
                                                 "height", G_TYPE_INT, height,
                                                 "framerate", GST_TYPE_FRACTION, framerate, 1,
@@ -310,6 +311,14 @@ public:
         queue0 = gst_element_factory_make("queue", NULL);
         g_object_set(G_OBJECT(queue0), "max-size-buffers", 15, "leaky", 2, NULL); // downstream leaky
         
+        // JPEG decoder (only create if stream is JPEG)
+        if (format == "image/jpeg") {
+            jpegdec_stage = gst_element_factory_make("nvv4l2decoder", NULL);
+            g_object_set(G_OBJECT(jpegdec_stage), "mjpeg", 1, NULL);
+        } else {
+            jpegdec_stage = gst_element_factory_make("identity", NULL); // do nothing
+        }
+
         // Converter
         convert = gst_element_factory_make("nvvidconv", NULL);
 
@@ -377,11 +386,11 @@ public:
         gst_caps_unref(caps2);
 
         // Add elements to pipeline
-        gst_bin_add_many(GST_BIN(pipeline), src, capsfilter0, queue0, convert, capsfilter1, 
+        gst_bin_add_many(GST_BIN(pipeline), src, capsfilter0, queue0, jpegdec_stage, convert, capsfilter1, 
                          queue1, encoder, queue2, parse, payloader, capsfilter2, NULL);
         
         // Link elements
-        gst_element_link_many(src, capsfilter0, queue0, convert, capsfilter1, 
+        gst_element_link_many(src, capsfilter0, queue0, jpegdec_stage, convert, capsfilter1, 
                               queue1, encoder, queue2, parse, payloader, capsfilter2, NULL);
 
         // Link to webrtcbin
@@ -560,10 +569,10 @@ public:
         gst_bin_add(GST_BIN(pipeline), webrtcbin);
 
         // Add media streams to the pipeline
-        // add_stream("argus", "", 640, 480, 30, 2000000);
-        // add_stream("v4l2src", "/dev/cam-arducam", 640, 480, 30, 2000000);
-        // add_stream("v4l2src", "/dev/cam-aveo", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/video11", 640, 480, 30, 2000000);
+        add_stream("argus", "", "video/x-raw", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/cam-arducam", "image/jpeg", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/cam-aveo", "video/x-raw", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/video9", "video/x-raw", 640, 480, 30, 2000000);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 

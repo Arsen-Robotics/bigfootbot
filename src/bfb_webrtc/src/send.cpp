@@ -282,6 +282,9 @@ public:
             g_object_set(G_OBJECT(src), "sensor-mode", 3, NULL);
         }
 
+        // Get the src pad of source element
+        GstPad* src_srcpad = gst_element_get_static_pad(src, "src");
+
         // 1st caps filter - after camera source
         capsfilter0 = gst_element_factory_make("capsfilter", NULL);
         if (src_type == "v4l2src") {
@@ -355,9 +358,6 @@ public:
                  "EnableTwopassCBR", 0,
                  NULL);
 
-        // Get the src pad of encoder element
-        GstPad* enc_srcpad = gst_element_get_static_pad(encoder, "src");
-
         // Queue after encoder
         queue2 = gst_element_factory_make("queue", NULL);
         g_object_set(G_OBJECT(queue2), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
@@ -413,14 +413,14 @@ public:
             frame_interval_info->stream_id = pipeline_stream_index;
 
             // Attach frame interval info to pad
-            g_object_set_qdata_full(G_OBJECT(enc_srcpad),
+            g_object_set_qdata_full(G_OBJECT(src_srcpad),
                 FRAME_INTERVAL_INFO_QUARK,
                 frame_interval_info,
                 [](gpointer data){ delete static_cast<FrameIntervalInfo*>(data); });
             
             // Create frame callback probe
-            gst_pad_add_probe(enc_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, this, nullptr);
-            gst_object_unref(enc_srcpad);
+            gst_pad_add_probe(src_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, this, nullptr);
+            gst_object_unref(src_srcpad);
 
             // Add frame_interval_info instance to frame_intervals vector
             {
@@ -448,56 +448,47 @@ public:
             g_object_get_qdata(G_OBJECT(pad), FRAME_INTERVAL_INFO_QUARK)
         );
 
-        // If this probe info doesn't contain a buffer, return
+        // Only process buffers
         if (!(GST_PAD_PROBE_INFO_TYPE(info) & GST_PAD_PROBE_TYPE_BUFFER)) {
             return GST_PAD_PROBE_OK;
         }
 
-        // Get the buffer (frame)
-        GstBuffer* buffer = GST_PAD_PROBE_INFO_BUFFER(info);
-        if (!buffer) return GST_PAD_PROBE_OK;
-        
-        // Retrieve PTS from buffer
-        if (!GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buffer))) {
-            return GST_PAD_PROBE_OK;
-        }
+        // Get current time point from system_clock (wall clock) in ns
+        auto now = std::chrono::system_clock::now();
+        int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 
-        // Get PTS in nanoseconds
-        uint64_t pts_ns = GST_BUFFER_PTS(buffer);
+        // Lock the mutex to access frame interval info
+        std::lock_guard<std::mutex> lk(self->frame_interval_struct_mutex);
 
         // Interval between frames' PTSs in nanoseconds
         uint64_t interval_ns = 0;
+        
+        if (frame_interval_info->have_last_ts) {
+            interval_ns = now_ns - frame_interval_info->last_frame_ts_ns;
+        } else {
+            // First frame received, can't compute interval yet
+            frame_interval_info->last_frame_ts_ns = now_ns;
+            frame_interval_info->have_last_ts = true;
 
-        {
-            std::lock_guard<std::mutex> lk(self->frame_interval_struct_mutex);
-            
-            if (frame_interval_info->have_last_pts) {
-                interval_ns = pts_ns - frame_interval_info->last_frame_pts_ns;
-            } else {
-                // First frame received, can't compute interval yet
-                frame_interval_info->last_frame_pts_ns = pts_ns;
-                frame_interval_info->have_last_pts = true;
-
-                // Don't process further for first frame
-                return GST_PAD_PROBE_OK;
-            }
-
-            // Update last frame PTS
-            frame_interval_info->last_frame_pts_ns = pts_ns;
-
-            // If interval is non-positive, return
-            if (interval_ns <= 0) return GST_PAD_PROBE_OK;
-
-            if (frame_interval_info->ewma_frame_interval_ns == 0) {
-                frame_interval_info->ewma_frame_interval_ns = interval_ns;
-            } else {
-                frame_interval_info->ewma_frame_interval_ns =
-                    self->interval_ewma_alpha * interval_ns +
-                    (1.0 - self->interval_ewma_alpha) * frame_interval_info->ewma_frame_interval_ns;
-            }
-
+            // Don't process further for first frame
             return GST_PAD_PROBE_OK;
         }
+
+        // Update last frame PTS
+        frame_interval_info->last_frame_ts_ns = now_ns;
+
+        // If interval is non-positive, return
+        if (interval_ns <= 0) return GST_PAD_PROBE_OK;
+
+        if (frame_interval_info->ewma_frame_interval_ns == 0) {
+            frame_interval_info->ewma_frame_interval_ns = interval_ns;
+        } else {
+            frame_interval_info->ewma_frame_interval_ns =
+                self->interval_ewma_alpha * interval_ns +
+                (1.0 - self->interval_ewma_alpha) * frame_interval_info->ewma_frame_interval_ns;
+        }
+
+        return GST_PAD_PROBE_OK;
     }
 
     void frame_interval_monitor_callback() {
@@ -599,9 +590,9 @@ public:
     //     );
     // }
 
-    void change_bitrate(int stream_id, int delta_kpbs) {
+    void change_bitrate(int stream_id, int delta_bps) {
         // Create a lambda that will execute the bitrate change
-        auto func = [this, stream_id, delta_kpbs]() {
+        auto func = [this, stream_id, delta_bps]() {
             // Find the encoder corresponding to stream_id
             auto it = encoders.find(stream_id);
             if (it == encoders.end() || it->second == nullptr) {
@@ -618,7 +609,7 @@ public:
             g_object_get(G_OBJECT(encoder), "bitrate", &current_bitrate, nullptr);
 
             // Calculate new bitrate
-            int new_bitrate = current_bitrate + delta_kpbs * 1000; // conver kbps to bps
+            int new_bitrate = current_bitrate + delta_bps;
 
             // Clamp new bitrate within allowed range
             new_bitrate = std::max(min_bitrate, std::min(new_bitrate, max_bitrate));
@@ -866,8 +857,8 @@ private:
 
     struct FrameIntervalInfo {
         int stream_id;
-        bool have_last_pts{false};
-        uint64_t last_frame_pts_ns{0};
+        bool have_last_ts{false};
+        uint64_t last_frame_ts_ns{0};
         uint64_t ewma_frame_interval_ns{0}; // Exponentially Weighted Moving Average
     };
 

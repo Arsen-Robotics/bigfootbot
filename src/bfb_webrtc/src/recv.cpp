@@ -745,11 +745,11 @@ private:
     std::mutex streams_mutex;
 
     // Stutter detection parameters
-    const double stutter_multiplier = 1.1; // multiplier for PTS interval threshold
+    const double stutter_multiplier = 1.2; // multiplier for PTS interval threshold
     const int stutter_monitor_period_ms = 2000;    // monitor period in ms
     const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
     const double low_stutter_threshold = 0.04;  // if <1% stutter -> increase bitrate
-    const int bitrate_step_kbps = 100;     // amount to change bitrate by (kbps)
+    const int bitrate_step_kbps = 100000;     // amount to change bitrate by (bps)
 };
 
 /**

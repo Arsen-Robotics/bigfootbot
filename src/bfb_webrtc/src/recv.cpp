@@ -336,32 +336,52 @@ public:
             RCLCPP_INFO(this->get_logger(), "Stutter ratio for stream %d: %.3f (%llu stutters / %llu frames)",
                                             stream_id, ratio, stutters, frames);
 
-            // Prepare control message
-            Json::Value ctrl;
-            bool send = false;
-            if (ratio > high_stutter_threshold) {
-                // Too much stutter -> request lower bitrate
-                int delta = -bitrate_step_kbps;
-                ctrl["control"]["action"] = "change_bitrate";
-                ctrl["control"]["stream_id"] = stream_id;
-                ctrl["control"]["delta"] = delta;
-                send = true;
-                RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
-            } else if (ratio < low_stutter_threshold) {
-                // Low stutter -> request higher bitrate
-                int delta = bitrate_step_kbps;
-                ctrl["control"]["action"] = "change_bitrate";
-                ctrl["control"]["stream_id"] = stream_id;
-                ctrl["control"]["delta"] = delta;
-                send = true;
-                RCLCPP_WARN(this->get_logger(), "Stream %d: Low stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
-            }
+            int delta = 0;
 
-            if (send) {
+            if (ratio > 0.15) delta = -500000;   // -500 kbps
+            else if (ratio > 0.11) delta = -300000; // -300 kbps
+            else if (ratio > 0.07) delta = -100000; // -100 kbps
+            else if (ratio > 0.06) delta = -50000; // -50 kbps
+
+            else if (ratio < 0.04) delta = +80000;  // +80 kbps
+            else if (ratio < 0.015) delta = +150000; // +150 kbps (very clean)
+
+            if (delta != 0) {
+                // Prepare control message
+                Json::Value ctrl;
+
+                ctrl["control"]["action"] = "change_bitrate";
+                ctrl["control"]["stream_id"] = stream_id;
+                ctrl["control"]["delta"] = delta;
+
                 Json::StreamWriterBuilder w;
                 std::string msg = Json::writeString(w, ctrl);
                 this->queue_ws(msg);
             }
+
+            // if (ratio > high_stutter_threshold) {
+            //     // Too much stutter -> request lower bitrate
+            //     int delta = -bitrate_step_kbps;
+            //     ctrl["control"]["action"] = "change_bitrate";
+            //     ctrl["control"]["stream_id"] = stream_id;
+            //     ctrl["control"]["delta"] = delta;
+            //     send = true;
+            //     RCLCPP_WARN(this->get_logger(), "Stream %d: High stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
+            // } else if (ratio < low_stutter_threshold) {
+            //     // Low stutter -> request higher bitrate
+            //     int delta = bitrate_step_kbps;
+            //     ctrl["control"]["action"] = "change_bitrate";
+            //     ctrl["control"]["stream_id"] = stream_id;
+            //     ctrl["control"]["delta"] = delta;
+            //     send = true;
+            //     RCLCPP_WARN(this->get_logger(), "Stream %d: Low stutter ratio %.3f -> request bitrate delta %d kbps", stream_id, ratio, delta);
+            // }
+
+            // if (send) {
+            //     Json::StreamWriterBuilder w;
+            //     std::string msg = Json::writeString(w, ctrl);
+            //     this->queue_ws(msg);
+            // }
         }
     }
 
@@ -745,11 +765,11 @@ private:
     std::mutex streams_mutex;
 
     // Stutter detection parameters
-    const double stutter_multiplier = 1.2; // multiplier for PTS interval threshold
-    const int stutter_monitor_period_ms = 2000;    // monitor period in ms
-    const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
-    const double low_stutter_threshold = 0.04;  // if <1% stutter -> increase bitrate
-    const int bitrate_step_kbps = 100000;     // amount to change bitrate by (bps)
+    const double stutter_multiplier = 1.1; // multiplier for PTS interval threshold
+    const int stutter_monitor_period_ms = 3000;    // monitor period in ms
+    //const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
+    //const double low_stutter_threshold = 0.04;  // if <1% stutter -> increase bitrate
+    //const int bitrate_step_kbps = 100000;     // amount to change bitrate by (bps)
 };
 
 /**

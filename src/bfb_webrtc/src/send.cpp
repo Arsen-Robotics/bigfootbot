@@ -561,9 +561,10 @@ public:
 
         // Add media streams to the pipeline
         add_stream("argus", "", "video/x-raw", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/cam-arducam", "image/jpeg", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/cam-aveo", "video/x-raw", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/video9", "video/x-raw", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/video2", "video/x-raw", 640, 480, 15, 2000000);
+        add_stream("v4l2src", "/dev/cam-arducam", "video/x-raw", 640, 480, 30, 2000000);
+        // add_stream("v4l2src", "/dev/cam-aveo", "video/x-raw", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/video10", "video/x-raw", 640, 480, 30, 2000000);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
@@ -869,7 +870,7 @@ private:
     // Vector of frame interval info instances
     std::vector<FrameIntervalInfo*> frame_intervals;
     std::mutex frame_intervals_vector_mutex;
-    const int frame_interval_monitor_period_ms = 5000;
+    const int frame_interval_monitor_period_ms = 10000;
 };
 
 /**

@@ -15,7 +15,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sys/resource.h>
 
-static GQuark FRAME_INTERVAL_INFO_QUARK = 0;
+static GQuark STREAM_INFO_QUARK = 0;
 
 /**
  * @brief Main class handling WebRTC video streaming
@@ -47,7 +47,7 @@ public:
         pipeline = nullptr;
         webrtcbin = nullptr;
         ws_running = true;
-        FRAME_INTERVAL_INFO_QUARK = g_quark_from_static_string("frame-interval-info");
+        STREAM_INFO_QUARK = g_quark_from_static_string("stream-info");
 
         // Frame interval monitor callback
         frame_interval_monitor_timer = this->create_wall_timer(
@@ -271,7 +271,8 @@ public:
                     int framerate,
                     int bitrate) {
         // Create GStreamer elements for the stream
-        GstElement *src, *queue0, *capsfilter0, *jpegdec_stage, *convert, *capsfilter1, *queue1, *encoder, *queue2, *parse, *payloader, *capsfilter2;
+        GstElement *src, *src_queue, *src_capsfilter, *jpegdec_stage, *conv, *conv_capsfilter,
+        *videorate, *videorate_capsfilter, *enc_queue0, *enc, *enc_queue1, *parse, *pay, *pay_capsfilter;
 
         // Source
         if (src_type == "v4l2src") {
@@ -285,35 +286,35 @@ public:
         // Get the src pad of source element
         GstPad* src_srcpad = gst_element_get_static_pad(src, "src");
 
-        // 1st caps filter - after camera source
-        capsfilter0 = gst_element_factory_make("capsfilter", NULL);
+        // Caps filter - after camera source
+        src_capsfilter = gst_element_factory_make("capsfilter", NULL);
         if (src_type == "v4l2src") {
-            GstCaps* caps0 = gst_caps_new_simple(format.c_str(),
+            GstCaps* src_caps = gst_caps_new_simple(format.c_str(),
                                                 "width", G_TYPE_INT, width,
                                                 "height", G_TYPE_INT, height,
                                                 "framerate", GST_TYPE_FRACTION, framerate, 1,
                                                 NULL);
-            g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
-            gst_caps_unref(caps0);
+            g_object_set(G_OBJECT(src_capsfilter), "caps", src_caps, NULL);
+            gst_caps_unref(src_caps);
         } else if (src_type == "argus") {
-            GstCaps* caps0 = gst_caps_new_simple(format.c_str(),
+            GstCaps* src_caps = gst_caps_new_simple(format.c_str(),
                                                 "width", G_TYPE_INT, width,
                                                 "height", G_TYPE_INT, height,
                                                 "framerate", GST_TYPE_FRACTION, framerate, 1,
                                                 NULL);
 
             // Set memory feature to NVMM
-            GstCapsFeatures* features0 = gst_caps_features_new("memory:NVMM", NULL);
-            gst_caps_set_features(caps0, 0, features0);
+            GstCapsFeatures* argus_src_features = gst_caps_features_new("memory:NVMM", NULL);
+            gst_caps_set_features(src_caps, 0, argus_src_features);
 
-            g_object_set(G_OBJECT(capsfilter0), "caps", caps0, NULL);
-            gst_caps_unref(caps0);
+            g_object_set(G_OBJECT(src_capsfilter), "caps", src_caps, NULL);
+            gst_caps_unref(src_caps);
         }
 
-        // Queue after camera source
-        queue0 = gst_element_factory_make("queue", NULL);
-        g_object_set(G_OBJECT(queue0), "max-size-buffers", 15, "leaky", 2, NULL); // downstream leaky
-        
+        // Queue - after camera source
+        src_queue = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(src_queue), "max-size-buffers", 15, "leaky", 2, NULL); // downstream leaky
+    
         // JPEG decoder (only create if stream is JPEG)
         if (format == "image/jpeg") {
             jpegdec_stage = gst_element_factory_make("nvv4l2decoder", NULL);
@@ -323,29 +324,46 @@ public:
         }
 
         // Converter
-        convert = gst_element_factory_make("nvvidconv", NULL);
+        conv = gst_element_factory_make("nvvidconv", NULL);
 
-        // 2nd caps filter - after converter
-        capsfilter1 = gst_element_factory_make("capsfilter", NULL);
-        GstCaps* caps1 = gst_caps_new_simple("video/x-raw",
+        // Caps filter - after converter
+        conv_capsfilter = gst_element_factory_make("capsfilter", NULL);
+        GstCaps* conv_caps = gst_caps_new_simple("video/x-raw",
                                              "format", G_TYPE_STRING, "NV12",
                                              NULL);
 
         // Set memory feature to NVMM
-        GstCapsFeatures* features1 = gst_caps_features_new("memory:NVMM", NULL);
-        gst_caps_set_features(caps1, 0, features1);
+        GstCapsFeatures* conv_features = gst_caps_features_new("memory:NVMM", NULL);
+        gst_caps_set_features(conv_caps, 0, conv_features);
 
-        g_object_set(G_OBJECT(capsfilter1), "caps", caps1, NULL);
-        gst_caps_unref(caps1);
+        g_object_set(G_OBJECT(conv_capsfilter), "caps", conv_caps, NULL);
+        gst_caps_unref(conv_caps);
 
-        // Queue before encoder
-        queue1 = gst_element_factory_make("queue", NULL);
-        g_object_set(G_OBJECT(queue1), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
+        // Videorate
+        videorate = gst_element_factory_make("videorate", NULL);
+
+        // Capsfilter - after videorate
+        videorate_capsfilter = gst_element_factory_make("capsfilter", NULL);
+        GstCaps* videorate_caps = gst_caps_new_simple("video/x-raw",
+                                             "format", G_TYPE_STRING, "NV12",
+                                             "drop-only", G_TYPE_BOOLEAN, TRUE,
+                                             NULL);
+        
+        // Set memory feature to NVMM
+        GstCapsFeatures* videorate_features = gst_caps_features_new("memory:NVMM", NULL);
+        gst_caps_set_features(videorate_caps, 0, videorate_features);
+
+        g_object_set(G_OBJECT(videorate_capsfilter), "caps", videorate_caps, NULL);
+        gst_caps_unref(videorate_caps);
+
+        // Queue - before encoder
+        enc_queue0 = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(enc_queue0), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
 
         // Encoder
         std::string enc_name = "enc" + std::to_string(pipeline_stream_index);
-        encoder = gst_element_factory_make("nvv4l2h264enc", enc_name.c_str());
-        g_object_set(encoder,
+        enc = gst_element_factory_make("nvv4l2h264enc", enc_name.c_str());
+        g_object_set(enc,
                  "control-rate", 1,
                  "bitrate", bitrate,
                  "iframeinterval", 30,
@@ -358,43 +376,44 @@ public:
                  "EnableTwopassCBR", 0,
                  NULL);
 
-        // Queue after encoder
-        queue2 = gst_element_factory_make("queue", NULL);
-        g_object_set(G_OBJECT(queue2), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
+        // Queue - after encoder
+        enc_queue1 = gst_element_factory_make("queue", NULL);
+        g_object_set(G_OBJECT(enc_queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
 
         // Parser
         parse = gst_element_factory_make("h264parse", NULL);
         g_object_set(parse, "config-interval", 0, NULL);
 
         // Payloader
-        payloader = gst_element_factory_make("rtph264pay", NULL);
-        g_object_set(payloader,
+        pay = gst_element_factory_make("rtph264pay", NULL);
+        g_object_set(pay,
                     "pt", 96,
                     "mtu", 1200,
                     "config-interval", -1,
-                    NULL);
+                    NULL);                 
 
-        // 3rd caps filter - after payloader
-        capsfilter2 = gst_element_factory_make("capsfilter", NULL);
-        GstCaps* caps2 = gst_caps_new_simple("application/x-rtp",
+        // Caps filter - after payloader
+        pay_capsfilter = gst_element_factory_make("capsfilter", NULL);
+        GstCaps* pay_caps = gst_caps_new_simple("application/x-rtp",
                                              "media", G_TYPE_STRING, "video",
                                              "encoding-name", G_TYPE_STRING, "H264",
                                              "payload", G_TYPE_INT, 96,
                                              NULL);
 
-        g_object_set(G_OBJECT(capsfilter2), "caps", caps2, NULL);
-        gst_caps_unref(caps2);
+        g_object_set(G_OBJECT(pay_capsfilter), "caps", pay_caps, NULL);
+        gst_caps_unref(pay_caps);
 
         // Add elements to pipeline
-        gst_bin_add_many(GST_BIN(pipeline), src, capsfilter0, queue0, jpegdec_stage, convert, capsfilter1, 
-                         queue1, encoder, queue2, parse, payloader, capsfilter2, NULL);
+        gst_bin_add_many(GST_BIN(pipeline), src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
+                         enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
         
         // Link elements
-        gst_element_link_many(src, capsfilter0, queue0, jpegdec_stage, convert, capsfilter1, 
-                              queue1, encoder, queue2, parse, payloader, capsfilter2, NULL);
+        gst_element_link_many(src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
+                              enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
 
         // Link to webrtcbin
-        GstPad* pay_src = gst_element_get_static_pad(capsfilter2, "src");
+        GstPad* pay_src = gst_element_get_static_pad(pay_capsfilter, "src");
+
         // Requesting sink pad from webrtcbin also creates a new transceiver internally
         GstPad* webrtc_sink = gst_element_get_request_pad(webrtcbin, "sink_%u");
 
@@ -404,28 +423,33 @@ public:
 
         if (transceiver) {
             // Store encoder element in the map
-            encoders[pipeline_stream_index] = encoder;
+            encoders[pipeline_stream_index] = enc;
 
             RCLCPP_INFO(this->get_logger(), "Transceiver created for stream %d", pipeline_stream_index);
 
-            // Store stream ID in an instance of frame_interval_info
-            FrameIntervalInfo* frame_interval_info = new FrameIntervalInfo();
-            frame_interval_info->stream_id = pipeline_stream_index;
+            // Create an instance of info
+            StreamInfo* stream_info = new StreamInfo();
 
-            // Attach frame interval info to pad
+            // Store necessary data in the instance of stream info for further usage during
+            // frame interval calculation and sending to receiver; dynamically adjusting bitrate and fps
+            stream_info->stream_id = pipeline_stream_index;
+            stream_info->encoder = enc;
+            stream_info->videorate = videorate;
+
+            // Attach stream_info to pad
             g_object_set_qdata_full(G_OBJECT(src_srcpad),
-                FRAME_INTERVAL_INFO_QUARK,
-                frame_interval_info,
-                [](gpointer data){ delete static_cast<FrameIntervalInfo*>(data); });
+                STREAM_INFO_QUARK,
+                stream_info,
+                [](gpointer data){ delete static_cast<StreamInfo*>(data); });
             
             // Create frame callback probe
             gst_pad_add_probe(src_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, this, nullptr);
             gst_object_unref(src_srcpad);
 
-            // Add frame_interval_info instance to frame_intervals vector
+            // Add stream_info instance to streams map
             {
-                std::lock_guard<std::mutex> lk(frame_intervals_vector_mutex);
-                frame_intervals.push_back(frame_interval_info);
+                std::lock_guard<std::mutex> lk(streams_mutex);
+                streams[pipeline_stream_index] = stream_info;
             }
 
             // Only increment if transceiver has actually been created
@@ -443,9 +467,9 @@ public:
     static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
         WebRTCSendNode* self = static_cast<WebRTCSendNode*>(user_data);
 
-        // Retrieve frame interval info
-        FrameIntervalInfo* frame_interval_info = static_cast<FrameIntervalInfo*>(
-            g_object_get_qdata(G_OBJECT(pad), FRAME_INTERVAL_INFO_QUARK)
+        // Retrieve stream_info
+        StreamInfo* stream_info = static_cast<StreamInfo*>(
+            g_object_get_qdata(G_OBJECT(pad), STREAM_INFO_QUARK)
         );
 
         // Only process buffers
@@ -457,56 +481,52 @@ public:
         auto now = std::chrono::system_clock::now();
         int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 
-        // Lock the mutex to access frame interval info
-        std::lock_guard<std::mutex> lk(self->frame_interval_struct_mutex);
+        // Lock the mutex to access stream_info
+        std::lock_guard<std::mutex> lk(self->stream_info_struct_mutex);
 
         // Interval between frames' PTSs in nanoseconds
         uint64_t interval_ns = 0;
         
-        if (frame_interval_info->have_last_ts) {
-            interval_ns = now_ns - frame_interval_info->last_frame_ts_ns;
+        if (stream_info->have_last_ts) {
+            interval_ns = now_ns - stream_info->last_frame_ts_ns;
         } else {
             // First frame received, can't compute interval yet
-            frame_interval_info->last_frame_ts_ns = now_ns;
-            frame_interval_info->have_last_ts = true;
+            stream_info->last_frame_ts_ns = now_ns;
+            stream_info->have_last_ts = true;
 
             // Don't process further for first frame
             return GST_PAD_PROBE_OK;
         }
 
         // Update last frame PTS
-        frame_interval_info->last_frame_ts_ns = now_ns;
+        stream_info->last_frame_ts_ns = now_ns;
 
         // If interval is non-positive, return
         if (interval_ns <= 0) return GST_PAD_PROBE_OK;
 
-        if (frame_interval_info->ewma_frame_interval_ns == 0) {
-            frame_interval_info->ewma_frame_interval_ns = interval_ns;
+        if (stream_info->ewma_frame_interval_ns == 0) {
+            stream_info->ewma_frame_interval_ns = interval_ns;
         } else {
-            frame_interval_info->ewma_frame_interval_ns =
+            stream_info->ewma_frame_interval_ns =
                 self->interval_ewma_alpha * interval_ns +
-                (1.0 - self->interval_ewma_alpha) * frame_interval_info->ewma_frame_interval_ns;
+                (1.0 - self->interval_ewma_alpha) * stream_info->ewma_frame_interval_ns;
         }
 
         return GST_PAD_PROBE_OK;
     }
 
     void frame_interval_monitor_callback() {
-        std::lock_guard<std::mutex> lk(frame_intervals_vector_mutex);
+        std::lock_guard<std::mutex> lk(streams_mutex);
 
-        for (auto& frame_interval_info : frame_intervals) {
-            if (!frame_interval_info) continue;
+        for (auto& [stream_id, stream_info] : streams) {
+            if (!stream_info) continue;
 
             // Get EWMA frame interval
-            int stream_id = -1;
             uint64_t ewma_frame_interval_ns = 0;
             {
-                std::lock_guard<std::mutex> lk(frame_interval_struct_mutex);
-                stream_id = frame_interval_info->stream_id;
-                ewma_frame_interval_ns = frame_interval_info->ewma_frame_interval_ns;
+                std::lock_guard<std::mutex> lk(stream_info_struct_mutex);
+                ewma_frame_interval_ns = stream_info->ewma_frame_interval_ns;
             }
-
-            if (stream_id == -1) continue;
 
             // Prepare frame interval message
             Json::Value info;
@@ -561,10 +581,10 @@ public:
 
         // Add media streams to the pipeline
         add_stream("argus", "", "video/x-raw", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/video2", "video/x-raw", 640, 480, 15, 2000000);
+        add_stream("v4l2src", "/dev/video11", "video/x-raw", 640, 480, 15, 2000000);
         add_stream("v4l2src", "/dev/cam-arducam", "video/x-raw", 640, 480, 30, 2000000);
         // add_stream("v4l2src", "/dev/cam-aveo", "video/x-raw", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/video10", "video/x-raw", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/video9", "video/x-raw", 640, 480, 30, 2000000);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
@@ -594,16 +614,42 @@ public:
     void change_bitrate(int stream_id, int delta_bps) {
         // Create a lambda that will execute the bitrate change
         auto func = [this, stream_id, delta_bps]() {
-            // Find the encoder corresponding to stream_id
-            auto it = encoders.find(stream_id);
-            if (it == encoders.end() || it->second == nullptr) {
-                RCLCPP_WARN(this->get_logger(),
-                            "Stream %d encoder not found. Cannot change bitrate.", stream_id);
-                return;
+            StreamInfo* stream_info = nullptr;
+
+            // Lock the map to find the StreamInfo
+            {
+                std::lock_guard<std::mutex> lk(streams_mutex);
+                auto it = streams.find(stream_id);
+                if (it == streams.end() || it->second == nullptr) {
+                    RCLCPP_WARN(this->get_logger(),
+                                "Stream %d not found. Cannot change bitrate.", stream_id);
+                    return;
+                }
+                stream_info = it->second;
             }
+
+            // Lock the StreamInfo to safely access its elements
+            GstElement* encoder = nullptr;
+            {
+                std::lock_guard<std::mutex> lk(stream_info_struct_mutex);
+                encoder = stream_info->encoder;
+                if (!encoder) {
+                    RCLCPP_WARN(this->get_logger(),
+                                "Stream %d encoder is null. Cannot change bitrate.", stream_id);
+                    return;
+                }
+            }
+
+            // // Find the encoder corresponding to stream_id
+            // auto it = encoders.find(stream_id);
+            // if (it == encoders.end() || it->second == nullptr) {
+            //     RCLCPP_WARN(this->get_logger(),
+            //                 "Stream %d encoder not found. Cannot change bitrate.", stream_id);
+            //     return;
+            // }
         
-            // Get the encoder element
-            GstElement* encoder = it->second;
+            // // Get the encoder element
+            // GstElement* encoder = it->second;
             
             // Get the current bitrate
             int current_bitrate = 0;
@@ -856,20 +902,26 @@ private:
     const int min_bitrate{300000};
     const int max_bitrate{2000000};
 
-    struct FrameIntervalInfo {
+    struct StreamInfo {
         int stream_id;
         bool have_last_ts{false};
         uint64_t last_frame_ts_ns{0};
         uint64_t ewma_frame_interval_ns{0}; // Exponentially Weighted Moving Average
+        GstElement* encoder{nullptr};
+        GstElement* videorate{nullptr};
     };
 
-    std::mutex frame_interval_struct_mutex;
+    std::mutex stream_info_struct_mutex;
     rclcpp::TimerBase::SharedPtr frame_interval_monitor_timer;
     const double interval_ewma_alpha = 0.1;
 
-    // Vector of frame interval info instances
-    std::vector<FrameIntervalInfo*> frame_intervals;
-    std::mutex frame_intervals_vector_mutex;
+    // Map of stream info instances
+    std::unordered_map<int, StreamInfo*> streams;
+    std::mutex streams_mutex;
+
+    // // Vector of frame interval info instances
+    // std::vector<StreamInfo*> frame_intervals;
+    // std::mutex frame_intervals_vector_mutex;
     const int frame_interval_monitor_period_ms = 10000;
 };
 

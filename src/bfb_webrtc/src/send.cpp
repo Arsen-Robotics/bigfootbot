@@ -272,7 +272,7 @@ public:
                     int bitrate) {
         // Create GStreamer elements for the stream
         GstElement *src, *src_queue, *src_capsfilter, *jpegdec_stage, *conv, *conv_capsfilter,
-        *videorate, *videorate_capsfilter, *enc_queue0, *enc, *enc_queue1, *parse, *pay, *pay_capsfilter;
+        *videorate, *videorate_capsfilter, *enc_queue0, *enc, *enc_queue1, *parse, *pay, *pay_capsfilter, *rtpulpfecenc;
 
         // Source
         if (src_type == "v4l2src") {
@@ -358,7 +358,7 @@ public:
 
         // Queue - before encoder
         enc_queue0 = gst_element_factory_make("queue", NULL);
-        g_object_set(G_OBJECT(enc_queue0), "max-size-buffers", 3, "leaky", 2, NULL); // downstream leaky
+        g_object_set(G_OBJECT(enc_queue0), "max-size-buffers", 10, "leaky", 2, NULL); // downstream leaky
 
         // Encoder
         std::string enc_name = "enc" + std::to_string(pipeline_stream_index);
@@ -366,7 +366,7 @@ public:
         g_object_set(enc,
                  "control-rate", 1,
                  "bitrate", bitrate,
-                 "iframeinterval", 30,
+                 "iframeinterval", 15,
                  "num-B-Frames", 0,
                  "preset-level", 1,
                  "profile", 0,
@@ -403,16 +403,19 @@ public:
         g_object_set(G_OBJECT(pay_capsfilter), "caps", pay_caps, NULL);
         gst_caps_unref(pay_caps);
 
+        // Create Nvidia FEC element
+        rtpulpfecenc = gst_element_factory_make("rtpulpfecenc", NULL);
+
         // Add elements to pipeline
         gst_bin_add_many(GST_BIN(pipeline), src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                         enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
+                         enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, rtpulpfecenc, NULL);
         
         // Link elements
         gst_element_link_many(src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                              enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
+                              enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, rtpulpfecenc, NULL);
 
         // Link to webrtcbin
-        GstPad* pay_src = gst_element_get_static_pad(pay_capsfilter, "src");
+        GstPad* pay_src = gst_element_get_static_pad(rtpulpfecenc, "src");
 
         // Requesting sink pad from webrtcbin also creates a new transceiver internally
         GstPad* webrtc_sink = gst_element_get_request_pad(webrtcbin, "sink_%u");
@@ -422,6 +425,8 @@ public:
         g_signal_emit_by_name(webrtcbin, "get-transceiver", pipeline_stream_index, &transceiver);
 
         if (transceiver) {
+            g_object_set(transceiver, "do-nack", TRUE, nullptr);
+            
             // Store encoder element in the map
             encoders[pipeline_stream_index] = enc;
 
@@ -614,7 +619,7 @@ public:
     void change_bitrate(int stream_id, int delta_bps) {
         // Create a lambda that will execute the bitrate change
         auto func = [this, stream_id, delta_bps]() {
-            StreamInfo* stream_info = nullptr;
+            GstElement* encoder = nullptr;
 
             // Lock the map to find the StreamInfo
             {
@@ -625,19 +630,13 @@ public:
                                 "Stream %d not found. Cannot change bitrate.", stream_id);
                     return;
                 }
-                stream_info = it->second;
+                encoder = it->second->encoder;
             }
 
-            // Lock the StreamInfo to safely access its elements
-            GstElement* encoder = nullptr;
-            {
-                std::lock_guard<std::mutex> lk(stream_info_struct_mutex);
-                encoder = stream_info->encoder;
-                if (!encoder) {
-                    RCLCPP_WARN(this->get_logger(),
-                                "Stream %d encoder is null. Cannot change bitrate.", stream_id);
-                    return;
-                }
+            if (!encoder) {
+                RCLCPP_WARN(this->get_logger(),
+                            "Stream %d encoder is null. Cannot change bitrate.", stream_id);
+                return;
             }
 
             // // Find the encoder corresponding to stream_id

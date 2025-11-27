@@ -272,7 +272,7 @@ public:
                     int bitrate) {
         // Create GStreamer elements for the stream
         GstElement *src, *src_queue, *src_capsfilter, *jpegdec_stage, *conv, *conv_capsfilter,
-        *videorate, *videorate_capsfilter, *enc_queue0, *enc, *enc_queue1, *parse, *pay, *pay_capsfilter *rtpulpfecenc;
+        *videorate, *videorate_capsfilter, *enc_queue0, *enc, *enc_queue1, *parse, *pay, *pay_capsfilter, *rtpulpfecenc;
 
         // Source
         if (src_type == "v4l2src") {
@@ -619,7 +619,7 @@ public:
     void change_bitrate(int stream_id, int delta_bps) {
         // Create a lambda that will execute the bitrate change
         auto func = [this, stream_id, delta_bps]() {
-            StreamInfo* stream_info = nullptr;
+            GstElement* encoder = nullptr;
 
             // Lock the map to find the StreamInfo
             {

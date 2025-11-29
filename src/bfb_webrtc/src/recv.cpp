@@ -356,7 +356,7 @@ public:
 
                 Json::StreamWriterBuilder w;
                 std::string msg = Json::writeString(w, ctrl);
-                this->queue_ws(msg);
+                //this->queue_ws(msg);
             }
 
             // if (ratio > high_stutter_threshold) {
@@ -468,6 +468,8 @@ public:
                 g_signal_emit_by_name(webrtcbin, "set-remote-description", offer, nullptr);
                 gst_webrtc_session_description_free(offer);
 
+                this->configure_jitterbuffer(this->webrtcbin);
+
                 // Create answer
                 GstPromise *promise = gst_promise_new_with_change_func([](GstPromise *promise, gpointer user_data) {
                     WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
@@ -517,6 +519,36 @@ public:
         queue_ws(answerStr);
         g_free(sdpStr);
         gst_webrtc_session_description_free(answer);
+    }
+
+    static void configure_jitterbuffer(GstElement* webrtcbin) {
+        // Iterate through all children to find rtpjitterbuffer elements
+        GstIterator* it = gst_bin_iterate_elements(GST_BIN(webrtcbin));
+        GValue item = G_VALUE_INIT;
+        
+        while (gst_iterator_next(it, &item) == GST_ITERATOR_OK) {
+            GstElement* element = GST_ELEMENT(g_value_get_object(&item));
+            const gchar* factory_name = gst_plugin_feature_get_name(
+                GST_PLUGIN_FEATURE(gst_element_get_factory(element))
+            );
+            
+            if (g_strcmp0(factory_name, "rtpjitterbuffer") == 0) {
+                // CRITICAL: Disable lost packet events
+                g_object_set(element,
+                    "do-lost", FALSE,           // Don't emit lost events
+                    "do-retransmission", FALSE, // Don't request retransmits (if you don't want them)
+                    "latency", 100,              // Lower latency
+                    "drop-on-latency", FALSE,   // Never drop due to latency
+                    NULL);
+                
+                g_print("Configured jitterbuffer: %s\n", GST_ELEMENT_NAME(element));
+            }
+            
+            g_value_reset(&item);
+        }
+        
+        g_value_unset(&item);
+        gst_iterator_free(it);
     }
 
     static void on_incoming_stream(GstElement* webrtcbin, GstPad* pad, WebRTCRecvNode* self) {
@@ -584,7 +616,7 @@ public:
             return;
         }
 
-        g_object_set(self->webrtcbin, "latency", 0, NULL);
+        //g_object_set(self->webrtcbin, "latency", 200, NULL);
 
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
@@ -613,7 +645,7 @@ public:
                 "silent", TRUE,
                 "flush-on-eos", TRUE,
                 NULL);
-
+            
             conv = gst_element_factory_make("videoconvert", nullptr);
             g_object_set(conv,
                 "qos", TRUE, // Enable QoS

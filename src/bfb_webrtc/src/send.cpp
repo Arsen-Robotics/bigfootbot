@@ -272,7 +272,7 @@ public:
                     int bitrate) {
         // Create GStreamer elements for the stream
         GstElement *src, *src_queue, *src_capsfilter, *jpegdec_stage, *conv, *conv_capsfilter,
-        *videorate, *videorate_capsfilter, *enc_queue0, *enc, *enc_queue1, *parse, *pay, *pay_capsfilter, *rtpulpfecenc;
+        *videorate, *videorate_capsfilter, *enc_queue0, *enc, *enc_queue1, *parse, *pay, *pay_capsfilter;
 
         // Source
         if (src_type == "v4l2src") {
@@ -403,19 +403,16 @@ public:
         g_object_set(G_OBJECT(pay_capsfilter), "caps", pay_caps, NULL);
         gst_caps_unref(pay_caps);
 
-        // Create Nvidia FEC element
-        rtpulpfecenc = gst_element_factory_make("rtpulpfecenc", NULL);
-
         // Add elements to pipeline
         gst_bin_add_many(GST_BIN(pipeline), src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                         enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, rtpulpfecenc, NULL);
+                         enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
         
         // Link elements
         gst_element_link_many(src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                              enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, rtpulpfecenc, NULL);
+                              enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
 
         // Link to webrtcbin
-        GstPad* pay_src = gst_element_get_static_pad(rtpulpfecenc, "src");
+        GstPad* pay_src = gst_element_get_static_pad(pay_capsfilter, "src");
 
         // Requesting sink pad from webrtcbin also creates a new transceiver internally
         GstPad* webrtc_sink = gst_element_get_request_pad(webrtcbin, "sink_%u");
@@ -586,9 +583,9 @@ public:
 
         // Add media streams to the pipeline
         add_stream("argus", "", "video/x-raw", 640, 480, 30, 2000000);
-        add_stream("v4l2src", "/dev/video11", "video/x-raw", 640, 480, 15, 2000000);
+        //add_stream("v4l2src", "/dev/video11", "video/x-raw", 640, 480, 15, 2000000);
         add_stream("v4l2src", "/dev/cam-arducam", "video/x-raw", 640, 480, 30, 2000000);
-        // add_stream("v4l2src", "/dev/cam-aveo", "video/x-raw", 640, 480, 30, 2000000);
+        add_stream("v4l2src", "/dev/cam-aveo", "video/x-raw", 640, 480, 30, 2000000);
         add_stream("v4l2src", "/dev/video9", "video/x-raw", 640, 480, 30, 2000000);
 
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());

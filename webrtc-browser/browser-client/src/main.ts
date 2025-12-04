@@ -74,7 +74,7 @@ class App {
 
     // Initialize signaling client with default URL
     // Why: Can be changed via UI before connecting
-    const defaultUrl = this.signalingUrlInput.value || 'ws://localhost:8765';
+    const defaultUrl = this.signalingUrlInput.value || 'ws://87.119.173.184:8765';
     this.signalingClient = new SignalingClient(defaultUrl);
 
     // Setup event listeners
@@ -124,7 +124,7 @@ class App {
   private async connect(): Promise<void> {
     try {
       // Update URL if changed
-      const url = this.signalingUrlInput.value || 'ws://localhost:8765';
+      const url = this.signalingUrlInput.value || 'ws://87.119.173.184:8765';
       if (url !== (this.signalingClient as any).url) {
         this.signalingClient.disconnect();
         this.signalingClient = new SignalingClient(url);
@@ -209,6 +209,9 @@ class App {
     // Attach stream to video element
     // Why: Browser will decode and display the video
     videoElement.srcObject = stream;
+    videoElement.autoplay = true;
+    videoElement.playsInline = true;
+    videoElement.play(); // Force playback immediately
     
     // Store video element reference
     // Why: Need to clean up when track ends

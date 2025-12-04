@@ -161,6 +161,63 @@ export class WebRTCClient {
         console.log('[WebRTC] Generated track ID:', trackId);
       }
 
+      // ✨ NEW: MINIMIZE LATENCY - Set jitter buffer to absolute minimum
+      const receiver = event.receiver;
+      if (receiver && track.kind === 'video') {
+        // Use modern jitterBufferTarget API (Chrome 115+, Firefox 117+)
+        try {
+          (receiver as any).jitterBufferTarget = 0;  // 0ms = minimum possible
+          console.log('[WebRTC] Set jitterBufferTarget = 0ms for', trackId);
+        } catch (e) {
+          console.warn('[WebRTC] jitterBufferTarget not supported:', e);
+        }
+
+        // Fallback: Use legacy playoutDelayHint (older Chrome)
+        try {
+          (receiver as any).playoutDelayHint = 0;
+          console.log('[WebRTC] Set playoutDelayHint = 0s for', trackId);
+        } catch (e) {
+          console.warn('[WebRTC] playoutDelayHint not supported:', e);
+        }
+
+        // Set track content hint for motion (low latency mode)
+        try {
+          track.contentHint = 'motion';
+          console.log('[WebRTC] Set contentHint = motion for', trackId);
+        } catch (e) {
+          console.warn('[WebRTC] contentHint not supported:', e);
+        }
+
+        // ✨ ADD THIS: Verify it was actually set
+        setTimeout(() => {
+          const actualJBT = (receiver as any).jitterBufferTarget;
+          const actualPDH = (receiver as any).playoutDelayHint;
+          console.log('[WebRTC] ACTUAL VALUES:', {
+            trackId,
+            jitterBufferTarget: actualJBT,
+            playoutDelayHint: actualPDH,
+            supported: actualJBT !== undefined
+          });
+        }, 1000);
+
+
+        // ✨ CRITICAL: Keep forcing minimum latency continuously
+        // Why: Browser might reset the value, so we re-apply every 100ms
+        const latencyInterval = setInterval(() => {
+          if (track.readyState === 'live' && receiver) {
+            try {
+              (receiver as any).jitterBufferTarget = 0;
+              (receiver as any).playoutDelayHint = 0;
+            } catch (e) {
+              // Ignore errors
+            }
+          } else {
+            // Track ended, stop interval
+            clearInterval(latencyInterval);
+          }
+        }, 100);
+      }
+
       // Create track info object
       // Why: Bundle all track-related information together
       const trackInfo: TrackInfo = {

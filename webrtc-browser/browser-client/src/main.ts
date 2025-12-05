@@ -269,6 +269,23 @@ class App {
     video.autoplay = true;
     video.playsInline = true;
     video.muted = false; // Why: Allow audio if present (though cameras usually video-only)
+
+    // ✨ ADD THESE CRITICAL SETTINGS:
+    video.setAttribute('playsinline', 'true');  // iOS compatibility
+    (video as any).disablePictureInPicture = true;  // Reduce overhead
+    
+    // CRITICAL: Request low-latency mode
+    try {
+      (video as any).requestVideoFrameCallback((now: number, metadata: any) => {
+        // This forces browser into low-latency decode path
+        // Continuously request next frame
+        if (video.srcObject) {
+          (video as any).requestVideoFrameCallback(arguments.callee);
+        }
+      });
+    } catch (e) {
+      console.warn('[App] requestVideoFrameCallback not supported');
+    }
     
     // Create wrapper div for video and label
     // Why: Better layout control, can add labels/controls per stream

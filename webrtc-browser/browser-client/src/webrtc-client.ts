@@ -134,7 +134,7 @@ export class WebRTCClient {
      */
     pc.ontrack = (event) => {
       const track = event.track;
-      const stream = event.streams[0]; // Get first stream (usually only one per track)
+      const stream = new MediaStream([track]);
       
       console.log('[WebRTC] Received remote track:', track.kind, {
         id: track.id,

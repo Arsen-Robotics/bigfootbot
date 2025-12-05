@@ -381,15 +381,15 @@ public:
         g_object_set(G_OBJECT(enc_queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
 
         // Parser
-        parse = gst_element_factory_make("h264parse", NULL);
-        g_object_set(parse, "config-interval", 0, NULL);
+        // parse = gst_element_factory_make("h264parse", NULL);
+        // g_object_set(parse, "config-interval", 0, NULL);
 
         // Payloader
         pay = gst_element_factory_make("rtph264pay", NULL);
         g_object_set(pay,
                     "pt", 96,
                     "mtu", 1200,
-                    "config-interval", -1,
+                    "config-interval", 1,
                     NULL);                 
 
         // Caps filter - after payloader
@@ -405,11 +405,11 @@ public:
 
         // Add elements to pipeline
         gst_bin_add_many(GST_BIN(pipeline), src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                         enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
+                         enc_queue0, enc, enc_queue1, pay, pay_capsfilter, NULL);
         
         // Link elements
         gst_element_link_many(src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                              enc_queue0, enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
+                              enc_queue0, enc, enc_queue1, pay, pay_capsfilter, NULL);
 
         // Link to webrtcbin
         GstPad* pay_src = gst_element_get_static_pad(pay_capsfilter, "src");
@@ -582,9 +582,9 @@ public:
         gst_bin_add(GST_BIN(pipeline), webrtcbin);
 
         // Add media streams to the pipeline
+        add_stream("v4l2src", "/dev/cam-arducam", "video/x-raw", 640, 480, 30, 2000000);
         add_stream("argus", "", "video/x-raw", 640, 480, 30, 2000000);
         // add_stream("v4l2src", "/dev/video11", "video/x-raw", 640, 480, 15, 2000000);
-        add_stream("v4l2src", "/dev/cam-arducam", "video/x-raw", 640, 480, 30, 2000000);
         add_stream("v4l2src", "/dev/cam-aveo", "video/x-raw", 640, 480, 30, 2000000);
         add_stream("v4l2src", "/dev/video9", "video/x-raw", 640, 480, 30, 2000000);
 

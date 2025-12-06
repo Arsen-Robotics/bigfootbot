@@ -46,10 +46,10 @@ public:
         STREAM_INFO_QUARK = g_quark_from_static_string("stream-info");
 
         // Stutter monitor callback
-        stutter_monitor_timer = this->create_wall_timer(
-            std::chrono::milliseconds(stutter_monitor_period_ms),
-            [this]() { this->stutter_monitor_callback(); }
-        );
+        // stutter_monitor_timer = this->create_wall_timer(
+        //     std::chrono::milliseconds(stutter_monitor_period_ms),
+        //     [this]() { this->stutter_monitor_callback(); }
+        // );
     }
 
     /**
@@ -535,10 +535,12 @@ public:
             if (g_strcmp0(factory_name, "rtpjitterbuffer") == 0) {
                 // CRITICAL: Disable lost packet events
                 g_object_set(element,
-                    "do-lost", FALSE,           // Don't emit lost events
-                    "do-retransmission", FALSE, // Don't request retransmits (if you don't want them)
-                    "latency", 100,              // Lower latency
-                    "drop-on-latency", FALSE,   // Never drop due to latency
+                    "mode", 4,               // Synced mode
+                    "latency", 200,
+                    "do-lost", FALSE,
+                    "drop-on-latency", FALSE,
+                    "max-dropout-time", 0,   // ← ADD: Don't wait for late packets
+                    "max-misorder-time", 0,  // ← ADD: Don't reorder packets
                     NULL);
                 
                 g_print("Configured jitterbuffer: %s\n", GST_ELEMENT_NAME(element));
@@ -616,7 +618,7 @@ public:
             return;
         }
 
-        //g_object_set(self->webrtcbin, "latency", 200, NULL);
+        g_object_set(self->webrtcbin, "latency", 200, NULL);
 
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
@@ -648,15 +650,22 @@ public:
             
             conv = gst_element_factory_make("videoconvert", nullptr);
             g_object_set(conv,
-                "qos", TRUE, // Enable QoS
+                "qos", FALSE, // Enable QoS
                 // "n-threads", 2, // Use multiple threads for conversion
                 NULL);
+
+            int stream_id = stream_info->stream_id;
+            std::string filename = "/ros2_ws/src/stream" +
+            std::to_string(stream_id) + ".mp4";
             
-            sink = gst_element_factory_make("xvimagesink", nullptr);
+            sink = gst_element_factory_make("filesink", nullptr);
             g_object_set(sink,
-                "sync", FALSE,
-                "max-lateness", nominal_frame_interval_ns, // 1 frame interval
-                "qos", TRUE, // Enable QoS
+                "sync", FALSE,           // No sync
+                "qos", FALSE,            // No QoS
+                "max-lateness", -1,      // Never consider frames late
+                "async", FALSE,          // Synchronous state changes
+                "throttle-time", 0,      // No throttling
+                "location", filename.c_str(),
                 NULL);
 
             
@@ -678,27 +687,27 @@ public:
         gst_element_link_many(queue, conv, sink, nullptr);
 
         // Add stutter monitoring probe on sink pad of sink element
-        if (sink) {
-            GstPad* sinkpad = gst_element_get_static_pad(sink, "sink");
-            if (sinkpad) {
-                // Store nominal frame interval on pad for probe use
-                stream_info->nominal_frame_interval_ns = nominal_frame_interval_ns;
+        // if (sink) {
+        //     GstPad* sinkpad = gst_element_get_static_pad(sink, "sink");
+        //     if (sinkpad) {
+        //         // Store nominal frame interval on pad for probe use
+        //         stream_info->nominal_frame_interval_ns = nominal_frame_interval_ns;
 
-                // Attach stream info to pad
-                // Transfer ownership to sinkpad: sinkpad will free the struct when pad is destroyed
-                g_object_set_qdata_full(G_OBJECT(sinkpad),
-                    STREAM_INFO_QUARK,
-                    stream_info,
-                    [](gpointer data){ delete static_cast<StreamInfo*>(data); });
+        //         // Attach stream info to pad
+        //         // Transfer ownership to sinkpad: sinkpad will free the struct when pad is destroyed
+        //         g_object_set_qdata_full(G_OBJECT(sinkpad),
+        //             STREAM_INFO_QUARK,
+        //             stream_info,
+        //             [](gpointer data){ delete static_cast<StreamInfo*>(data); });
 
-                // Remove the non-owning pointer from decodebin to avoid dangling pointer later
-                g_object_set_qdata(G_OBJECT(decodebin), STREAM_INFO_QUARK, nullptr);
+        //         // Remove the non-owning pointer from decodebin to avoid dangling pointer later
+        //         g_object_set_qdata(G_OBJECT(decodebin), STREAM_INFO_QUARK, nullptr);
 
-                // Add probe
-                gst_pad_add_probe(sinkpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
-                gst_object_unref(sinkpad);
-            }
-        }
+        //         // Add probe
+        //         gst_pad_add_probe(sinkpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCRecvNode::frame_probe_callback, self, nullptr);
+        //         gst_object_unref(sinkpad);
+        //     }
+        // }
 
         gst_caps_unref(caps);
     }

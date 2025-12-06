@@ -50,10 +50,10 @@ public:
         STREAM_INFO_QUARK = g_quark_from_static_string("stream-info");
 
         // Frame interval monitor callback
-        frame_interval_monitor_timer = this->create_wall_timer(
-            std::chrono::milliseconds(frame_interval_monitor_period_ms),
-            [this]() { this->frame_interval_monitor_callback(); }
-        );
+        // frame_interval_monitor_timer = this->create_wall_timer(
+        //     std::chrono::milliseconds(frame_interval_monitor_period_ms),
+        //     [this]() { this->frame_interval_monitor_callback(); }
+        // );
     }
 
     /**
@@ -374,6 +374,7 @@ public:
                  "insert-sps-pps", 1,
                  "insert-vui", 1,
                  "EnableTwopassCBR", 0,
+                 "DisableCabac", TRUE,
                  NULL);
 
         // Queue - after encoder
@@ -388,7 +389,7 @@ public:
         pay = gst_element_factory_make("rtph264pay", NULL);
         g_object_set(pay,
                     "pt", 96,
-                    "mtu", 1200,
+                    "mtu", 800,
                     "config-interval", 1,
                     NULL);                 
 
@@ -429,30 +430,30 @@ public:
 
             RCLCPP_INFO(this->get_logger(), "Transceiver created for stream %d", pipeline_stream_index);
 
-            // Create an instance of info
-            StreamInfo* stream_info = new StreamInfo();
+            // // Create an instance of info
+            // StreamInfo* stream_info = new StreamInfo();
 
-            // Store necessary data in the instance of stream info for further usage during
-            // frame interval calculation and sending to receiver; dynamically adjusting bitrate and fps
-            stream_info->stream_id = pipeline_stream_index;
-            stream_info->encoder = enc;
-            stream_info->videorate = videorate;
+            // // Store necessary data in the instance of stream info for further usage during
+            // // frame interval calculation and sending to receiver; dynamically adjusting bitrate and fps
+            // stream_info->stream_id = pipeline_stream_index;
+            // stream_info->encoder = enc;
+            // stream_info->videorate = videorate;
 
-            // Attach stream_info to pad
-            g_object_set_qdata_full(G_OBJECT(src_srcpad),
-                STREAM_INFO_QUARK,
-                stream_info,
-                [](gpointer data){ delete static_cast<StreamInfo*>(data); });
+            // // Attach stream_info to pad
+            // g_object_set_qdata_full(G_OBJECT(src_srcpad),
+            //     STREAM_INFO_QUARK,
+            //     stream_info,
+            //     [](gpointer data){ delete static_cast<StreamInfo*>(data); });
             
-            // Create frame callback probe
-            gst_pad_add_probe(src_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, this, nullptr);
-            gst_object_unref(src_srcpad);
+            // // Create frame callback probe
+            // gst_pad_add_probe(src_srcpad, GST_PAD_PROBE_TYPE_BUFFER, &WebRTCSendNode::frame_probe_callback, this, nullptr);
+            // gst_object_unref(src_srcpad);
 
-            // Add stream_info instance to streams map
-            {
-                std::lock_guard<std::mutex> lk(streams_mutex);
-                streams[pipeline_stream_index] = stream_info;
-            }
+            // // Add stream_info instance to streams map
+            // {
+            //     std::lock_guard<std::mutex> lk(streams_mutex);
+            //     streams[pipeline_stream_index] = stream_info;
+            // }
 
             // Only increment if transceiver has actually been created
             pipeline_stream_index++;

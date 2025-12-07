@@ -535,11 +535,11 @@ public:
             if (g_strcmp0(factory_name, "rtpjitterbuffer") == 0) {
                 // CRITICAL: Disable lost packet events
                 g_object_set(element,
-                    "mode", 4,               // Synced mode
-                    "latency", 200,
+                    "mode", 3,               // Synced mode
+                    "latency", 50,
                     "do-lost", FALSE,
                     "drop-on-latency", FALSE,
-                    "max-dropout-time", 0,   // ← ADD: Don't wait for late packets
+                    "max-dropout-time", 200,   // ← ADD: Don't wait for late packets
                     "max-misorder-time", 0,  // ← ADD: Don't reorder packets
                     NULL);
                 
@@ -618,7 +618,7 @@ public:
             return;
         }
 
-        g_object_set(self->webrtcbin, "latency", 200, NULL);
+        g_object_set(self->webrtcbin, "latency", 50, NULL);
 
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
@@ -654,18 +654,17 @@ public:
                 // "n-threads", 2, // Use multiple threads for conversion
                 NULL);
 
-            int stream_id = stream_info->stream_id;
-            std::string filename = "/ros2_ws/src/stream" +
-            std::to_string(stream_id) + ".mp4";
+            // int stream_id = stream_info->stream_id;
+            // std::string filename = "/ros2_ws/src/stream" +
+            // std::to_string(stream_id) + ".mp4";
             
-            sink = gst_element_factory_make("filesink", nullptr);
+            sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,           // No sync
                 "qos", FALSE,            // No QoS
                 "max-lateness", -1,      // Never consider frames late
                 "async", FALSE,          // Synchronous state changes
                 "throttle-time", 0,      // No throttling
-                "location", filename.c_str(),
                 NULL);
 
             

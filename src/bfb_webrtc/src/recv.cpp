@@ -535,12 +535,12 @@ public:
             if (g_strcmp0(factory_name, "rtpjitterbuffer") == 0) {
                 // CRITICAL: Disable lost packet events
                 g_object_set(element,
-                    "mode", 3,               // Synced mode
-                    "latency", 50,
+                    "mode", 3,
+                    "latency", 100,
                     "do-lost", FALSE,
-                    "drop-on-latency", FALSE,
-                    "max-dropout-time", 200,   // ← ADD: Don't wait for late packets
-                    "max-misorder-time", 0,  // ← ADD: Don't reorder packets
+                    "drop-on-latency", TRUE,
+                    "max-dropout-time", 250,
+                    "max-misorder-time", 100,
                     NULL);
                 
                 g_print("Configured jitterbuffer: %s\n", GST_ELEMENT_NAME(element));
@@ -618,7 +618,7 @@ public:
             return;
         }
 
-        g_object_set(self->webrtcbin, "latency", 50, NULL);
+        g_object_set(self->webrtcbin, "latency", 100, NULL);
 
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
@@ -641,11 +641,10 @@ public:
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
                 "max-size-buffers", 0,
-                "max-size-time", G_GUINT64_CONSTANT(500000000),
+                "max-size-time", 0,
                 "max-size-bytes", 0,
-                "leaky", 2, // downstream
+                "leaky", 0, // downstream
                 "silent", TRUE,
-                "flush-on-eos", TRUE,
                 NULL);
             
             conv = gst_element_factory_make("videoconvert", nullptr);

@@ -389,7 +389,7 @@ public:
         pay = gst_element_factory_make("rtph264pay", NULL);
         g_object_set(pay,
                     "pt", 96,
-                    "mtu", 800,
+                    "mtu", 1200,
                     "config-interval", 1,
                     NULL);                 
 

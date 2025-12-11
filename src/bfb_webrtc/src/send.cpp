@@ -374,7 +374,6 @@ public:
                  "insert-sps-pps", 1,
                  "insert-vui", 1,
                  "EnableTwopassCBR", 0,
-                 "DisableCabac", TRUE,
                  NULL);
 
         // Queue - after encoder

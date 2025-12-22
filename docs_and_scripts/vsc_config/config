@@ -1,5 +1,5 @@
 # Read more about SSH config files: https://linux.die.net/man/5/ssh_config
-  Host bfb_nvidia_external
+Host bfb_nvidia_external
     HostName 87.119.173.184
     User bigfootbot
     Port 22
@@ -12,7 +12,7 @@
     ControlPersist 1h
     PreferredAuthentications password,publickey
 
-  Host bfb_rpi5_external
+Host bfb_rpi5_external
     HostName 87.119.173.184
     User bigfootbot
     Port 23

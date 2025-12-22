@@ -657,7 +657,7 @@ public:
             // std::string filename = "/ros2_ws/src/stream" +
             // std::to_string(stream_id) + ".mp4";
             
-            sink = gst_element_factory_make("xvimagesink", nullptr);
+            sink = gst_element_factory_make("ximagesink", nullptr);
             g_object_set(sink,
                 "sync", FALSE,           // No sync
                 "qos", FALSE,            // No QoS

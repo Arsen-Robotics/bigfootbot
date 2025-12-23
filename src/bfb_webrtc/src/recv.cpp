@@ -535,12 +535,14 @@ public:
             if (g_strcmp0(factory_name, "rtpjitterbuffer") == 0) {
                 // CRITICAL: Disable lost packet events
                 g_object_set(element,
-                    "mode", 3,
-                    "latency", 100,
-                    "do-lost", FALSE,
-                    "drop-on-latency", TRUE,
-                    "max-dropout-time", 250,
-                    "max-misorder-time", 100,
+                    "mode", 4,                      // SLAVE mode (sync to sender clock)
+                    "latency", 220,                 // 220ms (match Chrome's ~217ms)
+                    "do-lost", FALSE,               // Don't generate lost events
+                    "do-retransmission", TRUE,      // Enable NACK retransmission
+                    "rtx-max-retries", 3,           // Allow 3 retransmit attempts
+                    "drop-on-latency", FALSE,       // Don't drop frames
+                    "max-dropout-time", 500,
+                    "max-misorder-time", 200,
                     NULL);
                 
                 g_print("Configured jitterbuffer: %s\n", GST_ELEMENT_NAME(element));
@@ -659,11 +661,10 @@ public:
             
             sink = gst_element_factory_make("ximagesink", nullptr);
             g_object_set(sink,
-                "sync", FALSE,           // No sync
-                "qos", FALSE,            // No QoS
-                "max-lateness", -1,      // Never consider frames late
-                "async", FALSE,          // Synchronous state changes
-                "throttle-time", 0,      // No throttling
+                "sync", FALSE,           // Match Chrome's synchronized playback
+                "max-lateness", 200000000, // 200ms tolerance
+                "qos", FALSE,
+                "async", TRUE,
                 NULL);
 
             

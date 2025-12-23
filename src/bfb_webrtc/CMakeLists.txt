@@ -37,19 +37,19 @@ add_executable(camera_node src/camera_node.cpp)
 # --- ROS 2 dependencies ---
 ament_target_dependencies(signaling_node rclcpp)
 ament_target_dependencies(webrtc_send_node rclcpp sensor_msgs cv_bridge OpenCV)
-ament_target_dependencies(webrtc_recv_node rclcpp)
+ament_target_dependencies(webrtc_recv_node rclcpp cv_bridge OpenCV)
 ament_target_dependencies(camera_node rclcpp sensor_msgs cv_bridge OpenCV)
 
 # --- Include directories ---
-target_include_directories(webrtc_send_node PRIVATE ${GSTREAMER_INCLUDE_DIRS})
-target_include_directories(webrtc_recv_node PRIVATE ${GSTREAMER_INCLUDE_DIRS})
-target_include_directories(camera_node PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+target_include_directories(webrtc_send_node PRIVATE ${GSTREAMER_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+target_include_directories(webrtc_recv_node PRIVATE ${GSTREAMER_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+target_include_directories(camera_node PRIVATE ${GSTREAMER_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 # --- Link libraries (plain style) ---
 target_link_libraries(signaling_node jsoncpp pthread)
-target_link_libraries(webrtc_send_node jsoncpp pthread ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES})
-target_link_libraries(webrtc_recv_node jsoncpp pthread ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES})
-target_link_libraries(camera_node ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} pthread)
+target_link_libraries(webrtc_send_node jsoncpp pthread ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(webrtc_recv_node jsoncpp pthread ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(camera_node ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} pthread ${OpenCV_LIBS})
 
 # --- Install executables ---
 install(TARGETS signaling_node webrtc_send_node webrtc_recv_node camera_node

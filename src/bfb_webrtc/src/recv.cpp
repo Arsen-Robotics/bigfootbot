@@ -7,12 +7,14 @@
 #include <jsoncpp/json/json.h>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
+#include <opencv2/opencv.hpp>
 #include <X11/Xlib.h>
 #include <glib.h>
 #include <thread>
 #include <atomic>
 #include <mutex>
 #include <sys/resource.h>
+#include <gst/app/gstappsink.h>
 
 static GQuark STREAM_INFO_QUARK = 0;
 
@@ -49,6 +51,12 @@ public:
         // stutter_monitor_timer = this->create_wall_timer(
         //     std::chrono::milliseconds(stutter_monitor_period_ms),
         //     [this]() { this->stutter_monitor_callback(); }
+        // );
+
+        // Timer for frame pulling at 30fps (33.33ms)
+        // frame_pull_timer = this->create_wall_timer(
+        //     std::chrono::milliseconds(33),
+        //     [this]() { this->pull_and_display_frames(); }
         // );
     }
 
@@ -309,6 +317,13 @@ public:
 
         // Set pipeline state to PLAYING
         gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+        // CRITICAL: Add GLib timer for frame pulling (runs in GLib main thread)
+        g_timeout_add(33, [](gpointer user_data) -> gboolean {
+            WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
+            self->pull_and_display_frames_glib();
+            return G_SOURCE_CONTINUE;  // Keep timer running
+        }, this);
     }
 
     void stutter_monitor_callback() {
@@ -659,13 +674,28 @@ public:
             // std::string filename = "/ros2_ws/src/stream" +
             // std::to_string(stream_id) + ".mp4";
             
-            sink = gst_element_factory_make("ximagesink", nullptr);
+            // sink = gst_element_factory_make("ximagesink", nullptr);
+            // g_object_set(sink,
+            //     "sync", FALSE,           // Match Chrome's synchronized playback
+            //     "max-lateness", 200000000, // 200ms tolerance
+            //     "qos", FALSE,
+            //     "async", TRUE,
+            //     NULL);
+
+            sink = gst_element_factory_make("appsink", nullptr);
             g_object_set(sink,
-                "sync", FALSE,           // Match Chrome's synchronized playback
-                "max-lateness", 200000000, // 200ms tolerance
-                "qos", FALSE,
-                "async", TRUE,
+                "emit-signals", FALSE,  // pull manually
+                "sync", FALSE,           // ignore timestamps
+                "max-buffers", 2,        // only keep latest
+                "drop", TRUE,            // drop older frames
                 NULL);
+
+            // Set appsink caps to BGR for OpenCV
+            GstCaps* appsink_caps = gst_caps_new_simple("video/x-raw",
+                "format", G_TYPE_STRING, "BGR",
+                NULL);
+            gst_app_sink_set_caps(GST_APP_SINK(sink), appsink_caps);
+            gst_caps_unref(appsink_caps);
 
             
         } else if (g_str_has_prefix(name, "audio")) {
@@ -684,6 +714,23 @@ public:
         gst_object_unref(sinkpad);
 
         gst_element_link_many(queue, conv, sink, nullptr);
+
+        // Create stream info
+        int transceiver_index = stream_info->stream_id;
+        stream_info->appsink = GST_APP_SINK(sink);
+        
+        // Create window name
+        char window_name[64];
+        snprintf(window_name, sizeof(window_name), "Stream %d", transceiver_index);
+        stream_info->window_name = new char[strlen(window_name) + 1];
+        strcpy(stream_info->window_name, window_name);
+        cv::namedWindow(stream_info->window_name, cv::WINDOW_AUTOSIZE);
+
+        // Store in map
+        {
+            std::lock_guard<std::mutex> lk(self->streams_mutex);
+            self->streams[transceiver_index] = stream_info;
+        }
 
         // Add stutter monitoring probe on sink pad of sink element
         // if (sink) {
@@ -709,6 +756,41 @@ public:
         // }
 
         gst_caps_unref(caps);
+    }
+
+    // Timer callback - pulls and displays latest frame from each stream
+    void pull_and_display_frames_glib() {
+        std::lock_guard<std::mutex> lk(streams_mutex);
+
+        for (auto& [stream_id, stream_info] : streams) {
+            if (!stream_info || !stream_info->appsink) continue;
+
+            GstSample* sample = gst_app_sink_try_pull_sample(stream_info->appsink, 0);
+            
+            if (sample) {
+                GstBuffer* buffer = gst_sample_get_buffer(sample);
+                GstCaps* caps = gst_sample_get_caps(sample);
+                
+                GstStructure* structure = gst_caps_get_structure(caps, 0);
+                int width, height;
+                gst_structure_get_int(structure, "width", &width);
+                gst_structure_get_int(structure, "height", &height);
+
+                GstMapInfo map;
+                if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+                    // Create OpenCV Mat directly from buffer data
+                    cv::Mat frame(height, width, CV_8UC3, map.data);
+                    
+                    // Display frame - now safe because we're in GLib thread
+                    cv::imshow(stream_info->window_name, frame);
+                    cv::waitKey(1);
+
+                    gst_buffer_unmap(buffer, &map);
+                }
+
+                gst_sample_unref(sample);
+            }
+        }
     }
 
     static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
@@ -789,6 +871,7 @@ private:
     // Stutter monitoring
     std::mutex stutter_mutex;
     rclcpp::TimerBase::SharedPtr stutter_monitor_timer;
+    rclcpp::TimerBase::SharedPtr frame_pull_timer;
 
     // Stream info (per stream)
     struct StreamInfo {
@@ -798,6 +881,8 @@ private:
         uint64_t last_frame_pts_ns{0};
         std::atomic<uint64_t> frame_count{0};
         std::atomic<uint64_t> stutter_count{0};
+        GstAppSink* appsink{nullptr};
+        char* window_name{nullptr};
     };
 
     // Map of stream info instances

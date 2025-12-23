@@ -19,8 +19,16 @@ ARG BASE_IMAGE=nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_b7e1ed6c02a6fa3c1c73
 FROM ${BASE_IMAGE:-'ubuntu:20.04'}
 
 # Workaround as of 19.01.2025 there was a GPG error ONLY with nvcr base image
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
-    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
+# RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null \
+#     && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
+
+# 02.07.2025 fix
+RUN apt-key del F42ED6FBAB17C654 \
+    && rm -f /usr/share/keyrings/ros-archive-keyring.gpg \
+    && curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && sed -i '/isaac-ros/d' /etc/apt/sources.list \
+    && curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | \
+    gpg --yes --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg
 
 RUN apt update
 RUN apt install -y build-essential curl git lsb-release gnupg
@@ -36,7 +44,7 @@ COPY config.json .
 # -s is for silent mode (not showing progress bar or error messages)
 # -f fail silently on server errors (curl will not output the error message and will return a non-zero 
 # exit status instead)
-RUN curl -sf "https://install.transitiverobotics.com?id=alexm&token=5k5l2x5160m1nop4a5r1y&docker=true" | bash    
+RUN curl -sf "https://install.transitiverobotics.com?id=iorlov&token=4x6m5pu374u12o5z6kz3r&docker=true" | bash    
 
 WORKDIR /root
 COPY entrypoint.sh .

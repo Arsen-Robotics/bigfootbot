@@ -7,14 +7,12 @@
 #include <jsoncpp/json/json.h>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
-#include <opencv2/opencv.hpp>
 #include <X11/Xlib.h>
 #include <glib.h>
 #include <thread>
 #include <atomic>
 #include <mutex>
 #include <sys/resource.h>
-#include <gst/app/gstappsink.h>
 
 static GQuark STREAM_INFO_QUARK = 0;
 
@@ -51,12 +49,6 @@ public:
         // stutter_monitor_timer = this->create_wall_timer(
         //     std::chrono::milliseconds(stutter_monitor_period_ms),
         //     [this]() { this->stutter_monitor_callback(); }
-        // );
-
-        // Timer for frame pulling at 30fps (33.33ms)
-        // frame_pull_timer = this->create_wall_timer(
-        //     std::chrono::milliseconds(33),
-        //     [this]() { this->pull_and_display_frames(); }
         // );
     }
 
@@ -306,6 +298,16 @@ public:
             return;
         }
 
+        // Grab rtpbin *by name* from webrtcbin’s internal bin
+        GstElement *rtpbin = gst_bin_get_by_name(GST_BIN(webrtcbin), "rtpbin");
+        if (rtpbin) {
+            g_signal_connect(rtpbin,
+                            "new-jitterbuffer",
+                            G_CALLBACK(on_new_jitterbuffer),
+                            this);
+            gst_object_unref(rtpbin);
+        }
+
         gst_pipeline_use_clock(GST_PIPELINE(pipeline), gst_system_clock_obtain());
 
         // Set WebRTC properties
@@ -315,15 +317,8 @@ public:
         g_signal_connect(webrtcbin, "on-ice-candidate", G_CALLBACK(&WebRTCRecvNode::send_ice_candidate), this);
         g_signal_connect(webrtcbin, "pad-added", G_CALLBACK(&WebRTCRecvNode::on_incoming_stream), this);
 
-        // Set pipeline state to PLAYING
-        gst_element_set_state(pipeline, GST_STATE_PLAYING);
-
-        // CRITICAL: Add GLib timer for frame pulling (runs in GLib main thread)
-        g_timeout_add(33, [](gpointer user_data) -> gboolean {
-            WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
-            self->pull_and_display_frames_glib();
-            return G_SOURCE_CONTINUE;  // Keep timer running
-        }, this);
+        // Set pipeline state to PAUSED
+        gst_element_set_state(pipeline, GST_STATE_PAUSED);
     }
 
     void stutter_monitor_callback() {
@@ -483,7 +478,10 @@ public:
                 g_signal_emit_by_name(webrtcbin, "set-remote-description", offer, nullptr);
                 gst_webrtc_session_description_free(offer);
 
-                this->configure_jitterbuffer(this->webrtcbin);
+                // this->configure_jitterbuffer(this->webrtcbin);
+
+                // Set pipeline state to PLAYING
+                gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
 
                 // Create answer
                 GstPromise *promise = gst_promise_new_with_change_func([](GstPromise *promise, gpointer user_data) {
@@ -536,39 +534,67 @@ public:
         gst_webrtc_session_description_free(answer);
     }
 
-    static void configure_jitterbuffer(GstElement* webrtcbin) {
-        // Iterate through all children to find rtpjitterbuffer elements
-        GstIterator* it = gst_bin_iterate_elements(GST_BIN(webrtcbin));
-        GValue item = G_VALUE_INIT;
-        
-        while (gst_iterator_next(it, &item) == GST_ITERATOR_OK) {
-            GstElement* element = GST_ELEMENT(g_value_get_object(&item));
-            const gchar* factory_name = gst_plugin_feature_get_name(
-                GST_PLUGIN_FEATURE(gst_element_get_factory(element))
-            );
-            
-            if (g_strcmp0(factory_name, "rtpjitterbuffer") == 0) {
-                // CRITICAL: Disable lost packet events
-                g_object_set(element,
-                    "mode", 4,                      // SLAVE mode (sync to sender clock)
-                    "latency", 220,                 // 220ms (match Chrome's ~217ms)
-                    "do-lost", FALSE,               // Don't generate lost events
-                    "do-retransmission", TRUE,      // Enable NACK retransmission
-                    "rtx-max-retries", 3,           // Allow 3 retransmit attempts
-                    "drop-on-latency", FALSE,       // Don't drop frames
-                    "max-dropout-time", 500,
-                    "max-misorder-time", 200,
-                    NULL);
-                
-                g_print("Configured jitterbuffer: %s\n", GST_ELEMENT_NAME(element));
-            }
-            
-            g_value_reset(&item);
-        }
-        
-        g_value_unset(&item);
-        gst_iterator_free(it);
+    static void
+    on_new_jitterbuffer(GstElement *rtpbin,
+                        GstElement *jitterbuffer,
+                        guint session,
+                        guint ssrc,
+                        gpointer user_data)
+    {
+        // Basic config — adapt as needed
+        g_object_set(jitterbuffer,
+                    "mode", 1,                      // SLAVE mode (default, best for live)
+                    "latency", 300,                 // 300ms - LARGE buffer for maximum smoothness
+                    "do-lost", FALSE,               // Don't signal lost packets
+                    "do-retransmission", TRUE,      // Enable NACK retransmissions
+                    "rtx-next-seqnum", TRUE,        // Proactively request next packet
+                    "rtx-delay", 20,                // Wait 20ms before requesting retransmission
+                    "rtx-retry-timeout", 80,        // Retry every 80ms if not received
+                    "rtx-min-retry-timeout", 40,    // Minimum 40ms between retries
+                    "rtx-retry-period", 1000,       // Keep trying for 1 second total
+                    "rtx-max-retries", -1,          // Unlimited retries within period
+                    "drop-on-latency", FALSE,       // NEVER drop late frames
+                    "max-dropout-time", 5000,       // 5s before considering stream dead
+                    "max-misorder-time", 200,       // 200ms tolerance for reordering
+                    nullptr);
+
+        g_printerr("Configured rtpjitterbuffer for session %u, ssrc %u: %s\n",
+                session, ssrc, GST_ELEMENT_NAME(jitterbuffer));
     }
+
+    // static void configure_jitterbuffer(GstElement* webrtcbin) {
+    //     // Iterate through all children to find rtpjitterbuffer elements
+    //     GstIterator* it = gst_bin_iterate_elements(GST_BIN(webrtcbin));
+    //     GValue item = G_VALUE_INIT;
+        
+    //     while (gst_iterator_next(it, &item) == GST_ITERATOR_OK) {
+    //         GstElement* element = GST_ELEMENT(g_value_get_object(&item));
+    //         const gchar* factory_name = gst_plugin_feature_get_name(
+    //             GST_PLUGIN_FEATURE(gst_element_get_factory(element))
+    //         );
+            
+    //         if (g_strcmp0(factory_name, "rtpjitterbuffer") == 0) {
+    //             // CRITICAL: Disable lost packet events
+    //             g_object_set(element,
+    //                 "mode", 4,                      // SLAVE mode (sync to sender clock)
+    //                 "latency", 220,                 // 220ms (match Chrome's ~217ms)
+    //                 "do-lost", FALSE,               // Don't generate lost events
+    //                 "do-retransmission", TRUE,      // Enable NACK retransmission
+    //                 "rtx-max-retries", 3,           // Allow 3 retransmit attempts
+    //                 "drop-on-latency", FALSE,       // Don't drop frames
+    //                 "max-dropout-time", 500,
+    //                 "max-misorder-time", 200,
+    //                 NULL);
+                
+    //             g_print("Configured jitterbuffer: %s\n", GST_ELEMENT_NAME(element));
+    //         }
+            
+    //         g_value_reset(&item);
+    //     }
+        
+    //     g_value_unset(&item);
+    //     gst_iterator_free(it);
+    // }
 
     static void on_incoming_stream(GstElement* webrtcbin, GstPad* pad, WebRTCRecvNode* self) {
         RCLCPP_INFO(self->get_logger(), "Received incoming stream.");
@@ -635,14 +661,15 @@ public:
             return;
         }
 
-        g_object_set(self->webrtcbin, "latency", 100, NULL);
+        //g_object_set(self->webrtcbin, "latency", 100, NULL);
 
         const GstStructure* str = gst_caps_get_structure(caps, 0);
         const gchar* name = gst_structure_get_name(str);
 
         // Create elements
-        GstElement* queue = nullptr;
         GstElement* conv = nullptr;
+        GstElement* queue = nullptr;
+        GstElement* identity = nullptr;
         GstElement* sink = nullptr;
 
         uint64_t nominal_frame_interval_ns = 33333333ULL; // Default to ~30 FPS
@@ -654,48 +681,34 @@ public:
                 nominal_frame_interval_ns = static_cast<uint64_t>((1e9 * fps_d / fps_n) + 0.5);
             }
             
-            // Create queue to help absorb jitter
-            queue = gst_element_factory_make("queue", nullptr);
-            g_object_set(queue,
-                "max-size-buffers", 0,
-                "max-size-time", 0,
-                "max-size-bytes", 0,
-                "leaky", 0, // downstream
-                "silent", TRUE,
-                NULL);
-            
             conv = gst_element_factory_make("videoconvert", nullptr);
             g_object_set(conv,
                 "qos", FALSE, // Enable QoS
                 // "n-threads", 2, // Use multiple threads for conversion
                 NULL);
 
+            queue = gst_element_factory_make("queue", nullptr);
+            g_object_set(queue,
+                "max-size-buffers", 33,
+                "leaky", 2, // downstream
+                NULL);
+
+            identity = gst_element_factory_make("identity", nullptr);
+            g_object_set(identity,
+                "single-segment", TRUE,
+                nullptr);
+
             // int stream_id = stream_info->stream_id;
             // std::string filename = "/ros2_ws/src/stream" +
             // std::to_string(stream_id) + ".mp4";
             
-            // sink = gst_element_factory_make("ximagesink", nullptr);
-            // g_object_set(sink,
-            //     "sync", FALSE,           // Match Chrome's synchronized playback
-            //     "max-lateness", 200000000, // 200ms tolerance
-            //     "qos", FALSE,
-            //     "async", TRUE,
-            //     NULL);
-
-            sink = gst_element_factory_make("appsink", nullptr);
+            sink = gst_element_factory_make("ximagesink", nullptr);
             g_object_set(sink,
-                "emit-signals", FALSE,  // pull manually
-                "sync", FALSE,           // ignore timestamps
-                "max-buffers", 2,        // only keep latest
-                "drop", TRUE,            // drop older frames
+                "sync", FALSE,           // Match Chrome's synchronized playback
+                "max-lateness", 2000000000, // 200ms tolerance
+                "qos", FALSE,
+                "async", TRUE,
                 NULL);
-
-            // Set appsink caps to BGR for OpenCV
-            GstCaps* appsink_caps = gst_caps_new_simple("video/x-raw",
-                "format", G_TYPE_STRING, "BGR",
-                NULL);
-            gst_app_sink_set_caps(GST_APP_SINK(sink), appsink_caps);
-            gst_caps_unref(appsink_caps);
 
             
         } else if (g_str_has_prefix(name, "audio")) {
@@ -703,34 +716,18 @@ public:
             sink = gst_element_factory_make("autoaudiosink", nullptr);
         }
 
-        gst_bin_add_many(GST_BIN(self->pipeline), queue, conv, sink, nullptr);
-        gst_element_sync_state_with_parent(queue);
+        gst_bin_add_many(GST_BIN(self->pipeline), conv, queue, identity, sink, nullptr);
         gst_element_sync_state_with_parent(conv);
+        gst_element_sync_state_with_parent(queue);
+        gst_element_sync_state_with_parent(identity);
         gst_element_sync_state_with_parent(sink);
 
-        // Link: decodebin pad → queue → conv → sink
-        GstPad* sinkpad = gst_element_get_static_pad(queue, "sink");
+        // Link: decodebin pad → conv → queue → identity → sink
+        GstPad* sinkpad = gst_element_get_static_pad(conv, "sink");
         gst_pad_link(pad, sinkpad);
         gst_object_unref(sinkpad);
 
-        gst_element_link_many(queue, conv, sink, nullptr);
-
-        // Create stream info
-        int transceiver_index = stream_info->stream_id;
-        stream_info->appsink = GST_APP_SINK(sink);
-        
-        // Create window name
-        char window_name[64];
-        snprintf(window_name, sizeof(window_name), "Stream %d", transceiver_index);
-        stream_info->window_name = new char[strlen(window_name) + 1];
-        strcpy(stream_info->window_name, window_name);
-        cv::namedWindow(stream_info->window_name, cv::WINDOW_AUTOSIZE);
-
-        // Store in map
-        {
-            std::lock_guard<std::mutex> lk(self->streams_mutex);
-            self->streams[transceiver_index] = stream_info;
-        }
+        gst_element_link_many(conv, queue, identity, sink, nullptr);
 
         // Add stutter monitoring probe on sink pad of sink element
         // if (sink) {
@@ -756,41 +753,6 @@ public:
         // }
 
         gst_caps_unref(caps);
-    }
-
-    // Timer callback - pulls and displays latest frame from each stream
-    void pull_and_display_frames_glib() {
-        std::lock_guard<std::mutex> lk(streams_mutex);
-
-        for (auto& [stream_id, stream_info] : streams) {
-            if (!stream_info || !stream_info->appsink) continue;
-
-            GstSample* sample = gst_app_sink_try_pull_sample(stream_info->appsink, 0);
-            
-            if (sample) {
-                GstBuffer* buffer = gst_sample_get_buffer(sample);
-                GstCaps* caps = gst_sample_get_caps(sample);
-                
-                GstStructure* structure = gst_caps_get_structure(caps, 0);
-                int width, height;
-                gst_structure_get_int(structure, "width", &width);
-                gst_structure_get_int(structure, "height", &height);
-
-                GstMapInfo map;
-                if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-                    // Create OpenCV Mat directly from buffer data
-                    cv::Mat frame(height, width, CV_8UC3, map.data);
-                    
-                    // Display frame - now safe because we're in GLib thread
-                    cv::imshow(stream_info->window_name, frame);
-                    cv::waitKey(1);
-
-                    gst_buffer_unmap(buffer, &map);
-                }
-
-                gst_sample_unref(sample);
-            }
-        }
     }
 
     static GstPadProbeReturn frame_probe_callback(GstPad* pad, GstPadProbeInfo* info, gpointer user_data) {
@@ -871,7 +833,6 @@ private:
     // Stutter monitoring
     std::mutex stutter_mutex;
     rclcpp::TimerBase::SharedPtr stutter_monitor_timer;
-    rclcpp::TimerBase::SharedPtr frame_pull_timer;
 
     // Stream info (per stream)
     struct StreamInfo {
@@ -881,8 +842,6 @@ private:
         uint64_t last_frame_pts_ns{0};
         std::atomic<uint64_t> frame_count{0};
         std::atomic<uint64_t> stutter_count{0};
-        GstAppSink* appsink{nullptr};
-        char* window_name{nullptr};
     };
 
     // Map of stream info instances

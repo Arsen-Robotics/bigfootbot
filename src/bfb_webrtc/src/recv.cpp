@@ -482,6 +482,7 @@ public:
 
                 // Set pipeline state to PLAYING
                 gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
+                g_timeout_add_seconds(1, print_webrtc_stats, this);
 
                 // Create answer
                 GstPromise *promise = gst_promise_new_with_change_func([](GstPromise *promise, gpointer user_data) {
@@ -544,18 +545,12 @@ public:
         // Basic config — adapt as needed
         g_object_set(jitterbuffer,
                     "mode", 1,                      // SLAVE mode (default, best for live)
-                    "latency", 300,                 // 300ms - LARGE buffer for maximum smoothness
+                    "latency", 500,                 // 300ms - LARGE buffer for maximum smoothness
                     "do-lost", FALSE,               // Don't signal lost packets
-                    "do-retransmission", TRUE,      // Enable NACK retransmissions
-                    "rtx-next-seqnum", TRUE,        // Proactively request next packet
-                    "rtx-delay", 20,                // Wait 20ms before requesting retransmission
-                    "rtx-retry-timeout", 80,        // Retry every 80ms if not received
-                    "rtx-min-retry-timeout", 40,    // Minimum 40ms between retries
-                    "rtx-retry-period", 1000,       // Keep trying for 1 second total
-                    "rtx-max-retries", -1,          // Unlimited retries within period
+                    "do-retransmission", FALSE,      // Enable NACK retransmissions
                     "drop-on-latency", FALSE,       // NEVER drop late frames
                     "max-dropout-time", 5000,       // 5s before considering stream dead
-                    "max-misorder-time", 200,       // 200ms tolerance for reordering
+                    "max-misorder-time", 2000,       // 200ms tolerance for reordering
                     nullptr);
 
         g_printerr("Configured rtpjitterbuffer for session %u, ssrc %u: %s\n",
@@ -817,6 +812,58 @@ public:
         }
     }
 
+    static gboolean print_webrtc_stats(gpointer user_data) {
+        auto* self = static_cast<WebRTCRecvNode*>(user_data);
+
+        if (!self->webrtcbin)
+            return G_SOURCE_CONTINUE;
+
+        GstPromise* promise = gst_promise_new();
+
+        // Trigger stats collection
+        g_signal_emit_by_name(self->webrtcbin, "get-stats", nullptr, promise);
+
+        gst_promise_wait(promise);
+
+        const GstStructure* stats = gst_promise_get_reply(promise);
+
+        if (!stats) {
+            gst_promise_unref(promise);
+            return G_SOURCE_CONTINUE;
+        }
+
+        // Iterate all stats entries
+        gst_structure_foreach(stats,
+            [](GQuark field_id, const GValue* value, gpointer) -> gboolean {
+
+                if (!GST_VALUE_HOLDS_STRUCTURE(value))
+                    return TRUE;
+
+                const GstStructure* s = gst_value_get_structure(value);
+                const gchar* type = gst_structure_get_name(s);
+
+                // Only inbound RTP video
+                if (g_str_has_prefix(type, "inbound-rtp")) {
+                    guint64 packets_lost = 0;
+                    guint64 packets_recv = 0;
+
+                    gst_structure_get_uint64(s, "packets-lost", &packets_lost);
+                    gst_structure_get_uint64(s, "packets-received", &packets_recv);
+
+                    g_print("[STATS] %s recv=%" G_GUINT64_FORMAT
+                            " lost=%" G_GUINT64_FORMAT "\n",
+                            type, packets_recv, packets_lost);
+                }
+
+                return TRUE;
+            },
+            nullptr
+        );
+
+        gst_promise_unref(promise);
+        return G_SOURCE_CONTINUE; // keep ticking
+    }
+
 private:
     // GStreamer elements
     GstElement* pipeline;
@@ -875,16 +922,22 @@ int main(int argc, char* argv[]) {
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
 
     // Start GStreamer loop first, then WebSocket connection
-    std::thread gloop_thread([&]() { 
-        g_main_loop_run(loop); 
-    });
+    // std::thread gloop_thread([&]() { 
+    //     g_main_loop_run(loop); 
+    // });
 
     // Start WebSocket connect in separate thread
     std::thread ws_connect_thread([&]() { 
         node->connect(); 
     });
 
-    rclcpp::spin(node);
+    // ROS2 spin in separate thread
+    std::thread ros_thread([&]() {
+        rclcpp::spin(node);
+    });
+
+    // Main thread
+    g_main_loop_run(loop);
 
     // Cleanup
     node->ws_running = false;

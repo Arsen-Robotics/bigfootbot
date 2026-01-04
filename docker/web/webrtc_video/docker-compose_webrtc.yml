@@ -145,6 +145,8 @@ services:
     cap_add:
       - SYS_NICE
 
+    # network_mode: "host"
+
     # networks:
     #   macnet:
     #     ipv4_address: 192.168.5.77

@@ -26,6 +26,7 @@ pkg_check_modules(GSTREAMER REQUIRED
   gstreamer-sdp-1.0
   gstreamer-video-1.0
   gstreamer-app-1.0
+  gstreamer-rtp-1.0
 )
 
 # --- Add executables ---
@@ -42,13 +43,13 @@ ament_target_dependencies(camera_node rclcpp sensor_msgs cv_bridge OpenCV)
 
 # --- Include directories ---
 target_include_directories(webrtc_send_node PRIVATE ${GSTREAMER_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
-target_include_directories(webrtc_recv_node PRIVATE ${GSTREAMER_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+target_include_directories(webrtc_recv_node PRIVATE ${GSTREAMER_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${GST_RTP_INCLUDE_DIRS})
 target_include_directories(camera_node PRIVATE ${GSTREAMER_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 # --- Link libraries (plain style) ---
 target_link_libraries(signaling_node jsoncpp pthread)
 target_link_libraries(webrtc_send_node jsoncpp pthread ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} ${OpenCV_LIBS})
-target_link_libraries(webrtc_recv_node jsoncpp pthread ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(webrtc_recv_node jsoncpp pthread ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} ${OpenCV_LIBS} ${GST_RTP_LIBRARIES})
 target_link_libraries(camera_node ${GSTREAMER_LIBRARIES} ${X11_LIBRARIES} pthread ${OpenCV_LIBS})
 
 # --- Install executables ---

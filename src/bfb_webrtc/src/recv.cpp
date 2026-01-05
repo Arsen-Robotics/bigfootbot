@@ -13,6 +13,7 @@
 #include <atomic>
 #include <mutex>
 #include <sys/resource.h>
+#include <gst/rtp/gstrtpbuffer.h>
 
 static GQuark STREAM_INFO_QUARK = 0;
 
@@ -484,6 +485,12 @@ public:
                 gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
                 g_timeout_add_seconds(1, print_webrtc_stats, this);
 
+                g_timeout_add_seconds(1, [](gpointer data) -> gboolean {
+                    auto* self = static_cast<WebRTCRecvNode*>(data);
+                    self->analyze_packet_loss();
+                    return TRUE; // keep running
+                }, this);
+
                 // Create answer
                 GstPromise *promise = gst_promise_new_with_change_func([](GstPromise *promise, gpointer user_data) {
                     WebRTCRecvNode* self = static_cast<WebRTCRecvNode*>(user_data);
@@ -555,6 +562,125 @@ public:
 
         g_printerr("Configured rtpjitterbuffer for session %u, ssrc %u: %s\n",
                 session, ssrc, GST_ELEMENT_NAME(jitterbuffer));
+
+        auto* self = static_cast<WebRTCRecvNode*>(user_data);
+
+        // PRE-JB (network arrival)
+        GstPad* sinkpad = gst_element_get_static_pad(jitterbuffer, "sink");
+        gst_pad_add_probe(
+            sinkpad,
+            GST_PAD_PROBE_TYPE_BUFFER,
+            pre_jb_probe,
+            self,
+            nullptr
+        );
+        gst_object_unref(sinkpad);
+
+        // POST-JB (after reordering / dropping)
+        GstPad* srcpad = gst_element_get_static_pad(jitterbuffer, "src");
+        gst_pad_add_probe(
+            srcpad,
+            GST_PAD_PROBE_TYPE_BUFFER,
+            post_jb_probe,
+            self,
+            nullptr
+        );
+        gst_object_unref(srcpad);
+    }
+
+    static GstPadProbeReturn pre_jb_probe(
+        GstPad*, GstPadProbeInfo* info, gpointer user_data)
+    {
+        auto* self = static_cast<WebRTCRecvNode*>(user_data);
+        GstBuffer* buf = GST_PAD_PROBE_INFO_BUFFER(info);
+        if (!buf) return GST_PAD_PROBE_OK;
+
+        GstRTPBuffer rtp = GST_RTP_BUFFER_INIT;
+        if (!gst_rtp_buffer_map(buf, GST_MAP_READ, &rtp))
+            return GST_PAD_PROBE_OK;
+
+        uint16_t seq = gst_rtp_buffer_get_seq(&rtp);
+        uint32_t ssrc = gst_rtp_buffer_get_ssrc(&rtp);
+
+        auto& tr = self->ssrc_map[ssrc];
+
+        tr.pre_jb_seen.insert(seq);
+
+        if (!tr.initialized) {
+            tr.max_pre_seq = seq;
+            tr.initialized = true;
+            tr.last_check = std::chrono::steady_clock::now();
+        } else if (seq_less(tr.max_pre_seq, seq)) {
+            tr.max_pre_seq = seq;
+        }
+
+        gst_rtp_buffer_unmap(&rtp);
+        return GST_PAD_PROBE_OK;
+    }
+
+    static GstPadProbeReturn post_jb_probe(
+        GstPad*, GstPadProbeInfo* info, gpointer user_data)
+    {
+        auto* self = static_cast<WebRTCRecvNode*>(user_data);
+        GstBuffer* buf = GST_PAD_PROBE_INFO_BUFFER(info);
+        if (!buf) return GST_PAD_PROBE_OK;
+
+        GstRTPBuffer rtp = GST_RTP_BUFFER_INIT;
+        if (!gst_rtp_buffer_map(buf, GST_MAP_READ, &rtp))
+            return GST_PAD_PROBE_OK;
+
+        uint16_t seq = gst_rtp_buffer_get_seq(&rtp);
+        uint32_t ssrc = gst_rtp_buffer_get_ssrc(&rtp);
+
+        auto& tr = self->ssrc_map[ssrc];
+        tr.post_jb_seen.insert(seq);
+
+        if (seq_less(tr.max_post_seq, seq))
+            tr.max_post_seq = seq;
+
+        gst_rtp_buffer_unmap(&rtp);
+        return GST_PAD_PROBE_OK;
+    }
+
+    void analyze_packet_loss()
+    {
+        auto now = std::chrono::steady_clock::now();
+
+        for (auto& [ssrc, tr] : ssrc_map) {
+            if (now - tr.last_check < std::chrono::seconds(1))
+                continue;
+
+            tr.last_check = now;
+
+            uint16_t upper = tr.max_pre_seq;
+
+            for (uint16_t seq = 0; seq != upper; ++seq) {
+
+                bool seen_pre  = tr.pre_jb_seen.count(seq);
+                bool seen_post = tr.post_jb_seen.count(seq);
+
+                if (!seen_pre) {
+                    std::cout << "[NETWORK DROP] SSRC=" << ssrc
+                            << " seq=" << seq << "\n";
+                }
+                else if (!seen_post) {
+                    std::cout << "[JB DROP] SSRC=" << ssrc
+                            << " seq=" << seq << "\n";
+                }
+            }
+
+            // Cleanup old history (keep sliding window)
+            const uint16_t KEEP = 5000;
+            while (tr.pre_jb_seen.size() > KEEP)
+                tr.pre_jb_seen.erase(tr.pre_jb_seen.begin());
+
+            while (tr.post_jb_seen.size() > KEEP)
+                tr.post_jb_seen.erase(tr.post_jb_seen.begin());
+        }
+    }
+
+    static inline bool seq_less(uint16_t a, uint16_t b) {
+        return (int16_t)(a - b) < 0;
     }
 
     // static void configure_jitterbuffer(GstElement* webrtcbin) {
@@ -901,6 +1027,20 @@ private:
     //const double high_stutter_threshold = 0.07; // if >7% stutter -> reduce bitrate
     //const double low_stutter_threshold = 0.04;  // if <1% stutter -> increase bitrate
     //const int bitrate_step_kbps = 100000;     // amount to change bitrate by (bps)
+
+    struct SeqTracker {
+        std::set<uint16_t> pre_jb_seen;     // packets seen BEFORE JB
+        std::set<uint16_t> post_jb_seen;    // packets seen AFTER JB
+
+        uint16_t max_pre_seq = 0;
+        uint16_t max_post_seq = 0;
+
+        bool initialized = false;
+
+        std::chrono::steady_clock::time_point last_check;
+    };
+
+    std::unordered_map<uint32_t, SeqTracker> ssrc_map;
 };
 
 /**

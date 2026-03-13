@@ -275,11 +275,16 @@ public:
      * - WebRTC transmission
      */
     void setup_pipeline() {
+        g_setenv("GST_UDP_BUFFER_SIZE", "16777216", TRUE);  // 16MB
+
         // Create GStreamer pipeline
         GError* error = nullptr;
         pipeline = gst_parse_launch("webrtcbin name=webrtcbin stun-server=stun://stun.l.google.com:19302 \
                 videotestsrc is-live=true pattern=black ! video/x-raw,width=16,height=16,framerate=1/1 ! videoconvert ! fakesink",
             &error);
+
+        system("for pid in $(pgrep -P $(pidof webrtc_recv_node)); do "
+           "chrt -f -p 50 $pid 2>/dev/null; done");
 
         if (error) {
             RCLCPP_ERROR(this->get_logger(), "ERROR: Could not create GStreamer pipeline: %s", error->message);
@@ -551,7 +556,7 @@ public:
     {
         // Basic config — adapt as needed
         g_object_set(jitterbuffer,
-                    "mode", 1,                      // SLAVE mode (default, best for live)
+                    "mode", 4,                      // SLAVE mode (default, best for live)
                     "latency", 500,                 // 300ms - LARGE buffer for maximum smoothness
                     "do-lost", FALSE,               // Don't signal lost packets
                     "do-retransmission", FALSE,      // Enable NACK retransmissions
@@ -603,10 +608,10 @@ public:
         uint32_t ssrc = gst_rtp_buffer_get_ssrc(&rtp);
 
         auto& tr = self->ssrc_map[ssrc];
-
         tr.pre_jb_seen.insert(seq);
 
         if (!tr.initialized) {
+            tr.first_seq = seq;        // TRACK FIRST!
             tr.max_pre_seq = seq;
             tr.initialized = true;
             tr.last_check = std::chrono::steady_clock::now();
@@ -642,40 +647,81 @@ public:
         return GST_PAD_PROBE_OK;
     }
 
-    void analyze_packet_loss()
-    {
+    void analyze_packet_loss() {
         auto now = std::chrono::steady_clock::now();
 
         for (auto& [ssrc, tr] : ssrc_map) {
+            if (!tr.initialized)
+                continue;
+                
             if (now - tr.last_check < std::chrono::seconds(1))
                 continue;
 
             tr.last_check = now;
 
-            uint16_t upper = tr.max_pre_seq;
+            // FIXED: Use last_reported_seq to avoid re-checking packets
+            uint16_t start = tr.last_reported_seq;
+            uint16_t end = tr.max_pre_seq;
 
-            for (uint16_t seq = 0; seq != upper; ++seq) {
+            // Skip if no new packets
+            if (start == end)
+                continue;
 
+            int total_checked = 0;
+            int network_drops = 0;
+            int jb_drops = 0;
+
+            // Check only NEW packets since last report
+            for (uint16_t seq = (start + 1) & 0xFFFF; 
+                seq != ((end + 1) & 0xFFFF); 
+                seq = (seq + 1) & 0xFFFF) {
+                
+                total_checked++;
                 bool seen_pre  = tr.pre_jb_seen.count(seq);
                 bool seen_post = tr.post_jb_seen.count(seq);
 
                 if (!seen_pre) {
-                    std::cout << "[NETWORK DROP] SSRC=" << ssrc
-                            << " seq=" << seq << "\n";
+                    network_drops++;
                 }
                 else if (!seen_post) {
-                    std::cout << "[JB DROP] SSRC=" << ssrc
-                            << " seq=" << seq << "\n";
+                    jb_drops++;
+                }
+                
+                // Stop if we've checked too many (safety)
+                if (total_checked > 10000) {
+                    RCLCPP_ERROR(rclcpp::get_logger("packet_loss"),
+                        "Checked too many packets, possible wraparound issue");
+                    break;
                 }
             }
 
-            // Cleanup old history (keep sliding window)
-            const uint16_t KEEP = 5000;
-            while (tr.pre_jb_seen.size() > KEEP)
-                tr.pre_jb_seen.erase(tr.pre_jb_seen.begin());
+            // Update last reported sequence
+            tr.last_reported_seq = end;
 
-            while (tr.post_jb_seen.size() > KEEP)
-                tr.post_jb_seen.erase(tr.post_jb_seen.begin());
+            // Only report if there were actual losses
+            if (network_drops > 0 || jb_drops > 0) {
+                RCLCPP_WARN(rclcpp::get_logger("packet_loss"),
+                    "SSRC=%u: checked=%d network_drops=%d jb_drops=%d (seq %u to %u)",
+                    ssrc, total_checked, network_drops, jb_drops, 
+                    (start + 1) & 0xFFFF, end);
+            }
+
+            // Cleanup old entries (keep last 2000 packets only)
+            uint16_t cleanup_threshold = (end - 2000) & 0xFFFF;
+            
+            for (auto it = tr.pre_jb_seen.begin(); it != tr.pre_jb_seen.end(); ) {
+                if (seq_less(*it, cleanup_threshold))
+                    it = tr.pre_jb_seen.erase(it);
+                else
+                    ++it;
+            }
+
+            for (auto it = tr.post_jb_seen.begin(); it != tr.post_jb_seen.end(); ) {
+                if (seq_less(*it, cleanup_threshold))
+                    it = tr.post_jb_seen.erase(it);
+                else
+                    ++it;
+            }
         }
     }
 
@@ -1028,19 +1074,18 @@ private:
     //const double low_stutter_threshold = 0.04;  // if <1% stutter -> increase bitrate
     //const int bitrate_step_kbps = 100000;     // amount to change bitrate by (bps)
 
-    struct SeqTracker {
-        std::set<uint16_t> pre_jb_seen;     // packets seen BEFORE JB
-        std::set<uint16_t> post_jb_seen;    // packets seen AFTER JB
-
+    struct TrackingInfo {
+        uint16_t first_seq = 0;
         uint16_t max_pre_seq = 0;
         uint16_t max_post_seq = 0;
-
+        uint16_t last_reported_seq = 0;  // NEW: Track what we've already reported
         bool initialized = false;
-
+        std::unordered_set<uint16_t> pre_jb_seen;
+        std::unordered_set<uint16_t> post_jb_seen;
         std::chrono::steady_clock::time_point last_check;
     };
 
-    std::unordered_map<uint32_t, SeqTracker> ssrc_map;
+    std::unordered_map<uint32_t, TrackingInfo> ssrc_map;
 };
 
 /**

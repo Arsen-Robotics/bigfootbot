@@ -357,8 +357,8 @@ public:
         gst_caps_unref(videorate_caps);
 
         // Queue - before encoder
-        enc_queue0 = gst_element_factory_make("queue", NULL);
-        g_object_set(G_OBJECT(enc_queue0), "max-size-buffers", 10, "leaky", 2, NULL); // downstream leaky
+        // enc_queue0 = gst_element_factory_make("queue", NULL);
+        // g_object_set(G_OBJECT(enc_queue0), "max-size-buffers", 10, "leaky", 2, NULL); // downstream leaky
 
         // Encoder
         std::string enc_name = "enc" + std::to_string(pipeline_stream_index);
@@ -374,6 +374,7 @@ public:
                  "insert-sps-pps", 1,
                  "insert-vui", 1,
                  "EnableTwopassCBR", 0,
+                 "vbv-size", 66667*5,
                  NULL);
 
         // Queue - after encoder
@@ -381,8 +382,8 @@ public:
         g_object_set(G_OBJECT(enc_queue1), "max-size-buffers", 5, "leaky", 2, NULL); // downstream leaky
 
         // Parser
-        // parse = gst_element_factory_make("h264parse", NULL);
-        // g_object_set(parse, "config-interval", 0, NULL);
+        parse = gst_element_factory_make("h264parse", NULL);
+        g_object_set(parse, "config-interval", 0, NULL);
 
         // Payloader
         pay = gst_element_factory_make("rtph264pay", NULL);
@@ -405,11 +406,11 @@ public:
 
         // Add elements to pipeline
         gst_bin_add_many(GST_BIN(pipeline), src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                         enc_queue0, enc, enc_queue1, pay, pay_capsfilter, NULL);
+                         enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
         
         // Link elements
         gst_element_link_many(src, src_capsfilter, src_queue, jpegdec_stage, conv, conv_capsfilter, 
-                              enc_queue0, enc, enc_queue1, pay, pay_capsfilter, NULL);
+                              enc, enc_queue1, parse, pay, pay_capsfilter, NULL);
 
         // Link to webrtcbin
         GstPad* pay_src = gst_element_get_static_pad(pay_capsfilter, "src");
@@ -422,7 +423,7 @@ public:
         g_signal_emit_by_name(webrtcbin, "get-transceiver", pipeline_stream_index, &transceiver);
 
         if (transceiver) {
-            g_object_set(transceiver, "do-nack", TRUE, nullptr);
+            g_object_set(transceiver, "do-nack", FALSE, nullptr);
             
             // Store encoder element in the map
             encoders[pipeline_stream_index] = enc;

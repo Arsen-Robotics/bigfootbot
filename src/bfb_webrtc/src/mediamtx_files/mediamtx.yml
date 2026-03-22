@@ -260,7 +260,7 @@ rtspTransports: [udp, multicast, tcp]
 # Available values are "no", "strict", "optional".
 rtspEncryption: "no"
 # Address of the TCP/RTSP listener. This is needed only when encryption is "no" or "optional".
-rtspAddress: :8765 # :8554
+rtspAddress: :8554
 # Address of the TCP/RTSPS listener. This is needed only when encryption is "strict" or "optional".
 rtspsAddress: :8322
 # Address of the UDP/RTP listener. This is needed only when "udp" is in rtspTransports and encryption is "no" or "optional".
@@ -377,7 +377,7 @@ hlsMuxerCloseAfter: 60s
 # Enable publishing and reading streams with the WebRTC protocol.
 webrtc: true
 # Address of the WebRTC HTTP listener.
-webrtcAddress: :8889 # :8889
+webrtcAddress: :8889
 # Enable HTTPS on the WebRTC server.
 # This covers only the WebRTC handshake and does not influence the encryption of WebRTC streams
 # which are always encrypted, with a key that is exchanged during the WebRTC handshake.
@@ -410,7 +410,7 @@ webrtcIPsFromInterfaces: true
 # An empty value means to use all available interfaces.
 webrtcIPsFromInterfacesList: []
 # Additional hosts or IPs to send to clients.
-webrtcAdditionalHosts: []
+webrtcAdditionalHosts: [ 87.119.173.184 ]
 # ICE servers. Needed only when local listeners can't be reached by clients.
 # STUN servers allows to obtain and share the public IP of the server.
 # TURN/TURNS servers forces all traffic through them.

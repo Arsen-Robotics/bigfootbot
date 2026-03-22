@@ -92,7 +92,7 @@ class SegmentationNode(Node):
         self.seg_pub.publish(overlay_msg)
 
         # Write to virtual video device
-        self.out.write(overlay)
+        self.out.write(output)
 
     def destroy_node(self):
         self.cap.release()

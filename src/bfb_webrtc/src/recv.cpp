@@ -562,7 +562,7 @@ public:
                     "do-retransmission", FALSE,      // Enable NACK retransmissions
                     "drop-on-latency", FALSE,       // NEVER drop late frames
                     "max-dropout-time", 5000,       // 5s before considering stream dead
-                    "max-misorder-time", 2000,       // 200ms tolerance for reordering
+                    "max-misorder-time", 200,       // 200ms tolerance for reordering
                     nullptr);
 
         g_printerr("Configured rtpjitterbuffer for session %u, ssrc %u: %s\n",
@@ -856,7 +856,7 @@ public:
 
             queue = gst_element_factory_make("queue", nullptr);
             g_object_set(queue,
-                "max-size-buffers", 33,
+                "max-size-buffers", 2,
                 "leaky", 2, // downstream
                 NULL);
 
@@ -869,9 +869,9 @@ public:
             // std::string filename = "/ros2_ws/src/stream" +
             // std::to_string(stream_id) + ".mp4";
             
-            sink = gst_element_factory_make("ximagesink", nullptr);
+            sink = gst_element_factory_make("xvimagesink", nullptr);
             g_object_set(sink,
-                "sync", FALSE,           // Match Chrome's synchronized playback
+                "sync", FALSE,
                 "max-lateness", 2000000000, // 200ms tolerance
                 "qos", FALSE,
                 "async", TRUE,

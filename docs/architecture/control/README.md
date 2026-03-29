@@ -16,16 +16,24 @@ For a detailed mapping of all ROS 2 nodes, communication topics, and their physi
 The following diagram explains how different velocity sources are prioritized by the `twist_mux` node to ensure safe operation.
 
 ```mermaid
-flowchart TD
-    JOY["/joy_vel (Priority 10)"] --> MUX{twist_mux}
-    AUTO["/nav_vel (Priority 5)"] --> MUX
+flowchart LR
+    subgraph Inputs
+        JOY["/joy_vel (Priority: 10)"]
+        AUTO["/nav_vel (Priority: 5)"]
+    end
 
-    MUX -- "joystick active\n(timeout < 0.5s)" --> RC
-    MUX -- "joystick idle\n(timeout expired)" --> RC
+    MUX{twist_mux}
+    RC[roboclaw_control_node]
 
-    RC[roboclaw_control_node] --> MOTORS[DC Motors]
+    JOY --> MUX
+    AUTO --> MUX
+
+    MUX -- "If JOY < 0.5s old" --> RC
+    MUX -- "Else if AUTO < 0.5s old" --> RC
+    MUX -- "Else (No signal)" --> STOP[Zero Velocity]
 
     style MUX fill:#f96,stroke:#333
+    style STOP fill:#fee,stroke:#b00
     style RC fill:#bbf,stroke:#333
 ```
 

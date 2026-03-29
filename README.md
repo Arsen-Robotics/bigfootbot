@@ -27,13 +27,16 @@ Bigfootbot is a versatile autonomous wheeled robot designed for multiple outdoor
 ## Package Structure
 The project is organized into several ROS 2 packages:
 
-- `bigfootbot` (metapackage)
-- `bigfootbot_base` - Core robot functionality
-- `bigfootbot_description` - Robot model and visualization
-- `bigfootbot_teleop` - Remote control implementation
-- `bigfootbot_navigation` - Autonomous navigation
-- `bigfootbot_bringup` - System startup and configuration
-- `bfb_arduino_gateway` - Arduino communication interface
+- `motor_control` - kinematic and RoboClaw motor control.
+- `bigfootbot_description` - Robot model and visualization.
+- `bigfootbot_teleop` - Remote control implementation.
+- `bigfootbot_navigation` - Autonomous navigation.
+- `bigfootbot_bringup` - System startup and configuration.
+- `bfb_arduino_gateway` - Arduino communication interface.
+- `bfb_road_follower` - Autonomous road following using CV.
+- `bfb_webrtc` - Low-latency video streaming.
+- `bfb_gps` - GPS data processing.
+- `bfb_interfaces` - Custom message and service definitions.
 
 ## Installation
 

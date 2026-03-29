@@ -1,6 +1,6 @@
 # Control System Architecture
 
-This document describes the high-level logic and functional components of the BigfootBot's control stack.
+This document describes the high-level logic and functional components of the BigfootBot's control stack, focusing on how different inputs are prioritized and executed safely.
 
 ## System Architecture & Deployment
 
@@ -11,29 +11,45 @@ For a detailed mapping of all ROS 2 nodes, communication topics, and their physi
 *   [**Logical View (Node Graph)**](../node_graph.md#1-logical-view-ros-2-node-graph) - To see topic and service communication.
 *   [**Physical View (Deployment Map)**](../node_graph.md#2-physical-view-deployment-map) - To see container deployment on the Raspberry Pi and Jetson.
 
-## Velocity Arbitration Logic
+---
 
-The following diagram explains how different velocity sources are prioritized by the `twist_mux` node to ensure safe operation.
+## Velocity Arbitration Logic (The "Heartbeat" Check)
+
+The `twist_mux` node acts as the decision arbiter. It uses a **freshness-based priority system** where every input topic must provide a "heartbeat" message at least every 0.5 seconds to remain active.
 
 ```mermaid
-flowchart LR
-    subgraph Inputs
-        JOY["/joy_vel (Priority: 10)"]
-        AUTO["/nav_vel (Priority: 5)"]
+flowchart TD
+    %% INPUT SOURCES
+    subgraph SOURCES [Input Sources]
+        direction LR
+        JOY_SRC[Physical Joystick] -- "joy" --> JOY_NODE[motor_control: joy_to_twist_node]
+        NAV_SRC[Navigation Algorithm] -- "nav_vel" --> MUX
+        
+        JOY_NODE -- "joy_vel" --> MUX
     end
 
-    MUX{twist_mux}
-    RC[roboclaw_control_node]
+    %% MUX DECISION LOGIC
+    subgraph MUX [twist_mux: Decision Arbiter]
+        direction TB
+        CHECK_JOY{Is /joy_vel <br/> 'Fresh'? (< 0.5s)}
+        CHECK_NAV{Is /nav_vel <br/> 'Fresh'? (< 0.5s)}
+        
+        CHECK_JOY -- "YES" --> OUT_JOY[Forward /joy_vel <br/> (Manual Override)]
+        CHECK_JOY -- "NO" --> CHECK_NAV
+        
+        CHECK_NAV -- "YES" --> OUT_NAV[Forward /nav_vel <br/> (Autonomous)]
+        CHECK_NAV -- "NO" --> OUT_STOP[Output Zero <br/> (Safety Stop)]
+    end
 
-    JOY --> MUX
-    AUTO --> MUX
+    %% EXECUTION
+    MUX --> RC[motor_control: roboclaw_control_node]
+    RC --> HW[DC Motors]
 
-    MUX -- "If JOY < 0.5s old" --> RC
-    MUX -- "Else if AUTO < 0.5s old" --> RC
-    MUX -- "Else (No signal)" --> STOP[Zero Velocity]
-
-    style MUX fill:#f96,stroke:#333
-    style STOP fill:#fee,stroke:#b00
+    %% STYLING
+    style MUX fill:#fff4dd,stroke:#d4a017,stroke-width:2px
+    style CHECK_JOY fill:#f96,stroke:#333
+    style CHECK_NAV fill:#f96,stroke:#333
+    style OUT_STOP fill:#fee,stroke:#b00,color:#b00
     style RC fill:#bbf,stroke:#333
 ```
 
@@ -41,17 +57,22 @@ flowchart LR
 
 ## Core Components
 
-### 1. Input Sources
-*   **Manual Control**: A joystick (PS3 or Logitech) is processed by the `joy_to_twist_node`, publishing to the high-priority `/joy_vel` topic.
-*   **Autonomous Navigation**: Vision-based road following or Nav2 stacks publish to the lower-priority `/nav_vel` topic.
+### 1. Manual Control Logic (`joy_to_twist_node`)
+This node (implemented in `src/motor_control/motor_control/joy_to_twist.py`) is responsible for translating raw physical inputs into safe ROS 2 commands:
+*   **Dynamic Steering**: The node calculates a `dynamic_angular_scale` based on linear speed. As the robot moves faster, steering sensitivity is automatically reduced to prevent high-speed instability.
+*   **Trim Correction**: Real-time mechanical drift correction via joystick buttons (adjusts `trim_value` to keep the robot driving straight).
+*   **Hardware Bridge**: Translates joystick buttons into command strings for the `bfb_arduino_gateway` (Buzzer, Headlights, Beacon).
 
-### 2. Multiplexer (`twist_mux`)
-The `twist_mux` node ensures safety by prioritizing manual overrides. If a message is received on `/joy_vel`, it will override any autonomous commands on `/nav_vel` for the duration of the timeout (0.5s).
+### 2. Autonomous Navigation
+Vision-based road following (from the `bfb_road_follower` package) or other Nav2-based stacks publish velocity commands to the `/nav_vel` topic.
 
-### 3. Execution (`motor_control`)
-The `roboclaw_control_node` is the final stage of the software stack. It performs differential drive kinematics to convert linear and angular velocity into motor-specific duty cycles.
+### 3. Arbitration (`twist_mux`)
+Ensures safety by prioritizing manual overrides. If a signal is received on `/joy_vel`, it will override autonomous commands for the duration of the 0.5s timeout. If no messages are received on any topic, it outputs a zero-velocity command to ensure the robot stops safely.
+
+### 4. Execution (`motor_control`)
+The `roboclaw_control_node` is the final software stage. It performs differential drive kinematics to convert linear and angular velocity into motor-specific commands for the physical RoboClaw driver.
 
 ## Safety Features
-*   **Joystick Deadman Switch**: The `joy_to_twist_node` requires a specific "enable" axis to be held.
-*   **Overcurrent Protection**: The `roboclaw_control_node` monitors motor current and will automatically stop the robot if it exceeds 30A.
-*   **Battery Monitoring**: Real-time voltage monitoring ensures the robot stops before the Li-ion battery is damaged.
+*   **Heartbeat Timeout**: If the software or network lags for more than 0.5s, the system automatically stops the robot.
+*   **Overcurrent Protection**: The `roboclaw_control_node` monitors motor current and will automatically stop if it exceeds 30A.
+*   **Battery Monitoring**: Real-time voltage monitoring ensures the robot stops before the Li-ion battery reaches a critical discharge level.

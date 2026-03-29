@@ -11,6 +11,31 @@ For a detailed mapping of all ROS 2 nodes, communication topics, and their physi
 *   [**Logical View (Node Graph)**](../node_graph.md#1-logical-view-ros-2-node-graph) - To see topic and service communication.
 *   [**Physical View (Deployment Map)**](../node_graph.md#2-physical-view-deployment-map) - To see container deployment on the Raspberry Pi and Jetson.
 
+## Velocity Arbitration Logic
+
+The following diagram explains how different velocity sources are prioritized by the `twist_mux` node to ensure safe operation.
+
+```mermaid
+graph TD
+    %% INPUTS
+    JOY[/Joystick Input: /joy_vel/] --> MUX{twist_mux}
+    AUTO[/Autonomous Input: /nav_vel/] --> MUX
+
+    %% LOGIC
+    subgraph "Arbitration Strategy"
+        MUX -- "Is Joy active?" --> YES{YES}
+        YES -- "Lock Priority 10" --> RC[motor_control: roboclaw_control_node]
+        MUX -- "Is Joy idle?" --> NO{NO}
+        NO -- "Use Priority 5" --> RC
+    end
+
+    %% OUTPUT
+    RC ==> MOTOR[Physical Motors]
+
+    style YES fill:#dfd
+    style NO fill:#eee
+```
+
 ---
 
 ## Core Components

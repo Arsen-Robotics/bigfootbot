@@ -1,0 +1,108 @@
+# --- README (Raspberry Pi Stack) ---
+# Install udev rules for RoboClaw and Arduino Mega on the host:
+# Copy src/motor_control/udev/99-roboclaw.rules to /etc/udev/rules.d
+# Copy src/bfb_arduino_gateway/udev/99-arduino-mega.rules to /etc/udev/rules.d
+# Run udevadm control --reload-rules && udevadm trigger
+
+# --- Docker compose commands ---
+# Create and start containers:
+#   `docker compose -f docker-compose.rpi.yml up -d`
+# Rebuild all services:
+#   `docker compose -f docker-compose.rpi.yml up --build`
+# Stop and remove containers:
+#   `docker compose -f docker-compose.rpi.yml down`
+# --------------------
+
+services:
+  bfb_roboclaw_control:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_roboclaw_control
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        # Build the docker image for BOTH x86/amd64 and any arm64/aarch64 device
+        - BASE_IMAGE=ros:humble-ros-base
+    # The name of the Docker image to be created
+    image: bfb_roboclaw_control:latest
+    # The name to be given to the container
+    container_name: bfb_roboclaw_control_cntr
+    volumes:
+      # Map all devices from host to container
+      - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../src/motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
+      - ../../src/motor_control/log:/ros2_ws/src/motor_control/log
+      - ../../src/motor_control/config:/ros2_ws/src/motor_control/config
+    privileged: true
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.70
+    command: >
+      bash -c "
+      ros2 run twist_mux twist_mux --ros-args --params-file ros2_ws/src/motor_control/config/twist_mux.yaml &
+      ros2 run motor_control roboclaw_control_node --ros-args --params-file ros2_ws/src/motor_control/config/params.yaml
+      "
+
+  bfb_joy_to_twist:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_joy_to_twist
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        - BASE_IMAGE=ros:humble-ros-base
+    image: bfb_joy_to_twist:latest
+    container_name: bfb_joy_to_twist_cntr
+    volumes:
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../src/motor_control/motor_control:/ros2_ws/src/motor_control/motor_control
+      - ../../src/motor_control/config:/ros2_ws/src/motor_control/config
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.71
+    command: ros2 run motor_control joy_to_twist_node --ros-args --params-file ros2_ws/src/motor_control/config/params.yaml
+
+  bfb_foxglove_bridge:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_foxglove_bridge
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        - BASE_IMAGE=ros:humble-ros-base
+    image: bfb_foxglove_bridge:latest
+    container_name: bfb_foxglove_bridge_cntr
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.72
+    command: ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+
+  bfb_arduino_gateway:
+    build:
+      context: ../..
+      dockerfile: docker/teleop/Dockerfile.bfb_arduino_gateway
+      # Pass arguments to Dockerfile to use different base images
+      args:
+        - BASE_IMAGE=ros:humble-ros-base
+    image: bfb_arduino_gateway:latest
+    container_name: bfb_arduino_gateway_cntr
+    volumes:
+      # Map all devices from host to container
+      - '/dev:/dev'
+      # Mount Python source files to be able to update them inside the container without rebuilding the image
+      - ../../src/bfb_arduino_gateway/bfb_arduino_gateway:/ros2_ws/src/bfb_arduino_gateway/bfb_arduino_gateway
+    privileged: true
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    networks:
+      macnet:
+        ipv4_address: 192.168.5.74
+    command: ros2 run bfb_arduino_gateway arduino_gateway_node
+
+networks:
+  macnet:
+    external: true # Use the existing Macvlan network

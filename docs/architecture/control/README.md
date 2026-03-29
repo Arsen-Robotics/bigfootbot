@@ -1,39 +1,17 @@
 # Control System Architecture
 
-This document describes the high-level control flow of the BigfootBot, from user/autonomous input to physical motor movement.
+This document describes the high-level logic and functional components of the BigfootBot's control stack.
 
-## System Overview
+## System Architecture & Deployment
 
 The control system follows a modular architecture where multiple input sources (Manual and Autonomous) are prioritized by a multiplexer before being executed by the motor controller.
 
-A detailed mapping of all ROS 2 nodes and their physical deployment can be found in the [**Logical & Physical Views**](../node_graph.md).
+For a detailed mapping of all ROS 2 nodes, communication topics, and their physical deployment across the hardware, please refer to the primary architecture document:
 
-```mermaid
-graph TD
-    subgraph "NVIDIA Jetson (Perception Machine)"
-        RF[Road Follower Node] -- "/nav_vel (Priority 5)" --> MUX
-    end
+*   [**Logical View (Node Graph)**](../node_graph.md#1-logical-view-ros-2-node-graph) - To see topic and service communication.
+*   [**Physical View (Deployment Map)**](../node_graph.md#2-physical-view-deployment-map) - To see container deployment on the Raspberry Pi and Jetson.
 
-    subgraph "Raspberry Pi (Control Hub)"
-        JOY[Joy to Twist Node] -- "/joy_vel (Priority 10)" --> MUX
-        MUX{twist_mux} -- "/cmd_vel_out" --> RC[RoboClaw Control Node]
-        RC -- "Relay Service" --> AG[Arduino Gateway]
-    end
-
-    subgraph "Physical Hardware"
-        RC -- "USB Serial" --> DRIVER[RoboClaw 2x15A]
-        DRIVER -- "PWM" --> MOTORS[DC Motors]
-        AG -- "Serial" --> ARDUINO[Arduino Mega]
-    end
-
-    %% Link across machines
-    RF -. "Network Link (ROS 2)" .-> MUX
-
-    style MUX fill:#f96,stroke:#333
-    style RC fill:#bbf,stroke:#333
-    style DRIVER fill:#dfd,stroke:#333
-    style RF fill:#ff9,stroke:#333
-```
+---
 
 ## Core Components
 

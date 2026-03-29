@@ -31,14 +31,14 @@ flowchart TD
     %% MUX DECISION LOGIC
     subgraph MUX [twist_mux: Decision Arbiter]
         direction TB
-        CHECK_JOY{Is /joy_vel <br/> 'Fresh'? (< 0.5s)}
-        CHECK_NAV{Is /nav_vel <br/> 'Fresh'? (< 0.5s)}
+        CHECK_JOY{"Is /joy_vel <br/> 'Fresh'? (< 0.5s)"}
+        CHECK_NAV{"Is /nav_vel <br/> 'Fresh'? (< 0.5s)"}
         
-        CHECK_JOY -- "YES" --> OUT_JOY[Forward /joy_vel <br/> (Manual Override)]
+        CHECK_JOY -- "YES" --> OUT_JOY["Forward /joy_vel <br/> (Manual Override)"]
         CHECK_JOY -- "NO" --> CHECK_NAV
         
-        CHECK_NAV -- "YES" --> OUT_NAV[Forward /nav_vel <br/> (Autonomous)]
-        CHECK_NAV -- "NO" --> OUT_STOP[Output Zero <br/> (Safety Stop)]
+        CHECK_NAV -- "YES" --> OUT_NAV["Forward /nav_vel <br/> (Autonomous)"]
+        CHECK_NAV -- "NO" --> OUT_STOP["Output Zero <br/> (Safety Stop)"]
     end
 
     %% EXECUTION
